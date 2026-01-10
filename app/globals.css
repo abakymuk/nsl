@@ -1,26 +1,215 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Port Blue - Primary (trust, stability, ocean) */
+  --color-primary: oklch(0.45 0.15 240);
+  --color-primary-foreground: oklch(0.98 0 0);
+
+  /* Container Orange - Accent (urgency, CTAs) */
+  --color-accent: oklch(0.65 0.2 45);
+  --color-accent-foreground: oklch(0.98 0 0);
+
+  /* Fog White - Background */
+  --color-background: oklch(0.985 0.005 240);
+  --color-foreground: oklch(0.15 0.03 240);
+
+  /* Card backgrounds */
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.15 0.03 240);
+
+  /* Popover */
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.15 0.03 240);
+
+  /* Secondary - Muted blues */
+  --color-secondary: oklch(0.95 0.01 240);
+  --color-secondary-foreground: oklch(0.25 0.03 240);
+
+  /* Muted */
+  --color-muted: oklch(0.94 0.01 240);
+  --color-muted-foreground: oklch(0.45 0.02 240);
+
+  /* Destructive */
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0 0);
+
+  /* Borders & inputs */
+  --color-border: oklch(0.88 0.01 240);
+  --color-input: oklch(0.88 0.01 240);
+  --color-ring: oklch(0.45 0.15 240);
+
+  /* Radius */
+  --radius: 0.75rem;
+
+  /* Fonts */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-heading: var(--font-dm-sans), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark mode - class-based for manual toggle */
+.dark {
+  --color-primary: oklch(0.7 0.12 240);
+  --color-primary-foreground: oklch(0.1 0.02 240);
+
+  /* Container Orange - brighter in dark */
+  --color-accent: oklch(0.7 0.18 45);
+  --color-accent-foreground: oklch(0.1 0 0);
+
+  /* Dark backgrounds */
+  --color-background: oklch(0.12 0.02 240);
+  --color-foreground: oklch(0.95 0.01 240);
+
+  --color-card: oklch(0.15 0.02 240);
+  --color-card-foreground: oklch(0.95 0.01 240);
+
+  --color-popover: oklch(0.15 0.02 240);
+  --color-popover-foreground: oklch(0.95 0.01 240);
+
+  --color-secondary: oklch(0.2 0.02 240);
+  --color-secondary-foreground: oklch(0.9 0.01 240);
+
+  --color-muted: oklch(0.2 0.02 240);
+  --color-muted-foreground: oklch(0.65 0.02 240);
+
+  --color-destructive: oklch(0.45 0.18 25);
+  --color-destructive-foreground: oklch(0.95 0 0);
+
+  --color-border: oklch(0.25 0.02 240);
+  --color-input: oklch(0.25 0.02 240);
+  --color-ring: oklch(0.6 0.12 240);
+}
+
+/* Selection color for dark mode */
+.dark ::selection {
+  background-color: oklch(0.7 0.12 240 / 0.3);
+  color: oklch(0.95 0.01 240);
+}
+
+* {
+  border-color: var(--color-border);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* Heading styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: oklch(0.45 0.15 240 / 0.2);
+  color: oklch(0.15 0.03 240);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* Animation keyframes */
+@keyframes shimmer {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes border-beam {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px oklch(0.45 0.15 240 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px oklch(0.45 0.15 240 / 0.5);
+  }
+}
+
+/* Animation utilities */
+.animate-shimmer {
+  animation: shimmer var(--shimmer-duration, 2s) infinite linear;
+}
+
+.animate-border-beam {
+  animation: border-beam var(--duration, 15s) infinite linear;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration, 40s) linear infinite;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration, 40s) linear infinite;
+}
+
+.animate-gradient {
+  animation: gradient 3s ease infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }

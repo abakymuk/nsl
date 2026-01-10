@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
+import { contactFormSchema } from "@/lib/validations/contact";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { sanitizeObject } from "@/lib/sanitize";
+import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import type { ContactInsert } from "@/types/database";
+
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+  return new Resend(apiKey);
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check rate limit (stricter for contact form)
+    const rateLimit = await checkRateLimit(request, "contact");
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.reset);
+    }
+
+    // Parse and sanitize input
+    const rawBody = await request.json();
+    const sanitizedBody = sanitizeObject(rawBody);
+
+    // Validate with Zod schema
+    const parseResult = contactFormSchema.safeParse(sanitizedBody);
+
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map((e) => ({
+        field: e.path.join("."),
+        message: e.message,
+      }));
+
+      return NextResponse.json(
+        { error: "Validation failed", errors },
+        { status: 400 }
+      );
+    }
+
+    const body = parseResult.data;
+
+    // Save to database if Supabase is configured
+    if (isSupabaseConfigured()) {
+      const supabase = createServerClient();
+
+      const contactData: ContactInsert = {
+        name: body.name,
+        email: body.email,
+        phone: body.phone || null,
+        company: body.company || null,
+        subject: body.subject || null,
+        message: body.message,
+        status: "new",
+      };
+
+      const { error: dbError } = await supabase.from("contacts").insert(contactData as never);
+
+      if (dbError) {
+        console.error("Database error:", dbError);
+        // Continue with email even if DB fails
+      }
+    }
+
+    // Send email via Resend
+    const emailTo = process.env.EMAIL_TO || "info@newstreamlogistics.com";
+    const emailFrom = process.env.EMAIL_FROM || "contact@newstreamlogistics.com";
+
+    const emailBody = `
+New Contact Form Submission
+
+Name: ${body.name}
+Email: ${body.email}
+${body.phone ? `Phone: ${body.phone}` : ""}
+${body.company ? `Company: ${body.company}` : ""}
+${body.subject ? `Subject: ${body.subject}` : ""}
+
+Message:
+${body.message}
+
+---
+Submitted at: ${new Date().toISOString()}
+    `.trim();
+
+    const resend = getResend();
+    await resend.emails.send({
+      from: emailFrom,
+      to: emailTo,
+      subject: body.subject
+        ? `Contact: ${body.subject}`
+        : `New Contact Form Submission from ${body.name}`,
+      text: emailBody,
+      replyTo: body.email,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Message sent successfully",
+    });
+  } catch (error) {
+    console.error("Error processing contact form:", error);
+
+    // Don't expose internal error details to client
+    return NextResponse.json(
+      { error: "Failed to send message. Please try again later." },
+      { status: 500 }
+    );
+  }
+}
