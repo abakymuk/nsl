@@ -1,7 +1,65 @@
+import { currentUser } from "@clerk/nextjs/server";
+import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
-import { FileText, Plus, Filter } from "lucide-react";
+import { FileText, Plus, ChevronRight } from "lucide-react";
 
-export default function QuotesPage() {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+async function getCustomerCompany(email: string) {
+  const { data } = await supabase
+    .from("quotes")
+    .select("company_name")
+    .eq("email", email)
+    .limit(1)
+    .single();
+
+  return data?.company_name || null;
+}
+
+async function getQuotes(email: string, companyName: string | null, status?: string) {
+  // Filter by company name if available (to show all company quotes)
+  const filter = companyName
+    ? { column: "company_name", value: companyName }
+    : { column: "email", value: email };
+
+  let query = supabase
+    .from("quotes")
+    .select("*")
+    .eq(filter.column, filter.value)
+    .order("created_at", { ascending: false });
+
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching quotes:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export default async function QuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const user = await currentUser();
+  const email = user?.emailAddresses?.[0]?.emailAddress || "";
+  const { status } = await searchParams;
+
+  // Get company name to show all company quotes
+  const companyName = await getCustomerCompany(email);
+  const quotes = await getQuotes(email, companyName, status);
+
+  const statuses = ["all", "pending", "quoted", "accepted", "rejected"];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -22,42 +80,126 @@ export default function QuotesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
-        <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm hover:bg-muted transition-colors">
-          <Filter className="h-4 w-4" />
-          Filter
-        </button>
-        <div className="flex gap-2">
-          {["All", "Pending", "Quoted", "Accepted"].map((status) => (
-            <button
-              key={status}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                status === "All"
-                  ? "bg-primary text-primary-foreground"
-                  : "border hover:bg-muted"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        {statuses.map((s) => (
+          <Link
+            key={s}
+            href={s === "all" ? "/dashboard/quotes" : `/dashboard/quotes?status=${s}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              (status || "all") === s
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted hover:bg-muted/80"
+            }`}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </Link>
+        ))}
       </div>
 
-      {/* Empty State */}
-      <div className="rounded-xl border bg-card p-12 text-center">
-        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-        <h3 className="font-semibold text-lg mb-2">No quotes yet</h3>
-        <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-          You haven&apos;t submitted any quote requests yet. Get started by requesting your first quote.
-        </p>
-        <Link
-          href="/quote"
-          className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Request Your First Quote
-        </Link>
-      </div>
+      {/* Quotes List */}
+      {quotes.length === 0 ? (
+        <div className="rounded-xl border bg-card p-12 text-center">
+          <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+          <h3 className="font-semibold text-lg mb-2">No quotes yet</h3>
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+            You haven&apos;t submitted any quote requests yet. Get started by
+            requesting your first quote.
+          </p>
+          <Link
+            href="/quote"
+            className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Request Your First Quote
+          </Link>
+        </div>
+      ) : (
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Service
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Container
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Route
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {quotes.map((quote: any) => (
+                  <tr
+                    key={quote.id}
+                    className="hover:bg-muted/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <span className="font-medium text-sm">
+                        {quote.service_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                        {quote.container_number || "N/A"}
+                      </code>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-muted-foreground">
+                        {quote.pickup_location && quote.delivery_location
+                          ? `${quote.pickup_location.substring(0, 15)}... → ${quote.delivery_location.substring(0, 15)}...`
+                          : "—"}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          quote.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : quote.status === "quoted"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                            : quote.status === "accepted"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : quote.status === "rejected"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
+                      >
+                        {quote.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {quote.quoted_price ? (
+                        <span className="font-semibold text-primary">
+                          ${quote.quoted_price.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(quote.created_at).toLocaleDateString()}
+                      </p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
