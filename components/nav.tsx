@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { FloatingNav } from "@/components/ui/aceternity/floating-navbar";
 import { FloatingDock } from "@/components/ui/aceternity/floating-dock";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
@@ -15,8 +16,8 @@ import {
   MapPin,
   Phone,
   FileText,
-  Sun,
-  Moon
+  LogIn,
+  LayoutDashboard,
 } from "lucide-react";
 
 const navItems = [
@@ -66,6 +67,35 @@ export function Nav() {
               Track
             </Link>
             <ThemeToggle />
+
+            {/* Auth buttons */}
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Login</span>
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link
+                href="/dashboard"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Dashboard</span>
+              </Link>
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "h-8 w-8",
+                  },
+                }}
+              />
+            </SignedIn>
+
             <ShimmerButton
               className="h-9 text-sm"
               shimmerColor="oklch(0.65 0.2 45)"
