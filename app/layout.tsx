@@ -5,6 +5,7 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LocalBusinessSchema, ServiceSchema } from "@/components/structured-data";
+import { PhoneBanner } from "@/components/phone-banner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -100,6 +101,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <PhoneBanner />
         </ThemeProvider>
       </body>
     </html>
