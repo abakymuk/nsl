@@ -12,23 +12,14 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse(rateLimit.reset);
     }
 
-    // Get container number from query params
+    // Get container number or tracking number from query params
     const { searchParams } = new URL(request.url);
     const containerNumber = searchParams.get("container");
+    const trackingNumber = searchParams.get("number"); // NSL tracking number
 
-    if (!containerNumber) {
+    if (!containerNumber && !trackingNumber) {
       return NextResponse.json(
-        { error: "Container number is required" },
-        { status: 400 }
-      );
-    }
-
-    // Sanitize input
-    const sanitizedContainer = sanitizeContainerNumber(containerNumber);
-
-    if (sanitizedContainer.length < 4) {
-      return NextResponse.json(
-        { error: "Invalid container number format" },
+        { error: "Container number or tracking number is required" },
         { status: 400 }
       );
     }
@@ -42,49 +33,87 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServerClient();
+    let shipment: Shipment | null = null;
 
-    // Look up shipment by container number
-    const { data: shipmentData, error: shipmentError } = await supabase
-      .from("shipments")
-      .select("*")
-      .eq("container_number", sanitizedContainer)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    // Search by tracking number first (NSL tracking number)
+    if (trackingNumber) {
+      const { data: shipmentData } = await supabase
+        .from("shipments")
+        .select("*")
+        .eq("tracking_number", trackingNumber.toUpperCase())
+        .single();
 
-    const shipment = shipmentData as Shipment | null;
+      shipment = shipmentData as Shipment | null;
+    }
 
-    if (shipmentError || !shipment) {
-      // Check if there's a quote for this container
-      const { data: quoteData } = await supabase
-        .from("quotes")
-        .select("reference_number, status, created_at")
+    // If not found by tracking number, search by container number
+    if (!shipment && containerNumber) {
+      const sanitizedContainer = sanitizeContainerNumber(containerNumber);
+
+      if (sanitizedContainer.length < 4) {
+        return NextResponse.json(
+          { error: "Invalid container number format" },
+          { status: 400 }
+        );
+      }
+
+      const { data: shipmentData } = await supabase
+        .from("shipments")
+        .select("*")
         .eq("container_number", sanitizedContainer)
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
-      const quote = quoteData as Pick<Quote, "reference_number" | "status" | "created_at"> | null;
+      shipment = shipmentData as Shipment | null;
 
-      if (quote) {
-        return NextResponse.json({
-          success: true,
-          found: true,
-          type: "quote",
-          data: {
-            containerNumber: sanitizedContainer,
-            status: "quote_" + quote.status,
-            referenceNumber: quote.reference_number,
-            message: getQuoteStatusMessage(quote.status),
-            lastUpdate: quote.created_at,
-          },
-        });
+      // Also search by PortPro reference if not found
+      if (!shipment) {
+        const { data: portproData } = await supabase
+          .from("shipments")
+          .select("*")
+          .eq("portpro_reference", sanitizedContainer)
+          .single();
+
+        shipment = portproData as Shipment | null;
+      }
+    }
+
+    // If no shipment found, check for quotes
+    if (!shipment) {
+      // Only search quotes if we have a container number
+      if (containerNumber) {
+        const sanitizedContainer = sanitizeContainerNumber(containerNumber);
+        const { data: quoteData } = await supabase
+          .from("quotes")
+          .select("reference_number, status, created_at")
+          .eq("container_number", sanitizedContainer)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        const quote = quoteData as Pick<Quote, "reference_number" | "status" | "created_at"> | null;
+
+        if (quote) {
+          return NextResponse.json({
+            success: true,
+            found: true,
+            type: "quote",
+            data: {
+              containerNumber: sanitizedContainer,
+              status: "quote_" + quote.status,
+              referenceNumber: quote.reference_number,
+              message: getQuoteStatusMessage(quote.status),
+              lastUpdate: quote.created_at,
+            },
+          });
+        }
       }
 
       return NextResponse.json({
         success: true,
         found: false,
-        message: "No shipment found for this container number. If you recently submitted a quote, please allow 1-2 hours for processing.",
+        message: "No shipment found. If you recently submitted a quote, please allow 1-2 hours for processing.",
       });
     }
 
@@ -102,19 +131,28 @@ export async function GET(request: NextRequest) {
       found: true,
       type: "shipment",
       data: {
+        trackingNumber: shipment.tracking_number,
         containerNumber: shipment.container_number,
         status: shipment.status,
+        origin: shipment.origin,
+        destination: shipment.destination,
+        eta: shipment.eta,
         currentLocation: shipment.current_location,
         pickupTime: shipment.pickup_time,
         deliveryTime: shipment.delivery_time,
         driverName: shipment.driver_name,
         publicNotes: shipment.public_notes,
         lastUpdate: shipment.updated_at,
+        // PortPro integration fields
+        portproReference: shipment.portpro_reference,
+        containerSize: shipment.container_size,
         events: events?.map((e) => ({
           status: e.status,
           location: e.location,
+          description: e.description,
           notes: e.notes,
           timestamp: e.created_at,
+          fromPortPro: e.portpro_event,
         })) || [],
       },
     });

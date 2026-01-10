@@ -154,10 +154,15 @@ export interface Database {
         Row: {
           id: string;
           quote_id: string | null;
+          tracking_number: string;
           created_at: string;
           updated_at: string;
           container_number: string;
+          container_size: string | null;
           status: string;
+          origin: string | null;
+          destination: string | null;
+          eta: string | null;
           pickup_time: string | null;
           delivery_time: string | null;
           current_location: string | null;
@@ -165,14 +170,27 @@ export interface Database {
           truck_number: string | null;
           public_notes: string | null;
           internal_notes: string | null;
+          customer_name: string | null;
+          customer_email: string | null;
+          // PortPro integration fields
+          portpro_reference: string | null;
+          portpro_load_id: string | null;
+          seal_number: string | null;
+          chassis_number: string | null;
+          weight: number | null;
         };
         Insert: {
           id?: string;
           quote_id?: string | null;
+          tracking_number: string;
           created_at?: string;
           updated_at?: string;
           container_number: string;
+          container_size?: string | null;
           status?: string;
+          origin?: string | null;
+          destination?: string | null;
+          eta?: string | null;
           pickup_time?: string | null;
           delivery_time?: string | null;
           current_location?: string | null;
@@ -180,14 +198,26 @@ export interface Database {
           truck_number?: string | null;
           public_notes?: string | null;
           internal_notes?: string | null;
+          customer_name?: string | null;
+          customer_email?: string | null;
+          portpro_reference?: string | null;
+          portpro_load_id?: string | null;
+          seal_number?: string | null;
+          chassis_number?: string | null;
+          weight?: number | null;
         };
         Update: {
           id?: string;
           quote_id?: string | null;
+          tracking_number?: string;
           created_at?: string;
           updated_at?: string;
           container_number?: string;
+          container_size?: string | null;
           status?: string;
+          origin?: string | null;
+          destination?: string | null;
+          eta?: string | null;
           pickup_time?: string | null;
           delivery_time?: string | null;
           current_location?: string | null;
@@ -195,6 +225,13 @@ export interface Database {
           truck_number?: string | null;
           public_notes?: string | null;
           internal_notes?: string | null;
+          customer_name?: string | null;
+          customer_email?: string | null;
+          portpro_reference?: string | null;
+          portpro_load_id?: string | null;
+          seal_number?: string | null;
+          chassis_number?: string | null;
+          weight?: number | null;
         };
       };
       shipment_events: {
@@ -203,27 +240,33 @@ export interface Database {
           shipment_id: string;
           created_at: string;
           status: string;
+          description: string | null;
           location: string | null;
           notes: string | null;
           created_by: string | null;
+          portpro_event: boolean;
         };
         Insert: {
           id?: string;
           shipment_id: string;
           created_at?: string;
           status: string;
+          description?: string | null;
           location?: string | null;
           notes?: string | null;
           created_by?: string | null;
+          portpro_event?: boolean;
         };
         Update: {
           id?: string;
           shipment_id?: string;
           created_at?: string;
           status?: string;
+          description?: string | null;
           location?: string | null;
           notes?: string | null;
           created_by?: string | null;
+          portpro_event?: boolean;
         };
       };
     };
