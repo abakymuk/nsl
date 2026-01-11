@@ -464,22 +464,32 @@ function ShipmentResult({ data, onTrackAnother }: { data: ShipmentData; onTrackA
 
       {/* Quick Info Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* ETA or Delivery Date */}
-        {isDelivered && data.deliveryTime ? (
-          <InfoCard
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            label="Delivered"
-            value={new Date(data.deliveryTime).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-            subValue={new Date(data.deliveryTime).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-            highlight
-          />
-        ) : eta ? (
+        {/* ETA or Delivery Date - only show ETA for non-delivered shipments */}
+        {isDelivered ? (
+          data.deliveryTime ? (
+            <InfoCard
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              label="Delivered"
+              value={new Date(data.deliveryTime).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+              subValue={new Date(data.deliveryTime).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+              highlight
+            />
+          ) : (
+            <InfoCard
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              label="Status"
+              value="Delivered"
+              subValue={`Updated ${getRelativeTime(data.lastUpdate)}`}
+              highlight
+            />
+          )
+        ) : eta && !isDelivered ? (
           <InfoCard
             icon={<Calendar className="h-5 w-5" />}
             label="ETA"
@@ -489,11 +499,11 @@ function ShipmentResult({ data, onTrackAnother }: { data: ShipmentData; onTrackA
           />
         ) : null}
 
-        {/* Current Location */}
+        {/* Current Location - show as "Delivered To" for delivered shipments */}
         {data.currentLocation && (
           <InfoCard
             icon={<MapPin className="h-5 w-5" />}
-            label="Current Location"
+            label={isDelivered ? "Delivered To" : "Current Location"}
             value={data.currentLocation}
           />
         )}
@@ -501,15 +511,15 @@ function ShipmentResult({ data, onTrackAnother }: { data: ShipmentData; onTrackA
         {/* Tracking Number */}
         <div className="rounded-xl border bg-card p-4">
           <div className="flex items-start gap-3">
-            <div className="rounded-lg p-2 bg-muted text-muted-foreground">
+            <div className="rounded-lg p-2 bg-muted text-muted-foreground shrink-0">
               <Hash className="h-5 w-5" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Tracking #
               </p>
               <div className="mt-1 flex items-center gap-1">
-                <p className="font-mono font-semibold text-foreground truncate">
+                <p className="font-mono text-sm font-semibold text-foreground truncate" title={data.trackingNumber}>
                   {data.trackingNumber}
                 </p>
                 <CopyButton text={data.trackingNumber} />
