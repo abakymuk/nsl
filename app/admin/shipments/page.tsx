@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
-import { Truck, Plus, ChevronRight } from "lucide-react";
+import { Truck, ChevronRight, RefreshCw } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,17 +49,17 @@ export default async function AdminShipmentsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Shipments Management</h1>
+          <h1 className="text-3xl font-bold">Shipments</h1>
           <p className="text-muted-foreground mt-1">
-            Track and manage all shipments
+            View shipments synced from PortPro
           </p>
         </div>
         <Link
-          href="/admin/shipments/new"
+          href="/admin/sync"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
         >
-          <Plus className="h-4 w-4" />
-          New Shipment
+          <RefreshCw className="h-4 w-4" />
+          Sync from PortPro
         </Link>
       </div>
 
@@ -115,11 +115,11 @@ export default async function AdminShipmentsPage({
                       No shipments found
                     </p>
                     <Link
-                      href="/admin/shipments/new"
+                      href="/admin/sync"
                       className="mt-4 inline-flex items-center gap-2 text-sm text-primary hover:underline"
                     >
-                      <Plus className="h-4 w-4" />
-                      Create your first shipment
+                      <RefreshCw className="h-4 w-4" />
+                      Sync from PortPro
                     </Link>
                   </td>
                 </tr>
@@ -172,7 +172,7 @@ export default async function AdminShipmentsPage({
                         href={`/admin/shipments/${shipment.id}`}
                         className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                       >
-                        Manage
+                        View
                         <ChevronRight className="h-4 w-4" />
                       </Link>
                     </td>
