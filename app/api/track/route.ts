@@ -4,6 +4,30 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeContainerNumber } from "@/lib/sanitize";
 import type { Quote } from "@/types/database";
 
+// Base columns that always exist in the original schema
+const BASE_SHIPMENT_COLUMNS = `
+  id,
+  container_number,
+  status,
+  created_at,
+  updated_at,
+  current_location,
+  pickup_time,
+  delivery_time,
+  driver_name,
+  public_notes
+`;
+
+// Base event columns that always exist
+const BASE_EVENT_COLUMNS = `
+  id,
+  shipment_id,
+  status,
+  created_at,
+  location,
+  notes
+`;
+
 // Define a flexible shipment type that allows optional fields
 interface TrackingShipment {
   id: string;
@@ -67,23 +91,8 @@ export async function GET(request: NextRequest) {
     const supabase = createServerClient();
     let shipment: TrackingShipment | null = null;
 
-    // Search by tracking number first (NSL tracking number)
-    if (trackingNumber) {
-      try {
-        const { data: shipmentData } = await supabase
-          .from("shipments")
-          .select("*")
-          .eq("tracking_number", trackingNumber.toUpperCase())
-          .single();
-
-        shipment = shipmentData as TrackingShipment | null;
-      } catch {
-        // tracking_number column may not exist yet, continue with container search
-      }
-    }
-
-    // If not found by tracking number, search by container number
-    if (!shipment && containerNumber) {
+    // Search by container number (most reliable - column always exists)
+    if (containerNumber) {
       const sanitizedContainer = sanitizeContainerNumber(containerNumber);
 
       if (sanitizedContainer.length < 4) {
@@ -93,33 +102,45 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      // First try with all columns (if migrations have been applied)
       const { data: shipmentData, error: shipmentError } = await supabase
         .from("shipments")
         .select("*")
         .eq("container_number", sanitizedContainer)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!shipmentError && shipmentData) {
         shipment = shipmentData as TrackingShipment;
-      }
+      } else if (shipmentError) {
+        // If error (likely column doesn't exist), try with base columns only
+        console.log("Falling back to base columns due to error:", shipmentError.message);
+        const { data: baseData } = await supabase
+          .from("shipments")
+          .select(BASE_SHIPMENT_COLUMNS)
+          .eq("container_number", sanitizedContainer)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      // Also search by PortPro reference if not found
-      if (!shipment) {
-        try {
-          const { data: portproData } = await supabase
-            .from("shipments")
-            .select("*")
-            .eq("portpro_reference", sanitizedContainer)
-            .single();
-
-          if (portproData) {
-            shipment = portproData as TrackingShipment;
-          }
-        } catch {
-          // portpro_reference column may not exist yet
+        if (baseData) {
+          shipment = baseData as TrackingShipment;
         }
+      }
+    }
+
+    // Search by tracking number if provided and no shipment found yet
+    if (!shipment && trackingNumber) {
+      const { data: shipmentData, error } = await supabase
+        .from("shipments")
+        .select("*")
+        .eq("tracking_number", trackingNumber.toUpperCase())
+        .maybeSingle();
+
+      // Only use this result if query succeeded (column exists)
+      if (!error && shipmentData) {
+        shipment = shipmentData as TrackingShipment;
       }
     }
 
@@ -128,17 +149,16 @@ export async function GET(request: NextRequest) {
       // Only search quotes if we have a container number
       if (containerNumber) {
         const sanitizedContainer = sanitizeContainerNumber(containerNumber);
-        const { data: quoteData } = await supabase
+        const { data: quoteData, error: quoteError } = await supabase
           .from("quotes")
           .select("reference_number, status, created_at")
           .eq("container_number", sanitizedContainer)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        const quote = quoteData as Pick<Quote, "reference_number" | "status" | "created_at"> | null;
-
-        if (quote) {
+        if (!quoteError && quoteData) {
+          const quote = quoteData as Pick<Quote, "reference_number" | "status" | "created_at">;
           return NextResponse.json({
             success: true,
             found: true,
@@ -161,14 +181,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get shipment events
-    const { data: eventsData } = await supabase
+    // Get shipment events - try full select first, fall back to base columns
+    let events: TrackingEvent[] = [];
+    const { data: eventsData, error: eventsError } = await supabase
       .from("shipment_events")
       .select("*")
       .eq("shipment_id", shipment.id)
       .order("created_at", { ascending: false });
 
-    const events = eventsData as TrackingEvent[] | null;
+    if (!eventsError && eventsData) {
+      events = eventsData as TrackingEvent[];
+    } else if (eventsError) {
+      // Fall back to base columns
+      const { data: baseEvents } = await supabase
+        .from("shipment_events")
+        .select(BASE_EVENT_COLUMNS)
+        .eq("shipment_id", shipment.id)
+        .order("created_at", { ascending: false });
+
+      if (baseEvents) {
+        events = baseEvents as TrackingEvent[];
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -190,14 +224,14 @@ export async function GET(request: NextRequest) {
         // PortPro integration fields
         portproReference: shipment.portpro_reference || null,
         containerSize: shipment.container_size || null,
-        events: events?.map((e) => ({
+        events: events.map((e) => ({
           status: e.status,
           location: e.location || null,
           description: e.description || null,
           notes: e.notes || null,
           timestamp: e.created_at,
           fromPortPro: e.portpro_event || false,
-        })) || [],
+        })),
       },
     });
   } catch (error) {
