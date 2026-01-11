@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { FloatingNav } from "@/components/ui/aceternity/floating-navbar";
@@ -49,8 +49,14 @@ const dockItems = [
 
 export function Nav() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Don't render nav on admin pages (admin has its own sidebar navigation)
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   // Check if current user is admin
   const isAdmin = isAdminEmail(user?.email);

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Phone, Mail, MapPin, ArrowUpRight } from "lucide-react";
 
 const navigation = {
@@ -16,6 +19,12 @@ const navigation = {
 };
 
 export function Footer() {
+  const pathname = usePathname();
+
+  // Don't render footer on admin pages (admin has its own layout)
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
   return (
     <footer className="border-t bg-secondary/30 pb-24 md:pb-0">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">

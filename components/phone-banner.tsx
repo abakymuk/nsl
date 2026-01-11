@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Phone, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function PhoneBanner() {
+  const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Don't render on admin pages
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   useEffect(() => {
     const handleScroll = () => {
