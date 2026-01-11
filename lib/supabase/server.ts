@@ -2,6 +2,7 @@ import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
+import { isAdminEmail } from "@/lib/constants";
 
 // Server-side Supabase client with auth (for server components and API routes)
 export async function createServerClient() {
@@ -82,11 +83,5 @@ export async function getUser() {
 // Check if user is admin
 export async function isAdmin() {
   const user = await getUser();
-  if (!user?.email) return false;
-
-  const ADMIN_EMAILS = [
-    "vlad@newstreamlogistics.com",
-  ];
-
-  return ADMIN_EMAILS.includes(user.email);
+  return isAdminEmail(user?.email);
 }

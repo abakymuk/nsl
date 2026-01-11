@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isAdminEmail } from "@/lib/constants";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = searchParams.get("next"); // Only use explicit next if provided
 
   if (code) {
     const cookieStore = await cookies();
@@ -30,10 +31,18 @@ export async function GET(request: Request) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+    if (!error && data.user) {
+      // If explicit redirect was requested, use it
+      if (next) {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
+
+      // Otherwise, route based on user role
+      const destination = isAdminEmail(data.user.email) ? "/admin" : "/dashboard";
+
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 

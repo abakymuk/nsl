@@ -21,23 +21,22 @@ import {
   Package,
   Settings,
   Shield,
-  Users,
   Mail,
   Home,
   MapPin,
-  Phone,
   FileText,
   LogIn,
   LayoutDashboard,
   LogOut,
   User as UserIcon,
+  ShieldCheck,
 } from "lucide-react";
+import { isAdminEmail } from "@/lib/constants";
 
 const navItems = [
   { name: "Services", link: "/services", icon: <Package className="h-4 w-4" /> },
   { name: "Process", link: "/process", icon: <Settings className="h-4 w-4" /> },
   { name: "Compliance", link: "/compliance", icon: <Shield className="h-4 w-4" /> },
-  { name: "About", link: "/about", icon: <Users className="h-4 w-4" /> },
   { name: "Contact", link: "/contact", icon: <Mail className="h-4 w-4" /> },
 ];
 
@@ -45,7 +44,6 @@ const dockItems = [
   { title: "Home", icon: <Home className="h-full w-full" />, href: "/" },
   { title: "Quote", icon: <FileText className="h-full w-full" />, href: "/quote" },
   { title: "Track", icon: <MapPin className="h-full w-full" />, href: "/track" },
-  { title: "Call", icon: <Phone className="h-full w-full" />, href: "tel:+13105551234" },
   { title: "Contact", icon: <Mail className="h-full w-full" />, href: "/contact" },
 ];
 
@@ -53,6 +51,13 @@ export function Nav() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Check if current user is admin
+  const isAdmin = isAdminEmail(user?.email);
+
+  // Determine the appropriate portal link based on role
+  const portalLink = isAdmin ? "/admin" : "/dashboard";
+  const portalLabel = isAdmin ? "Admin Panel" : "Dashboard";
 
   useEffect(() => {
     const supabase = createClient();
@@ -97,13 +102,6 @@ export function Nav() {
         ctaButton={
           <div className="flex items-center gap-3">
             <Link
-              href="tel:+13105551234"
-              className="hidden lg:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Phone className="h-4 w-4" />
-              <span>(310) 555-1234</span>
-            </Link>
-            <Link
               href="/track"
               className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -125,16 +123,24 @@ export function Nav() {
             {!loading && user && (
               <>
                 <Link
-                  href="/dashboard"
+                  href={portalLink}
                   className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Dashboard</span>
+                  {isAdmin ? (
+                    <ShieldCheck className="h-4 w-4" />
+                  ) : (
+                    <LayoutDashboard className="h-4 w-4" />
+                  )}
+                  <span>{portalLabel}</span>
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                      <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                        isAdmin
+                          ? "bg-gradient-to-br from-primary to-accent"
+                          : "bg-primary"
+                      }`}>
                         <span className="text-primary-foreground font-medium text-xs">
                           {user.email?.charAt(0).toUpperCase()}
                         </span>
@@ -144,14 +150,37 @@ export function Nav() {
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-medium">{user.email}</p>
+                      {isAdmin && (
+                        <p className="text-xs text-primary font-medium flex items-center gap-1 mt-0.5">
+                          <ShieldCheck className="h-3 w-3" />
+                          Administrator
+                        </p>
+                      )}
                     </div>
                     <DropdownMenuSeparator />
+
+                    {/* Show appropriate portal link */}
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Dashboard
+                      <Link href={portalLink} className="cursor-pointer">
+                        {isAdmin ? (
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                        ) : (
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                        )}
+                        {portalLabel}
                       </Link>
                     </DropdownMenuItem>
+
+                    {/* Admin users can also access customer dashboard */}
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard" className="cursor-pointer">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          Customer View
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/profile" className="cursor-pointer">
                         <UserIcon className="mr-2 h-4 w-4" />
