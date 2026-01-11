@@ -183,7 +183,7 @@ class PortProClient {
     if (params?.limit) searchParams.set("limit", params.limit.toString());
 
     const query = searchParams.toString();
-    const endpoint = `/load${query ? `?${query}` : ""}`;
+    const endpoint = `/loads${query ? `?${query}` : ""}`;
 
     const response = await this.request<{ data: PortProLoad[] }>(endpoint);
     return response.data || [];
@@ -195,7 +195,7 @@ class PortProClient {
   async getLoadByReference(referenceNumber: string): Promise<PortProLoad | null> {
     try {
       const response = await this.request<{ data: PortProLoad }>(
-        `/load/reference/${referenceNumber}`
+        `/loads/${referenceNumber}`
       );
       return response.data || null;
     } catch (error) {
@@ -209,7 +209,7 @@ class PortProClient {
    */
   async getLoadById(id: string): Promise<PortProLoad | null> {
     try {
-      const response = await this.request<{ data: PortProLoad }>(`/load/${id}`);
+      const response = await this.request<{ data: PortProLoad }>(`/loads/${id}`);
       return response.data || null;
     } catch (error) {
       console.error("Error fetching load:", error);
@@ -222,7 +222,7 @@ class PortProClient {
    */
   async searchByContainer(containerNumber: string): Promise<PortProLoad[]> {
     const response = await this.request<{ data: PortProLoad[] }>(
-      `/load?containerNo=${encodeURIComponent(containerNumber)}`
+      `/loads?containerNo=${encodeURIComponent(containerNumber)}`
     );
     return response.data || [];
   }
