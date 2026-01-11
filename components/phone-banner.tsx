@@ -11,12 +11,13 @@ export function PhoneBanner() {
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // Don't render on admin pages
-  if (pathname?.startsWith("/admin")) {
-    return null;
-  }
+  // Check if on admin pages
+  const isAdminPage = pathname?.startsWith("/admin");
 
   useEffect(() => {
+    // Don't set up scroll listener on admin pages
+    if (isAdminPage) return;
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
@@ -37,15 +38,15 @@ export function PhoneBanner() {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, isAdminPage]);
 
   const handleDismiss = () => {
     setIsDismissed(true);
     setIsVisible(false);
   };
 
-  // Don't show if dismissed or on desktop
-  if (isDismissed) return null;
+  // Don't show if dismissed, on desktop, or on admin pages
+  if (isDismissed || isAdminPage) return null;
 
   return (
     <AnimatePresence>

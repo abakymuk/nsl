@@ -53,10 +53,8 @@ export function Nav() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Don't render nav on admin pages (admin has its own sidebar navigation)
-  if (pathname?.startsWith("/admin")) {
-    return null;
-  }
+  // Check if on admin pages
+  const isAdminPage = pathname?.startsWith("/admin");
 
   // Check if current user is admin
   const isAdmin = isAdminEmail(user?.email);
@@ -83,6 +81,11 @@ export function Nav() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Don't render nav on admin pages (admin has its own sidebar navigation)
+  if (isAdminPage) {
+    return null;
+  }
 
   const handleSignOut = async () => {
     const supabase = createClient();
