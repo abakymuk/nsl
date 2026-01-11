@@ -154,7 +154,7 @@ export interface Database {
         Row: {
           id: string;
           quote_id: string | null;
-          tracking_number: string;
+          tracking_number: string | null;
           created_at: string;
           updated_at: string;
           container_number: string;
@@ -182,7 +182,7 @@ export interface Database {
         Insert: {
           id?: string;
           quote_id?: string | null;
-          tracking_number: string;
+          tracking_number?: string | null;
           created_at?: string;
           updated_at?: string;
           container_number: string;
@@ -209,7 +209,7 @@ export interface Database {
         Update: {
           id?: string;
           quote_id?: string | null;
-          tracking_number?: string;
+          tracking_number?: string | null;
           created_at?: string;
           updated_at?: string;
           container_number?: string;

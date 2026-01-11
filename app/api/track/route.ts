@@ -2,7 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeContainerNumber } from "@/lib/sanitize";
-import type { Shipment, ShipmentEvent, Quote } from "@/types/database";
+import type { Quote } from "@/types/database";
+
+// Define a flexible shipment type that allows optional fields
+interface TrackingShipment {
+  id: string;
+  container_number: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  current_location?: string | null;
+  pickup_time?: string | null;
+  delivery_time?: string | null;
+  driver_name?: string | null;
+  public_notes?: string | null;
+  // Fields that may or may not exist depending on migrations
+  tracking_number?: string | null;
+  origin?: string | null;
+  destination?: string | null;
+  eta?: string | null;
+  portpro_reference?: string | null;
+  container_size?: string | null;
+}
+
+interface TrackingEvent {
+  id: string;
+  shipment_id: string;
+  status: string;
+  created_at: string;
+  location?: string | null;
+  notes?: string | null;
+  description?: string | null;
+  portpro_event?: boolean;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,17 +65,21 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServerClient();
-    let shipment: Shipment | null = null;
+    let shipment: TrackingShipment | null = null;
 
     // Search by tracking number first (NSL tracking number)
     if (trackingNumber) {
-      const { data: shipmentData } = await supabase
-        .from("shipments")
-        .select("*")
-        .eq("tracking_number", trackingNumber.toUpperCase())
-        .single();
+      try {
+        const { data: shipmentData } = await supabase
+          .from("shipments")
+          .select("*")
+          .eq("tracking_number", trackingNumber.toUpperCase())
+          .single();
 
-      shipment = shipmentData as Shipment | null;
+        shipment = shipmentData as TrackingShipment | null;
+      } catch {
+        // tracking_number column may not exist yet, continue with container search
+      }
     }
 
     // If not found by tracking number, search by container number
@@ -57,7 +93,7 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const { data: shipmentData } = await supabase
+      const { data: shipmentData, error: shipmentError } = await supabase
         .from("shipments")
         .select("*")
         .eq("container_number", sanitizedContainer)
@@ -65,17 +101,25 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .single();
 
-      shipment = shipmentData as Shipment | null;
+      if (!shipmentError && shipmentData) {
+        shipment = shipmentData as TrackingShipment;
+      }
 
       // Also search by PortPro reference if not found
       if (!shipment) {
-        const { data: portproData } = await supabase
-          .from("shipments")
-          .select("*")
-          .eq("portpro_reference", sanitizedContainer)
-          .single();
+        try {
+          const { data: portproData } = await supabase
+            .from("shipments")
+            .select("*")
+            .eq("portpro_reference", sanitizedContainer)
+            .single();
 
-        shipment = portproData as Shipment | null;
+          if (portproData) {
+            shipment = portproData as TrackingShipment;
+          }
+        } catch {
+          // portpro_reference column may not exist yet
+        }
       }
     }
 
@@ -124,35 +168,35 @@ export async function GET(request: NextRequest) {
       .eq("shipment_id", shipment.id)
       .order("created_at", { ascending: false });
 
-    const events = eventsData as ShipmentEvent[] | null;
+    const events = eventsData as TrackingEvent[] | null;
 
     return NextResponse.json({
       success: true,
       found: true,
       type: "shipment",
       data: {
-        trackingNumber: shipment.tracking_number,
+        trackingNumber: shipment.tracking_number || shipment.portpro_reference || `NSL-${shipment.id.substring(0, 8).toUpperCase()}`,
         containerNumber: shipment.container_number,
         status: shipment.status,
-        origin: shipment.origin,
-        destination: shipment.destination,
-        eta: shipment.eta,
-        currentLocation: shipment.current_location,
-        pickupTime: shipment.pickup_time,
-        deliveryTime: shipment.delivery_time,
-        driverName: shipment.driver_name,
-        publicNotes: shipment.public_notes,
+        origin: shipment.origin || null,
+        destination: shipment.destination || null,
+        eta: shipment.eta || null,
+        currentLocation: shipment.current_location || null,
+        pickupTime: shipment.pickup_time || null,
+        deliveryTime: shipment.delivery_time || null,
+        driverName: shipment.driver_name || null,
+        publicNotes: shipment.public_notes || null,
         lastUpdate: shipment.updated_at,
         // PortPro integration fields
-        portproReference: shipment.portpro_reference,
-        containerSize: shipment.container_size,
+        portproReference: shipment.portpro_reference || null,
+        containerSize: shipment.container_size || null,
         events: events?.map((e) => ({
           status: e.status,
-          location: e.location,
-          description: e.description,
-          notes: e.notes,
+          location: e.location || null,
+          description: e.description || null,
+          notes: e.notes || null,
           timestamp: e.created_at,
-          fromPortPro: e.portpro_event,
+          fromPortPro: e.portpro_event || false,
         })) || [],
       },
     });
