@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUser, isAdmin } from "@/lib/supabase/server";
-import { AdminSidebar, MobileAdminNav } from "@/components/admin/sidebar";
+import { SidebarProvider } from "@/components/admin/sidebar";
 
 export default async function AdminLayout({
   children,
@@ -19,15 +19,11 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
-  return (
-    <div className="min-h-screen bg-muted/30">
-      <AdminSidebar />
-      <div className="lg:pl-64">
-        <main className="py-6 px-4 sm:px-6 lg:px-8 pb-24 lg:pb-6">
-          {children}
-        </main>
-      </div>
-      <MobileAdminNav />
-    </div>
-  );
+  // Extract user info for sidebar
+  const userData = {
+    email: user.email || "",
+    name: user.user_metadata?.full_name || user.user_metadata?.name || undefined,
+  };
+
+  return <SidebarProvider user={userData}>{children}</SidebarProvider>;
 }
