@@ -94,26 +94,32 @@ export default async function ShipmentDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Route */}
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <h2 className="font-semibold mb-4">Route Information</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin className="h-4 w-4 text-green-500" />
-                  <p className="text-xs text-muted-foreground">Origin</p>
-                </div>
-                <p className="font-medium">{shipment.origin || "N/A"}</p>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin className="h-4 w-4 text-red-500" />
-                  <p className="text-xs text-muted-foreground">Destination</p>
-                </div>
-                <p className="font-medium">{shipment.destination || "N/A"}</p>
+          {/* Route - only show if origin or destination exists */}
+          {(shipment.origin || shipment.destination) && (
+            <div className="rounded-xl border bg-card p-6 shadow-sm">
+              <h2 className="font-semibold mb-4">Route Information</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {shipment.origin && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <MapPin className="h-4 w-4 text-green-500" />
+                      <p className="text-xs text-muted-foreground">Origin</p>
+                    </div>
+                    <p className="font-medium">{shipment.origin}</p>
+                  </div>
+                )}
+                {shipment.destination && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <MapPin className="h-4 w-4 text-red-500" />
+                      <p className="text-xs text-muted-foreground">Destination</p>
+                    </div>
+                    <p className="font-medium">{shipment.destination}</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Shipment Details */}
           <div className="rounded-xl border bg-card p-6 shadow-sm">

@@ -137,8 +137,10 @@ export default async function AdminShipmentsPage({
                       </code>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm">
-                        {shipment.origin || "—"} → {shipment.destination || "—"}
+                      <p className="text-sm text-muted-foreground">
+                        {shipment.origin && shipment.destination
+                          ? `${shipment.origin} → ${shipment.destination}`
+                          : shipment.origin || shipment.destination || "—"}
                       </p>
                     </td>
                     <td className="px-6 py-4">
