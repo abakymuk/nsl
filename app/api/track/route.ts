@@ -1,77 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeContainerNumber } from "@/lib/sanitize";
-import type { Quote } from "@/types/database";
 
-// Base columns that always exist in the original schema
-const BASE_SHIPMENT_COLUMNS = `
-  id,
-  container_number,
-  status,
-  created_at,
-  updated_at,
-  current_location,
-  pickup_time,
-  delivery_time,
-  driver_name,
-  public_notes
-`;
+// Use untyped client for tracking to avoid schema mismatch issues
+function createTrackingClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Base event columns that always exist
-const BASE_EVENT_COLUMNS = `
-  id,
-  shipment_id,
-  status,
-  created_at,
-  location,
-  notes
-`;
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return null;
+  }
 
-// Define a flexible shipment type that allows optional fields
-interface TrackingShipment {
-  id: string;
-  container_number: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  current_location?: string | null;
-  pickup_time?: string | null;
-  delivery_time?: string | null;
-  driver_name?: string | null;
-  public_notes?: string | null;
-  // Fields that may or may not exist depending on migrations
-  tracking_number?: string | null;
-  origin?: string | null;
-  destination?: string | null;
-  eta?: string | null;
-  portpro_reference?: string | null;
-  container_size?: string | null;
-}
-
-interface TrackingEvent {
-  id: string;
-  shipment_id: string;
-  status: string;
-  created_at: string;
-  location?: string | null;
-  notes?: string | null;
-  description?: string | null;
-  portpro_event?: boolean;
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
   try {
     // Check rate limit
-    const rateLimit = await checkRateLimit(request, "quote"); // Reuse quote limiter
+    const rateLimit = await checkRateLimit(request, "quote");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.reset);
     }
 
-    // Get container number or tracking number from query params
+    // Get container number from query params
     const { searchParams } = new URL(request.url);
     const containerNumber = searchParams.get("container");
-    const trackingNumber = searchParams.get("number"); // NSL tracking number
+    const trackingNumber = searchParams.get("number");
 
     if (!containerNumber && !trackingNumber) {
       return NextResponse.json(
@@ -80,18 +40,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured()) {
+    // Create Supabase client
+    const supabase = createTrackingClient();
+    if (!supabase) {
       return NextResponse.json(
         { error: "Tracking service is currently unavailable" },
         { status: 503 }
       );
     }
 
-    const supabase = createServerClient();
-    let shipment: TrackingShipment | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let shipment: any = null;
 
-    // Search by container number (most reliable - column always exists)
+    // Search by container number first (most reliable)
     if (containerNumber) {
       const sanitizedContainer = sanitizeContainerNumber(containerNumber);
 
@@ -102,76 +63,59 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // First try with all columns (if migrations have been applied)
-      const { data: shipmentData, error: shipmentError } = await supabase
+      const { data, error } = await supabase
         .from("shipments")
         .select("*")
         .eq("container_number", sanitizedContainer)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
 
-      if (!shipmentError && shipmentData) {
-        shipment = shipmentData as TrackingShipment;
-      } else if (shipmentError) {
-        // If error (likely column doesn't exist), try with base columns only
-        console.log("Falling back to base columns due to error:", shipmentError.message);
-        const { data: baseData } = await supabase
-          .from("shipments")
-          .select(BASE_SHIPMENT_COLUMNS)
-          .eq("container_number", sanitizedContainer)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (baseData) {
-          shipment = baseData as TrackingShipment;
-        }
+      if (error) {
+        console.error("Shipment query error:", error);
+      } else if (data && data.length > 0) {
+        shipment = data[0];
       }
     }
 
-    // Search by tracking number if provided and no shipment found yet
+    // If not found and tracking number provided, try that
     if (!shipment && trackingNumber) {
-      const { data: shipmentData, error } = await supabase
+      const { data, error } = await supabase
         .from("shipments")
         .select("*")
         .eq("tracking_number", trackingNumber.toUpperCase())
-        .maybeSingle();
+        .limit(1);
 
-      // Only use this result if query succeeded (column exists)
-      if (!error && shipmentData) {
-        shipment = shipmentData as TrackingShipment;
+      // Ignore errors (column might not exist)
+      if (!error && data && data.length > 0) {
+        shipment = data[0];
       }
     }
 
     // If no shipment found, check for quotes
-    if (!shipment) {
-      // Only search quotes if we have a container number
-      if (containerNumber) {
-        const sanitizedContainer = sanitizeContainerNumber(containerNumber);
-        const { data: quoteData, error: quoteError } = await supabase
-          .from("quotes")
-          .select("reference_number, status, created_at")
-          .eq("container_number", sanitizedContainer)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    if (!shipment && containerNumber) {
+      const sanitizedContainer = sanitizeContainerNumber(containerNumber);
 
-        if (!quoteError && quoteData) {
-          const quote = quoteData as Pick<Quote, "reference_number" | "status" | "created_at">;
-          return NextResponse.json({
-            success: true,
-            found: true,
-            type: "quote",
-            data: {
-              containerNumber: sanitizedContainer,
-              status: "quote_" + quote.status,
-              referenceNumber: quote.reference_number,
-              message: getQuoteStatusMessage(quote.status),
-              lastUpdate: quote.created_at,
-            },
-          });
-        }
+      const { data: quoteData, error: quoteError } = await supabase
+        .from("quotes")
+        .select("reference_number, status, created_at")
+        .eq("container_number", sanitizedContainer)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!quoteError && quoteData && quoteData.length > 0) {
+        const quote = quoteData[0];
+        return NextResponse.json({
+          success: true,
+          found: true,
+          type: "quote",
+          data: {
+            containerNumber: sanitizedContainer,
+            status: "quote_" + quote.status,
+            referenceNumber: quote.reference_number,
+            message: getQuoteStatusMessage(quote.status),
+            lastUpdate: quote.created_at,
+          },
+        });
       }
 
       return NextResponse.json({
@@ -181,8 +125,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get shipment events - try full select first, fall back to base columns
-    let events: TrackingEvent[] = [];
+    if (!shipment) {
+      return NextResponse.json({
+        success: true,
+        found: false,
+        message: "No shipment found. If you recently submitted a quote, please allow 1-2 hours for processing.",
+      });
+    }
+
+    // Get shipment events
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let events: any[] = [];
     const { data: eventsData, error: eventsError } = await supabase
       .from("shipment_events")
       .select("*")
@@ -190,26 +143,16 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (!eventsError && eventsData) {
-      events = eventsData as TrackingEvent[];
-    } else if (eventsError) {
-      // Fall back to base columns
-      const { data: baseEvents } = await supabase
-        .from("shipment_events")
-        .select(BASE_EVENT_COLUMNS)
-        .eq("shipment_id", shipment.id)
-        .order("created_at", { ascending: false });
-
-      if (baseEvents) {
-        events = baseEvents as TrackingEvent[];
-      }
+      events = eventsData;
     }
 
+    // Build response with safe property access
     return NextResponse.json({
       success: true,
       found: true,
       type: "shipment",
       data: {
-        trackingNumber: shipment.tracking_number || shipment.portpro_reference || `NSL-${shipment.id.substring(0, 8).toUpperCase()}`,
+        trackingNumber: shipment.tracking_number || shipment.portpro_reference || `NSL-${String(shipment.id).substring(0, 8).toUpperCase()}`,
         containerNumber: shipment.container_number,
         status: shipment.status,
         origin: shipment.origin || null,
@@ -221,7 +164,6 @@ export async function GET(request: NextRequest) {
         driverName: shipment.driver_name || null,
         publicNotes: shipment.public_notes || null,
         lastUpdate: shipment.updated_at,
-        // PortPro integration fields
         portproReference: shipment.portpro_reference || null,
         containerSize: shipment.container_size || null,
         events: events.map((e) => ({
@@ -236,6 +178,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error tracking shipment:", error);
+
+    // Return more detailed error in development
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Detailed error:", errorMessage);
 
     return NextResponse.json(
       { error: "Failed to track shipment. Please try again later." },
