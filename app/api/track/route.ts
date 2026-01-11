@@ -42,13 +42,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Query shipments
-    const { data: shipments, error: shipmentError } = await supabase
+    // Query shipments - try container number first, then tracking number
+    let shipments;
+    let shipmentError;
+
+    // Try container number first
+    const containerResult = await supabase
       .from("shipments")
-      .select("id, container_number, status, created_at, updated_at, current_location, pickup_time, delivery_time, driver_name, public_notes")
+      .select("id, tracking_number, container_number, container_size, status, created_at, updated_at, current_location, origin, destination, pickup_time, delivery_time, eta, driver_name, weight, seal_number, chassis_number, public_notes")
       .eq("container_number", sanitized)
       .order("created_at", { ascending: false })
       .limit(1);
+
+    shipments = containerResult.data;
+    shipmentError = containerResult.error;
+
+    // If not found by container, try tracking number
+    if (!shipments || shipments.length === 0) {
+      const trackingResult = await supabase
+        .from("shipments")
+        .select("id, tracking_number, container_number, container_size, status, created_at, updated_at, current_location, origin, destination, pickup_time, delivery_time, eta, driver_name, weight, seal_number, chassis_number, public_notes")
+        .eq("tracking_number", sanitized)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      shipments = trackingResult.data;
+      shipmentError = trackingResult.error;
+    }
 
     if (shipmentError) {
       console.error("Supabase shipment error:", shipmentError);
@@ -73,13 +93,20 @@ export async function GET(request: NextRequest) {
         found: true,
         type: "shipment",
         data: {
-          trackingNumber: `NSL-${String(shipment.id).substring(0, 8).toUpperCase()}`,
+          trackingNumber: shipment.tracking_number || `NSL-${String(shipment.id).substring(0, 8).toUpperCase()}`,
           containerNumber: shipment.container_number,
+          containerSize: shipment.container_size,
           status: shipment.status,
           currentLocation: shipment.current_location,
+          origin: shipment.origin,
+          destination: shipment.destination,
           pickupTime: shipment.pickup_time,
           deliveryTime: shipment.delivery_time,
+          eta: shipment.eta,
           driverName: shipment.driver_name,
+          weight: shipment.weight,
+          sealNumber: shipment.seal_number,
+          chassisNumber: shipment.chassis_number,
           publicNotes: shipment.public_notes,
           lastUpdate: shipment.updated_at,
           events: (events || []).map((e: { status: string; location: string | null; notes: string | null; created_at: string }) => ({
