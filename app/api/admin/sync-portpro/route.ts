@@ -3,12 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { auth } from "@clerk/nextjs/server";
 import { getPortProClient, mapPortProStatus, PortProLoad } from "@/lib/portpro";
 
-// Admin emails that can trigger sync
-const ADMIN_EMAILS = [
-  "andriy@newstreamgroup.com",
-  "admin@newstream-logistics.com",
-];
-
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -35,24 +29,30 @@ export async function POST(request: NextRequest) {
     try {
       portpro = getPortProClient();
     } catch (error) {
+      console.error("PortPro client error:", error);
       return NextResponse.json(
-        { error: "PortPro not configured" },
+        { error: "PortPro not configured", details: error instanceof Error ? error.message : "Unknown" },
         { status: 503 }
       );
     }
 
     // Parse request body for options
     const body = await request.json().catch(() => ({}));
-    const { limit = 100, skip = 0, status } = body;
+    const { limit = 50, skip = 0 } = body;
 
     // Fetch loads from PortPro
     console.log(`Fetching loads from PortPro (skip: ${skip}, limit: ${limit})...`);
 
-    const loads = await portpro.getLoads({
-      skip,
-      limit,
-      status,
-    });
+    let loads: PortProLoad[];
+    try {
+      loads = await portpro.getLoads({ skip, limit });
+    } catch (fetchError) {
+      console.error("PortPro fetch error:", fetchError);
+      return NextResponse.json(
+        { error: "Failed to fetch loads from PortPro", details: fetchError instanceof Error ? fetchError.message : "Unknown" },
+        { status: 500 }
+      );
+    }
 
     console.log(`Fetched ${loads.length} loads from PortPro`);
 
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "No loads found in PortPro",
+        total: 0,
         synced: 0,
         skipped: 0,
         errors: 0,
@@ -81,25 +82,34 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check if shipment already exists (by portpro_reference or container_number)
-        const { data: existing } = await supabase
+        // Check if shipment already exists by container_number
+        const { data: existing, error: selectError } = await supabase
           .from("shipments")
           .select("id")
-          .or(`portpro_reference.eq.${load.reference_number},container_number.eq.${load.containerNo}`)
+          .eq("container_number", load.containerNo)
           .limit(1);
+
+        if (selectError) {
+          console.error(`Error checking existing shipment:`, selectError);
+          errors++;
+          errorDetails.push(`Select ${load.reference_number}: ${selectError.message}`);
+          continue;
+        }
+
+        // Base shipment data (only columns that definitely exist)
+        const baseShipmentData = {
+          container_number: load.containerNo,
+          status: mapPortProStatus(load.status),
+          current_location: getLoadLocation(load),
+          public_notes: `PortPro: ${load.reference_number} - ${load.type_of_load}`,
+          updated_at: new Date().toISOString(),
+        };
 
         if (existing && existing.length > 0) {
           // Update existing shipment
           const { error: updateError } = await supabase
             .from("shipments")
-            .update({
-              portpro_load_id: load._id,
-              portpro_reference: load.reference_number,
-              container_number: load.containerNo,
-              container_size: load.containerSize || null,
-              status: mapPortProStatus(load.status),
-              updated_at: new Date().toISOString(),
-            })
+            .update(baseShipmentData)
             .eq("id", existing[0].id);
 
           if (updateError) {
@@ -112,20 +122,9 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Create new shipment
-          const shipmentData = {
-            portpro_load_id: load._id,
-            portpro_reference: load.reference_number,
-            container_number: load.containerNo,
-            container_size: load.containerSize || null,
-            status: mapPortProStatus(load.status),
-            current_location: getLoadLocation(load),
-            driver_name: null,
-            public_notes: `Imported from PortPro - ${load.type_of_load} load`,
-          };
-
           const { error: insertError } = await supabase
             .from("shipments")
-            .insert(shipmentData);
+            .insert(baseShipmentData);
 
           if (insertError) {
             console.error(`Error creating shipment for ${load.reference_number}:`, insertError);
@@ -167,7 +166,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to check sync status / fetch load count
+// GET endpoint to check PortPro connection
 export async function GET() {
   try {
     let portpro;
@@ -175,18 +174,19 @@ export async function GET() {
       portpro = getPortProClient();
     } catch (error) {
       return NextResponse.json(
-        { error: "PortPro not configured" },
+        { error: "PortPro not configured", details: error instanceof Error ? error.message : "Unknown" },
         { status: 503 }
       );
     }
 
-    // Fetch a small batch to get count
+    // Test connection by fetching one load
     const loads = await portpro.getLoads({ limit: 1 });
 
     return NextResponse.json({
       success: true,
       configured: true,
       message: "PortPro connection successful",
+      sampleLoad: loads.length > 0 ? { reference: loads[0].reference_number, container: loads[0].containerNo } : null,
     });
 
   } catch (error) {
@@ -202,11 +202,10 @@ export async function GET() {
 }
 
 function getLoadLocation(load: PortProLoad): string | null {
-  // Determine current location based on status
   const status = load.status;
 
   if (status === "PENDING" || status === "CUSTOMS HOLD" || status === "FREIGHT HOLD" || status === "AVAILABLE") {
-    return load.shipper?.company_name || load.shipper?.address || "At Port";
+    return load.shipper?.company_name || "At Port";
   }
 
   if (status === "DISPATCHED") {
@@ -214,7 +213,7 @@ function getLoadLocation(load: PortProLoad): string | null {
   }
 
   if (status === "DROPPED" || status === "COMPLETED" || status === "BILLING") {
-    return load.consignee?.company_name || load.consignee?.address || "Delivered";
+    return load.consignee?.company_name || "Delivered";
   }
 
   return null;
