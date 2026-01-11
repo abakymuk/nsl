@@ -1,12 +1,9 @@
-import { currentUser } from "@clerk/nextjs/server";
-import { createClient } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
+import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { FileText, Plus, ChevronRight } from "lucide-react";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createUntypedAdminClient();
 
 async function getCustomerCompany(email: string) {
   const { data } = await supabase
@@ -50,8 +47,13 @@ export default async function QuotesPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress || "";
+  const user = await getUser();
+
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const email = user.email || "";
   const { status } = await searchParams;
 
   // Get company name to show all company quotes

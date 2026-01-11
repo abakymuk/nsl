@@ -1,16 +1,12 @@
-import { currentUser } from "@clerk/nextjs/server";
-import { createClient } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
+import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { FileText, Truck, Clock, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createUntypedAdminClient();
 
 async function getCustomerCompany(email: string) {
-  // First, find the company name from any quote submitted by this email
   const { data } = await supabase
     .from("quotes")
     .select("company_name")
@@ -22,7 +18,6 @@ async function getCustomerCompany(email: string) {
 }
 
 async function getCustomerStats(email: string, companyName: string | null) {
-  // Get quote stats - filter by company name if available, otherwise by email
   const quoteFilter = companyName
     ? { column: "company_name", value: companyName }
     : { column: "email", value: email };
@@ -38,7 +33,6 @@ async function getCustomerStats(email: string, companyName: string | null) {
     .eq(quoteFilter.column, quoteFilter.value)
     .eq("status", "pending");
 
-  // Get shipment stats - filter by company name if available
   const shipmentFilter = companyName
     ? { column: "customer_name", value: companyName }
     : { column: "customer_email", value: email };
@@ -87,7 +81,6 @@ async function getRecentActivity(email: string, companyName: string | null) {
     ? { column: "customer_name", value: companyName }
     : { column: "customer_email", value: email };
 
-  // Get recent quotes
   const { data: quotes } = await supabase
     .from("quotes")
     .select("id, company_name, status, created_at")
@@ -95,27 +88,25 @@ async function getRecentActivity(email: string, companyName: string | null) {
     .order("created_at", { ascending: false })
     .limit(3);
 
-  // Get recent shipments
   const { data: shipments } = await supabase
     .from("shipments")
-    .select("id, tracking_number, status, updated_at")
+    .select("id, container_number, status, updated_at")
     .eq(shipmentFilter.column, shipmentFilter.value)
     .order("updated_at", { ascending: false })
     .limit(3);
 
-  // Combine and sort by date
   const activity = [
     ...(quotes || []).map((q) => ({
       type: "quote",
       id: q.id,
-      title: `Quote: ${q.company_name}`,
+      title: `Quote: ${q.company_name || "Unknown"}`,
       status: q.status,
       date: q.created_at,
     })),
     ...(shipments || []).map((s) => ({
       type: "shipment",
       id: s.id,
-      title: `Shipment: ${s.tracking_number}`,
+      title: `Shipment: ${s.container_number}`,
       status: s.status,
       date: s.updated_at,
     })),
@@ -125,13 +116,16 @@ async function getRecentActivity(email: string, companyName: string | null) {
 }
 
 export default async function DashboardPage() {
-  const user = await currentUser();
-  const firstName = user?.firstName || "there";
-  const email = user?.emailAddresses?.[0]?.emailAddress || "";
+  const user = await getUser();
 
-  // Get company name to show all company data (not just individual)
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const email = user.email || "";
+  const firstName = user.user_metadata?.full_name?.split(" ")[0] || email.split("@")[0];
+
   const companyName = await getCustomerCompany(email);
-
   const stats = await getCustomerStats(email, companyName);
   const recentQuotes = await getRecentQuotes(email, companyName);
   const recentActivity = await getRecentActivity(email, companyName);
@@ -280,12 +274,12 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {recentQuotes.map((quote: any) => (
-                  <tr key={quote.id} className="text-sm">
-                    <td className="py-3">{quote.service_type}</td>
+                {recentQuotes.map((quote: Record<string, unknown>) => (
+                  <tr key={quote.id as string} className="text-sm">
+                    <td className="py-3">{quote.service_type as string}</td>
                     <td className="py-3">
                       <code className="bg-muted px-2 py-0.5 rounded text-xs">
-                        {quote.container_number || "N/A"}
+                        {(quote.container_number as string) || "N/A"}
                       </code>
                     </td>
                     <td className="py-3">
@@ -300,11 +294,11 @@ export default async function DashboardPage() {
                             : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
                         }`}
                       >
-                        {quote.status}
+                        {quote.status as string}
                       </span>
                     </td>
                     <td className="py-3 text-muted-foreground">
-                      {new Date(quote.created_at).toLocaleDateString()}
+                      {new Date(quote.created_at as string).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

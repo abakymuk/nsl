@@ -1,9 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createUntypedAdminClient } from "@/lib/supabase/server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createUntypedAdminClient();
 
 export interface Organization {
   id: string;
@@ -18,19 +15,19 @@ export interface Organization {
 export interface OrganizationMember {
   id: string;
   organization_id: string;
-  clerk_user_id: string;
+  user_id: string;
   email: string;
   role: "admin" | "member";
 }
 
 /**
- * Get user's organization by their Clerk user ID
+ * Get user's organization by their Supabase user ID
  */
-export async function getUserOrganization(clerkUserId: string): Promise<Organization | null> {
+export async function getUserOrganization(userId: string): Promise<Organization | null> {
   const { data: member } = await supabase
     .from("organization_members")
     .select("organization_id")
-    .eq("clerk_user_id", clerkUserId)
+    .eq("user_id", userId)
     .single();
 
   if (!member) return null;
@@ -81,7 +78,7 @@ export async function getOrganizationByEmail(email: string): Promise<Organizatio
  */
 export async function createOrganization(
   name: string,
-  clerkUserId: string,
+  userId: string,
   email: string,
   phone?: string
 ): Promise<Organization | null> {
@@ -111,7 +108,7 @@ export async function createOrganization(
     .from("organization_members")
     .insert({
       organization_id: org.id,
-      clerk_user_id: clerkUserId,
+      user_id: userId,
       email,
       role: "admin",
     });
@@ -131,7 +128,7 @@ export async function createOrganization(
  */
 export async function addOrganizationMember(
   organizationId: string,
-  clerkUserId: string,
+  userId: string,
   email: string,
   role: "admin" | "member" = "member"
 ): Promise<boolean> {
@@ -139,7 +136,7 @@ export async function addOrganizationMember(
     .from("organization_members")
     .insert({
       organization_id: organizationId,
-      clerk_user_id: clerkUserId,
+      user_id: userId,
       email,
       role,
     });

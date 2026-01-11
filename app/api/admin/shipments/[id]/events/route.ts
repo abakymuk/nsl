@@ -1,25 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { createClient } from "@supabase/supabase-js";
+import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const ADMIN_EMAILS = [
-  "vladimirovelyan@gmail.com",
-  "admin@newstream-logistics.com",
-];
-
-async function isAdmin() {
-  const { userId } = await auth();
-  if (!userId) return false;
-
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress;
-  return email && ADMIN_EMAILS.includes(email);
-}
+const supabase = createUntypedAdminClient();
 
 export async function POST(
   request: NextRequest,

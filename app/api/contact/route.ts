@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Save to database if Supabase is configured
     if (isSupabaseConfigured()) {
-      const supabase = createServerClient();
+      const supabase = await createServerClient();
 
       const contactData: ContactInsert = {
         name: body.name,

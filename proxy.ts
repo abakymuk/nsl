@@ -1,23 +1,42 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { type NextRequest, NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
-// Define protected routes - dashboard and admin require authentication
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/admin(.*)',
-]);
+export async function proxy(request: NextRequest) {
+  // Update Supabase session
+  const response = await updateSession(request);
 
-export default clerkMiddleware(async (auth, req) => {
-  // Protect dashboard and admin routes
-  if (isProtectedRoute(req)) {
-    await auth.protect();
+  // Protected routes that require authentication
+  const protectedPaths = ["/dashboard", "/admin"];
+  const isProtectedPath = protectedPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  if (isProtectedPath) {
+    // Check if user is authenticated by looking for Supabase auth cookies
+    const hasAuthCookie = request.cookies.getAll().some(
+      (cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token")
+    );
+
+    if (!hasAuthCookie) {
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("redirect", request.nextUrl.pathname);
+      return NextResponse.redirect(signInUrl);
+    }
   }
-});
+
+  return response;
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images (public images folder)
+     * - api routes that don't need auth
+     */
+    "/((?!_next/static|_next/image|favicon.ico|images|api/track|api/quote|api/contact|api/webhooks).*)",
   ],
 };

@@ -1,12 +1,9 @@
-import { currentUser } from "@clerk/nextjs/server";
-import { createClient } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
+import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Truck, Search, MapPin } from "lucide-react";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createUntypedAdminClient();
 
 async function getCustomerCompany(email: string) {
   // First check quotes table for company name
@@ -61,8 +58,13 @@ export default async function ShipmentsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress || "";
+  const user = await getUser();
+
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const email = user.email || "";
   const { status } = await searchParams;
 
   // Get company name to show all company shipments

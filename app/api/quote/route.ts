@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Save to database if Supabase is configured
     if (isSupabaseConfigured()) {
-      const supabase = createServerClient();
+      const supabase = await createServerClient();
 
       const quoteData: QuoteInsert = {
         container_number: body.containerNumber,

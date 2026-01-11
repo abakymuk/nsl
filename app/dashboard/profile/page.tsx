@@ -1,9 +1,17 @@
-import { currentUser } from "@clerk/nextjs/server";
-import { UserProfile } from "@clerk/nextjs";
-import { Building2, Mail, Phone, MapPin } from "lucide-react";
+import { redirect } from "next/navigation";
+import { getUser } from "@/lib/supabase/server";
+import { Building2, Phone, MapPin } from "lucide-react";
 
 export default async function ProfilePage() {
-  const user = await currentUser();
+  const user = await getUser();
+
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const email = user.email || "";
+  const firstName = user.user_metadata?.full_name?.split(" ")[0] || email.split("@")[0];
+  const lastName = user.user_metadata?.full_name?.split(" ").slice(1).join(" ") || "";
 
   return (
     <div className="space-y-6">
@@ -20,16 +28,14 @@ export default async function ProfilePage() {
         <div className="flex items-start gap-4">
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-2xl font-bold text-primary">
-              {user?.firstName?.[0] || user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase() || "U"}
+              {firstName[0]?.toUpperCase() || "U"}
             </span>
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-semibold">
-              {user?.firstName} {user?.lastName}
+              {firstName} {lastName}
             </h2>
-            <p className="text-muted-foreground">
-              {user?.emailAddresses[0]?.emailAddress}
-            </p>
+            <p className="text-muted-foreground">{email}</p>
           </div>
         </div>
       </div>
@@ -85,25 +91,30 @@ export default async function ProfilePage() {
         </p>
       </div>
 
-      {/* Clerk UserProfile for account management */}
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="p-6 border-b">
-          <h3 className="font-semibold text-lg">Account Settings</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your email, password, and security settings
-          </p>
-        </div>
-        <div className="p-6">
-          <UserProfile
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-none border-0 w-full",
-                navbar: "hidden",
-                pageScrollBox: "p-0",
-              },
-            }}
-          />
+      {/* Account Settings */}
+      <div className="rounded-xl border bg-card p-6">
+        <h3 className="font-semibold text-lg mb-4">Account Settings</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Manage your email and security settings
+        </p>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-background">
+            <div>
+              <p className="font-medium">Email</p>
+              <p className="text-sm text-muted-foreground">{email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-background">
+            <div>
+              <p className="font-medium">Password</p>
+              <p className="text-sm text-muted-foreground">••••••••</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Password change coming soon
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -1,29 +1,21 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getUser, isAdmin } from "@/lib/supabase/server";
 import { AdminSidebar, MobileAdminNav } from "@/components/admin/sidebar";
-
-// List of admin email addresses
-const ADMIN_EMAILS = [
-  "vladimirovelyan@gmail.com",
-  "admin@newstream-logistics.com",
-];
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = await auth();
+  const user = await getUser();
 
-  if (!userId) {
+  if (!user) {
     redirect("/sign-in");
   }
 
-  const user = await currentUser();
-  const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+  const admin = await isAdmin();
 
-  // Check if user is an admin
-  if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
+  if (!admin) {
     redirect("/dashboard");
   }
 
