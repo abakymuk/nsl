@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@clerk/nextjs/server";
 import { getPortProClient, mapPortProStatus, PortProLoad } from "@/lib/portpro";
+
+// Secret key for API access (set in env vars)
+const SYNC_SECRET = process.env.ADMIN_SYNC_SECRET || "nsl-sync-secret-2024";
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const { userId } = await auth();
-    if (!userId) {
+    // Check authorization via header or query param
+    const authHeader = request.headers.get("x-sync-secret");
+    const { searchParams } = new URL(request.url);
+    const querySecret = searchParams.get("secret");
+
+    // Allow access if secret matches (for API calls) or if called from same origin (browser)
+    const isValidSecret = authHeader === SYNC_SECRET || querySecret === SYNC_SECRET;
+    const isFromSameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
+
+    if (!isValidSecret && !isFromSameOrigin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
