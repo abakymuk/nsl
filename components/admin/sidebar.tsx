@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 
 const navItems = [
@@ -37,6 +38,11 @@ const navItems = [
     title: "Analytics",
     href: "/admin/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "PortPro Sync",
+    href: "/admin/sync",
+    icon: RefreshCw,
   },
   {
     title: "Settings",
