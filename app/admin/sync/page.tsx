@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { RefreshCw, CheckCircle, AlertCircle, Loader2, Wifi, WifiOff } from "lucide-react";
 
 interface SyncResult {
   success: boolean;
@@ -17,11 +17,54 @@ interface SyncResult {
   nextSkip?: number;
 }
 
+interface ConnectionStatus {
+  connected: boolean;
+  message: string;
+  sampleLoad?: { reference: string; container: string } | null;
+  error?: string;
+}
+
 export default function SyncPage() {
   const [syncing, setSyncing] = useState(false);
   const [results, setResults] = useState<SyncResult[]>([]);
   const [totalSynced, setTotalSynced] = useState(0);
   const [totalErrors, setTotalErrors] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
+  const [checkingConnection, setCheckingConnection] = useState(false);
+
+  const checkConnection = async () => {
+    setCheckingConnection(true);
+    try {
+      const response = await fetch("/api/admin/sync-portpro");
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setConnectionStatus({
+          connected: true,
+          message: data.message,
+          sampleLoad: data.sampleLoad,
+        });
+      } else {
+        setConnectionStatus({
+          connected: false,
+          message: data.error || "Connection failed",
+          error: data.details,
+        });
+      }
+    } catch (error) {
+      setConnectionStatus({
+        connected: false,
+        message: "Failed to check connection",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
+  useEffect(() => {
+    checkConnection();
+  }, []);
 
   const runSync = async (skip = 0, isInitial = true) => {
     if (isInitial) {
@@ -83,6 +126,66 @@ export default function SyncPage() {
         </p>
       </div>
 
+      {/* Connection Status Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {checkingConnection ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : connectionStatus?.connected ? (
+              <Wifi className="h-5 w-5 text-green-600" />
+            ) : (
+              <WifiOff className="h-5 w-5 text-red-600" />
+            )}
+            PortPro Connection
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {checkingConnection ? (
+            <p className="text-muted-foreground">Checking connection...</p>
+          ) : connectionStatus?.connected ? (
+            <div className="space-y-2">
+              <p className="text-green-600 font-medium">{connectionStatus.message}</p>
+              {connectionStatus.sampleLoad && (
+                <p className="text-sm text-muted-foreground">
+                  Sample load: {connectionStatus.sampleLoad.reference} - Container: {connectionStatus.sampleLoad.container || "N/A"}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-red-600 font-medium">{connectionStatus?.message}</p>
+              {connectionStatus?.error && (
+                <p className="text-sm text-muted-foreground">{connectionStatus.error}</p>
+              )}
+              <p className="text-sm text-muted-foreground mt-2">
+                Make sure PORTPRO_ACCESS_TOKEN and PORTPRO_REFRESH_TOKEN are set in your environment variables.
+              </p>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={checkConnection}
+            disabled={checkingConnection}
+            className="mt-4"
+          >
+            {checkingConnection ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Recheck Connection
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Sync Card */}
       <Card>
         <CardHeader>
           <CardTitle>Sync Loads from PortPro</CardTitle>
@@ -94,7 +197,7 @@ export default function SyncPage() {
         <CardContent className="space-y-4">
           <Button
             onClick={() => runSync()}
-            disabled={syncing}
+            disabled={syncing || !connectionStatus?.connected}
             size="lg"
             className="w-full sm:w-auto"
           >
@@ -110,6 +213,12 @@ export default function SyncPage() {
               </>
             )}
           </Button>
+
+          {!connectionStatus?.connected && !checkingConnection && (
+            <p className="text-sm text-amber-600">
+              Connect to PortPro first before syncing.
+            </p>
+          )}
 
           {(totalSynced > 0 || totalErrors > 0) && (
             <div className="flex gap-4 mt-4">
@@ -140,8 +249,8 @@ export default function SyncPage() {
                   key={index}
                   className={`p-4 rounded-lg border ${
                     result.success
-                      ? "bg-green-50 border-green-200"
-                      : "bg-red-50 border-red-200"
+                      ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900"
+                      : "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -153,7 +262,7 @@ export default function SyncPage() {
                     <span className="font-medium">{result.message}</span>
                   </div>
                   {result.success && (
-                    <div className="text-sm text-gray-600 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="text-sm text-muted-foreground grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div>Total: {result.total}</div>
                       <div>Synced: {result.synced}</div>
                       <div>Skipped: {result.skipped}</div>
@@ -185,11 +294,25 @@ export default function SyncPage() {
           <p>1. Fetches all loads from PortPro API in batches of 50</p>
           <p>2. For each load with a container number:</p>
           <ul className="list-disc list-inside ml-4">
-            <li>If a shipment already exists (by reference or container number), it updates it</li>
-            <li>Otherwise, creates a new shipment</li>
+            <li>If a shipment already exists (by container number), it updates it</li>
+            <li>Otherwise, creates a new shipment with a tracking number</li>
           </ul>
-          <p>3. Loads without container numbers are skipped</p>
-          <p>4. After sync, all shipments will be trackable on the tracking page</p>
+          <p>3. Synced data includes: origin, destination, customer info, ETA, weight, and more</p>
+          <p>4. Loads without container numbers are skipped</p>
+          <p>5. After sync, all shipments will be trackable on the tracking page</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Webhook Setup</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          <p>For real-time updates, configure PortPro to send webhooks to:</p>
+          <code className="block bg-muted px-3 py-2 rounded-md mt-2">
+            {typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/portpro
+          </code>
+          <p className="mt-2">Set your PORTPRO_WEBHOOK_SECRET in environment variables for signature verification.</p>
         </CardContent>
       </Card>
     </div>

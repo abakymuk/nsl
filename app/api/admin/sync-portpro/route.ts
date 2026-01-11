@@ -1,37 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
 import { getPortProClient, mapPortProStatus, PortProLoad } from "@/lib/portpro";
 
-// Secret key for API access (set in env vars)
-const SYNC_SECRET = process.env.ADMIN_SYNC_SECRET || "nsl-sync-secret-2024";
+const supabase = createUntypedAdminClient();
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authorization via header or query param
-    const authHeader = request.headers.get("x-sync-secret");
-    const { searchParams } = new URL(request.url);
-    const querySecret = searchParams.get("secret");
-
-    // Allow access if secret matches (for API calls) or if called from same origin (browser)
-    const isValidSecret = authHeader === SYNC_SECRET || querySecret === SYNC_SECRET;
-    const isFromSameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
-
-    if (!isValidSecret && !isFromSameOrigin) {
+    // Check admin authorization
+    if (!(await isAdmin())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // Get Supabase client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { error: "Database not configured" },
-        { status: 503 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get PortPro client
     let portpro;
@@ -105,20 +83,33 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Base shipment data (only columns that definitely exist)
-        const baseShipmentData = {
+        // Generate tracking number for new shipments
+        const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+        // Full shipment data from PortPro
+        const shipmentData = {
           container_number: load.containerNo,
+          container_size: load.containerSize || null,
           status: mapPortProStatus(load.status),
           current_location: getLoadLocation(load),
+          origin: load.shipper?.address || load.shipper?.company_name || null,
+          destination: load.consignee?.address || load.consignee?.company_name || null,
+          customer_name: load.caller?.company_name || null,
+          customer_email: load.caller?.email || null,
+          eta: load.deliveryTimes?.[0]?.deliveryFromTime || null,
+          pickup_time: load.pickupTimes?.[0]?.pickupFromTime || null,
+          weight: load.weight || null,
+          seal_number: load.sealNo || null,
+          chassis_number: load.chassisNo || null,
           public_notes: `PortPro: ${load.reference_number} - ${load.type_of_load}`,
           updated_at: new Date().toISOString(),
         };
 
         if (existing && existing.length > 0) {
-          // Update existing shipment
+          // Update existing shipment (don't change tracking_number)
           const { error: updateError } = await supabase
             .from("shipments")
-            .update(baseShipmentData)
+            .update(shipmentData)
             .eq("id", existing[0].id);
 
           if (updateError) {
@@ -130,17 +121,20 @@ export async function POST(request: NextRequest) {
             synced++;
           }
         } else {
-          // Create new shipment
+          // Create new shipment with tracking number
           const { error: insertError } = await supabase
             .from("shipments")
-            .insert(baseShipmentData);
+            .insert({
+              ...shipmentData,
+              tracking_number: trackingNumber,
+            });
 
           if (insertError) {
             console.error(`Error creating shipment for ${load.reference_number}:`, insertError);
             errors++;
             errorDetails.push(`Insert ${load.reference_number}: ${insertError.message}`);
           } else {
-            console.log(`Created shipment for ${load.reference_number} (${load.containerNo})`);
+            console.log(`Created shipment for ${load.reference_number} (${load.containerNo}) - Tracking: ${trackingNumber}`);
             synced++;
           }
         }
