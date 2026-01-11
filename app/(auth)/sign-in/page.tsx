@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { isAdminEmail } from "@/lib/constants";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const explicitRedirect = searchParams.get("redirect"); // Only use if explicitly provided
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,7 +28,7 @@ export default function SignInPage() {
 
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -38,7 +39,17 @@ export default function SignInPage() {
       return;
     }
 
-    router.push(redirect);
+    // Determine redirect destination
+    let destination: string;
+    if (explicitRedirect) {
+      // Use explicit redirect if provided (e.g., from protected page)
+      destination = explicitRedirect;
+    } else {
+      // Route based on user role
+      destination = isAdminEmail(data.user?.email) ? "/admin" : "/dashboard";
+    }
+
+    router.push(destination);
     router.refresh();
   };
 
