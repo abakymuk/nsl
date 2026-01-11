@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
-import { getPortProClient, mapPortProStatus, PortProLoad } from "@/lib/portpro";
+import { getPortProClient, mapPortProStatus, formatLocation, PortProLoad } from "@/lib/portpro";
 
 const supabase = createUntypedAdminClient();
 
@@ -86,21 +86,51 @@ export async function POST(request: NextRequest) {
         // Generate tracking number for new shipments
         const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-        // Full shipment data from PortPro
+        // Determine locations using the formatLocation helper
+        const pickupLocation = formatLocation(load.pickupLocation)
+          || formatLocation(load.shipper)
+          || formatLocation(load.terminal);
+
+        const deliveryLocation = formatLocation(load.deliveryLocation)
+          || formatLocation(load.consignee);
+
+        const returnLocation = formatLocation(load.returnLocation);
+
+        // Full shipment data from PortPro with all available fields
         const shipmentData = {
+          // Container info
           container_number: load.containerNo,
           container_size: load.containerSize || null,
+          container_type: load.containerType || null, // HC, ST, RF
+          // Status & location
           status: mapPortProStatus(load.status),
           current_location: getLoadLocation(load),
-          origin: load.shipper?.address || load.shipper?.company_name || null,
-          destination: load.consignee?.address || load.consignee?.company_name || null,
+          // Locations (addresses)
+          origin: pickupLocation,
+          destination: deliveryLocation,
+          return_location: returnLocation,
+          // Customer info
           customer_name: load.caller?.company_name || null,
           customer_email: load.caller?.email || null,
+          customer_phone: load.caller?.phone || null,
+          // Booking & shipping
+          booking_number: load.bookingNo || null,
+          shipping_line: load.ssl || null,
+          commodity: load.commodity || null,
+          // Dates
           eta: load.deliveryTimes?.[0]?.deliveryFromTime || null,
           pickup_time: load.pickupTimes?.[0]?.pickupFromTime || null,
+          last_free_day: load.lastFreeDay || null,
+          // Equipment
           weight: load.weight || null,
           seal_number: load.sealNo || null,
           chassis_number: load.chassisNo || null,
+          // Distance
+          total_miles: load.totalMiles || null,
+          // PortPro reference
+          portpro_reference: load.reference_number,
+          portpro_load_id: load._id,
+          // Notes
           public_notes: `PortPro: ${load.reference_number} - ${load.type_of_load}`,
           updated_at: new Date().toISOString(),
         };

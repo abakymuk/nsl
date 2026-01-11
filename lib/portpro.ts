@@ -72,32 +72,70 @@ export interface WebhookPayload {
   };
 }
 
-// Load data structure
+// Location structure from PortPro
+export interface PortProLocation {
+  company_name?: string;
+  address?: {
+    address1?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
+  // Some responses have flat address string
+  fullAddress?: string;
+}
+
+// Load data structure - matches actual PortPro API response
 export interface PortProLoad {
   _id: string;
   reference_number: string;
   type_of_load: LoadType;
   status: string;
+  // Container info
   containerNo?: string;
-  containerSize?: string;
-  containerType?: string;
+  containerSize?: string; // 20', 40', 45'
+  containerType?: string; // HC (High Cube), ST (Standard), RF (Reefer)
   containerOwner?: string;
   chassisNo?: string;
   sealNo?: string;
   weight?: number;
+  // Booking info
+  bookingNo?: string;
+  masterBillOfLading?: string;
+  houseBillOfLading?: string;
+  // Shipping line
+  ssl?: string; // e.g., "COSCO", "ONE", "MSC"
+  sslBookingNo?: string;
+  // Cargo info
+  commodity?: string;
+  hazmat?: boolean;
+  overweight?: boolean;
+  // Customer/Caller
   caller?: {
+    _id?: string;
     company_name?: string;
     email?: string;
     phone?: string;
+    address?: {
+      address1?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+    };
   };
-  shipper?: {
-    company_name?: string;
-    address?: string;
-  };
-  consignee?: {
-    company_name?: string;
-    address?: string;
-  };
+  // Shipper (origin/port)
+  shipper?: PortProLocation;
+  // Consignee (delivery destination)
+  consignee?: PortProLocation;
+  // Terminal/Port info
+  terminal?: PortProLocation;
+  emptyOrigin?: PortProLocation;
+  // Routing locations (these are the actual addresses shown in PortPro UI)
+  pickupLocation?: PortProLocation;  // "Pick Up Location" - port/terminal
+  deliveryLocation?: PortProLocation; // "Loading Location" - where cargo is delivered
+  returnLocation?: PortProLocation;   // "Return Location" - where empty container returns
+  // Dates
   pickupTimes?: Array<{
     pickupFromTime?: string;
     pickupToTime?: string;
@@ -106,6 +144,12 @@ export interface PortProLoad {
     deliveryFromTime?: string;
     deliveryToTime?: string;
   }>;
+  appointmentDate?: string;
+  lastFreeDay?: string;
+  returnDate?: string;
+  // Distance
+  totalMiles?: number;
+  // Timestamps
   createdAt: string;
   updatedAt?: string;
 }
@@ -288,22 +332,87 @@ export function mapPortProStatus(portproStatus: string): string {
 }
 
 /**
+ * Format a PortPro location into a readable address string
+ */
+export function formatLocation(location?: PortProLocation): string | null {
+  if (!location) return null;
+
+  // If there's a full address string, use it
+  if (location.fullAddress) return location.fullAddress;
+
+  // Build address from parts
+  const parts: string[] = [];
+
+  if (location.company_name) {
+    parts.push(location.company_name);
+  }
+
+  if (location.address) {
+    const addr = location.address;
+    const addressParts: string[] = [];
+
+    if (addr.address1) addressParts.push(addr.address1);
+    if (addr.city) addressParts.push(addr.city);
+    if (addr.state) {
+      if (addr.zip) {
+        addressParts.push(`${addr.state} ${addr.zip}`);
+      } else {
+        addressParts.push(addr.state);
+      }
+    }
+    if (addr.country && addr.country !== "US") addressParts.push(addr.country);
+
+    if (addressParts.length > 0) {
+      parts.push(addressParts.join(", "));
+    }
+  }
+
+  return parts.length > 0 ? parts.join("\n") : null;
+}
+
+/**
  * Convert PortPro load to our shipment format
  */
 export function convertLoadToShipment(load: PortProLoad) {
+  // Determine pickup location (origin) - prioritize pickupLocation, then shipper, then terminal
+  const pickupLocation = formatLocation(load.pickupLocation)
+    || formatLocation(load.shipper)
+    || formatLocation(load.terminal);
+
+  // Determine delivery location - prioritize deliveryLocation, then consignee
+  const deliveryLocation = formatLocation(load.deliveryLocation)
+    || formatLocation(load.consignee);
+
+  // Return location for empty container
+  const returnLocation = formatLocation(load.returnLocation);
+
   return {
     portpro_load_id: load._id,
     portpro_reference: load.reference_number,
     container_number: load.containerNo || null,
     container_size: load.containerSize || null,
+    container_type: load.containerType || null, // HC, ST, RF
     status: mapPortProStatus(load.status),
-    origin: load.shipper?.address || load.shipper?.company_name || null,
-    destination: load.consignee?.address || load.consignee?.company_name || null,
+    // Locations
+    origin: pickupLocation,
+    destination: deliveryLocation,
+    return_location: returnLocation,
+    // Customer info
     customer_name: load.caller?.company_name || null,
     customer_email: load.caller?.email || null,
+    customer_phone: load.caller?.phone || null,
+    // Booking & Shipping
+    booking_number: load.bookingNo || null,
+    shipping_line: load.ssl || null,
+    commodity: load.commodity || null,
+    // Dates
     eta: load.deliveryTimes?.[0]?.deliveryFromTime || null,
+    last_free_day: load.lastFreeDay || null,
+    // Equipment
     weight: load.weight || null,
     seal_number: load.sealNo || null,
     chassis_number: load.chassisNo || null,
+    // Distance
+    total_miles: load.totalMiles || null,
   };
 }

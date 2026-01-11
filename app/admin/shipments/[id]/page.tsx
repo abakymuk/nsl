@@ -1,7 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Package, Calendar, User, Mail } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Package,
+  Calendar,
+  User,
+  Mail,
+  Phone,
+  Ship,
+  FileText,
+  Truck,
+  Scale,
+  RotateCcw,
+  Navigation,
+} from "lucide-react";
 import { ShipmentActions } from "./shipment-actions";
 import { ShipmentTimeline } from "./shipment-timeline";
 
@@ -94,82 +108,263 @@ export default async function ShipmentDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Route - only show if origin or destination exists */}
-          {(shipment.origin || shipment.destination) && (
+          {/* Route - only show if origin, destination, or return_location exists */}
+          {(shipment.origin || shipment.destination || shipment.return_location) && (
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h2 className="font-semibold mb-4">Route Information</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {shipment.origin && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin className="h-4 w-4 text-green-500" />
-                      <p className="text-xs text-muted-foreground">Origin</p>
+                      <p className="text-xs text-muted-foreground font-medium">Pick Up Location</p>
                     </div>
-                    <p className="font-medium">{shipment.origin}</p>
+                    <p className="text-sm whitespace-pre-line">{shipment.origin}</p>
                   </div>
                 )}
                 {shipment.destination && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="h-4 w-4 text-red-500" />
-                      <p className="text-xs text-muted-foreground">Destination</p>
+                      <Truck className="h-4 w-4 text-blue-500" />
+                      <p className="text-xs text-muted-foreground font-medium">Delivery Location</p>
                     </div>
-                    <p className="font-medium">{shipment.destination}</p>
+                    <p className="text-sm whitespace-pre-line">{shipment.destination}</p>
+                  </div>
+                )}
+                {shipment.return_location && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <RotateCcw className="h-4 w-4 text-orange-500" />
+                      <p className="text-xs text-muted-foreground font-medium">Return Location</p>
+                    </div>
+                    <p className="text-sm whitespace-pre-line">{shipment.return_location}</p>
+                  </div>
+                )}
+              </div>
+              {shipment.total_miles && (
+                <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm text-muted-foreground">
+                  <Navigation className="h-4 w-4" />
+                  <span>Total Distance: <strong className="text-foreground">{shipment.total_miles.toFixed(2)} miles</strong></span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Container & Equipment */}
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h2 className="font-semibold mb-4">Container & Equipment</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                  <Package className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Container #</p>
+                  <code className="font-mono font-medium">{shipment.container_number}</code>
+                </div>
+              </div>
+              {(shipment.container_size || shipment.container_type) && (
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                    <Package className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Size / Type</p>
+                    <p className="font-medium">
+                      {[shipment.container_size, shipment.container_type].filter(Boolean).join(" ")}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {shipment.chassis_number && (
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                    <Truck className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Chassis #</p>
+                    <code className="font-mono font-medium">{shipment.chassis_number}</code>
+                  </div>
+                </div>
+              )}
+              {shipment.seal_number && (
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                    <Package className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Seal #</p>
+                    <code className="font-mono font-medium">{shipment.seal_number}</code>
+                  </div>
+                </div>
+              )}
+              {shipment.weight && (
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                    <Scale className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Weight</p>
+                    <p className="font-medium">{shipment.weight.toLocaleString()} LBS</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Booking & Shipping Info - only show if any field exists */}
+          {(shipment.booking_number || shipment.shipping_line || shipment.commodity) && (
+            <div className="rounded-xl border bg-card p-6 shadow-sm">
+              <h2 className="font-semibold mb-4">Booking & Shipping</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {shipment.booking_number && (
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Booking #</p>
+                      <code className="font-mono font-medium">{shipment.booking_number}</code>
+                    </div>
+                  </div>
+                )}
+                {shipment.shipping_line && (
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                      <Ship className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Shipping Line (SSL)</p>
+                      <p className="font-medium">{shipment.shipping_line}</p>
+                    </div>
+                  </div>
+                )}
+                {shipment.commodity && (
+                  <div className="flex items-start gap-3 sm:col-span-2 lg:col-span-1">
+                    <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                      <Package className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Commodity</p>
+                      <p className="font-medium">{shipment.commodity}</p>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Shipment Details */}
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <h2 className="font-semibold mb-4">Shipment Details</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-primary/10 p-2">
-                  <Package className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Container</p>
-                  <code className="font-mono font-medium">{shipment.container_number}</code>
-                </div>
+          {/* Customer Info */}
+          {(shipment.customer_name || shipment.customer_email || shipment.customer_phone) && (
+            <div className="rounded-xl border bg-card p-6 shadow-sm">
+              <h2 className="font-semibold mb-4">Customer Information</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {shipment.customer_name && (
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Customer</p>
+                      <p className="font-medium">{shipment.customer_name}</p>
+                    </div>
+                  </div>
+                )}
+                {shipment.customer_email && (
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                      <Mail className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <a
+                        href={`mailto:${shipment.customer_email}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {shipment.customer_email}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {shipment.customer_phone && (
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                      <Phone className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Phone</p>
+                      <a
+                        href={`tel:${shipment.customer_phone}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {shipment.customer_phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-primary/10 p-2">
+            </div>
+          )}
+
+          {/* Dates */}
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h2 className="font-semibold mb-4">Important Dates</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-2 shrink-0">
                   <Calendar className="h-4 w-4 text-primary" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">ETA</p>
                   <p className="font-medium">
                     {shipment.eta
-                      ? new Date(shipment.eta).toLocaleString()
+                      ? new Date(shipment.eta).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })
                       : "Not set"}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-primary/10 p-2">
-                  <User className="h-4 w-4 text-primary" />
+              {shipment.last_free_day && (
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-orange-100 dark:bg-orange-900/30 p-2 shrink-0">
+                    <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Last Free Day</p>
+                    <p className="font-medium text-orange-600 dark:text-orange-400">
+                      {new Date(shipment.last_free_day).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Customer</p>
-                  <p className="font-medium">{shipment.customer_name || "N/A"}</p>
+              )}
+              {shipment.pickup_time && (
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pickup Time</p>
+                    <p className="font-medium">
+                      {new Date(shipment.pickup_time).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-primary/10 p-2">
-                  <Mail className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <a
-                    href={`mailto:${shipment.customer_email}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {shipment.customer_email || "N/A"}
-                  </a>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
