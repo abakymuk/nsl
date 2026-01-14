@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS quotes (
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'quoted', 'accepted', 'rejected', 'completed', 'cancelled')),
   reference_number TEXT UNIQUE DEFAULT ('NSL-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0')),
 
-  -- Contact info (optional for anonymous quotes)
+  -- Contact info
   company_name TEXT,
   contact_name TEXT,
   email TEXT,
@@ -80,49 +80,72 @@ CREATE INDEX IF NOT EXISTS idx_contacts_status ON contacts(status);
 CREATE INDEX IF NOT EXISTS idx_contacts_created ON contacts(created_at DESC);
 
 -- ================================================
--- SHIPMENTS TABLE
--- Tracks active shipments
+-- LOADS TABLE
+-- Tracks active loads (drayage shipments)
 -- ================================================
-CREATE TABLE IF NOT EXISTS shipments (
+CREATE TABLE IF NOT EXISTS loads (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   quote_id UUID REFERENCES quotes(id) ON DELETE SET NULL,
+  tracking_number TEXT UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
+  -- Container details
   container_number TEXT NOT NULL,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'exception')),
+  container_size TEXT,
+  status TEXT DEFAULT 'booked' CHECK (status IN ('booked', 'dispatched', 'at_terminal', 'picked_up', 'in_transit', 'at_yard', 'out_for_delivery', 'delivered', 'completed', 'cancelled', 'exception')),
 
+  -- Route
+  origin TEXT,
+  destination TEXT,
+  eta TIMESTAMPTZ,
   pickup_time TIMESTAMPTZ,
   delivery_time TIMESTAMPTZ,
   current_location TEXT,
+
+  -- Assignment
   driver_name TEXT,
   truck_number TEXT,
 
-  -- Customer can see these
+  -- Customer info
+  customer_name TEXT,
+  customer_email TEXT,
+
+  -- Notes
   public_notes TEXT,
-  -- Internal notes (admin only)
-  internal_notes TEXT
+  internal_notes TEXT,
+
+  -- PortPro integration
+  portpro_reference TEXT,
+  portpro_load_id TEXT,
+  seal_number TEXT,
+  chassis_number TEXT,
+  weight INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS idx_shipments_container ON shipments(container_number);
-CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(status);
+CREATE INDEX IF NOT EXISTS idx_loads_container ON loads(container_number);
+CREATE INDEX IF NOT EXISTS idx_loads_tracking ON loads(tracking_number);
+CREATE INDEX IF NOT EXISTS idx_loads_status ON loads(status);
+CREATE INDEX IF NOT EXISTS idx_loads_created ON loads(created_at DESC);
 
 -- ================================================
--- SHIPMENT EVENTS TABLE
--- Timeline of status updates for each shipment
+-- LOAD EVENTS TABLE
+-- Timeline of status updates for each load
 -- ================================================
-CREATE TABLE IF NOT EXISTS shipment_events (
+CREATE TABLE IF NOT EXISTS load_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  load_id UUID NOT NULL REFERENCES loads(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   status TEXT NOT NULL,
+  description TEXT,
   location TEXT,
   notes TEXT,
-  created_by TEXT
+  created_by TEXT,
+  portpro_event BOOLEAN DEFAULT FALSE
 );
 
-CREATE INDEX IF NOT EXISTS idx_events_shipment ON shipment_events(shipment_id);
-CREATE INDEX IF NOT EXISTS idx_events_created ON shipment_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_load_events_load ON load_events(load_id);
+CREATE INDEX IF NOT EXISTS idx_load_events_created ON load_events(created_at DESC);
 
 -- ================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -131,22 +154,20 @@ CREATE INDEX IF NOT EXISTS idx_events_created ON shipment_events(created_at DESC
 -- Enable RLS on all tables
 ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shipment_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE load_events ENABLE ROW LEVEL SECURITY;
 
--- For now, allow service role full access (we'll add user policies later)
--- These policies allow the server-side client to perform all operations
-
+-- Service role policies (full access for server-side client)
 CREATE POLICY "Service role can do everything on quotes" ON quotes
   FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Service role can do everything on contacts" ON contacts
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY "Service role can do everything on shipments" ON shipments
+CREATE POLICY "Service role can do everything on loads" ON loads
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY "Service role can do everything on shipment_events" ON shipment_events
+CREATE POLICY "Service role can do everything on load_events" ON load_events
   FOR ALL USING (true) WITH CHECK (true);
 
 -- ================================================
@@ -168,8 +189,8 @@ CREATE TRIGGER quotes_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER shipments_updated_at
-  BEFORE UPDATE ON shipments
+CREATE TRIGGER loads_updated_at
+  BEFORE UPDATE ON loads
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
 
