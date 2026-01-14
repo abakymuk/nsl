@@ -146,14 +146,14 @@ export default async function ShipmentsPage({
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         shipment.status === "delivered"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          ? "bg-success/15 text-success"
                           : shipment.status === "in_transit"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          ? "bg-primary/15 text-primary"
                           : shipment.status === "at_port"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                          ? "bg-chart-4/15 text-chart-4"
                           : shipment.status === "out_for_delivery"
-                          ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          ? "bg-accent/15 text-accent"
+                          : "bg-warning/15 text-warning"
                       }`}
                     >
                       {shipment.status.replace(/_/g, " ")}

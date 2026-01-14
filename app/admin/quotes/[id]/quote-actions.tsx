@@ -105,7 +105,7 @@ export function QuoteActions({ quote }: QuoteActionsProps) {
             <button
               onClick={() => updateQuoteStatus("accepted")}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 disabled:opacity-50 transition-colors text-sm font-medium"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-success bg-success/10 text-success hover:bg-success/20 disabled:opacity-50 transition-colors text-sm font-medium"
             >
               <CheckCircle className="h-4 w-4" />
               Mark as Accepted
@@ -113,7 +113,7 @@ export function QuoteActions({ quote }: QuoteActionsProps) {
             <button
               onClick={() => updateQuoteStatus("rejected")}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 disabled:opacity-50 transition-colors text-sm font-medium"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-50 transition-colors text-sm font-medium"
             >
               <XCircle className="h-4 w-4" />
               Mark as Rejected

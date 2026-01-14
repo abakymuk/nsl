@@ -171,12 +171,12 @@ export default async function AdminDashboard() {
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         quote.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          ? "bg-warning/15 text-warning"
                           : quote.status === "quoted"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          ? "bg-primary/15 text-primary"
                           : quote.status === "accepted"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                          ? "bg-success/15 text-success"
+                          : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {quote.status}
@@ -226,10 +226,10 @@ export default async function AdminDashboard() {
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         shipment.status === "in_transit"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          ? "bg-primary/15 text-primary"
                           : shipment.status === "at_port"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          ? "bg-chart-4/15 text-chart-4"
+                          : "bg-warning/15 text-warning"
                       }`}
                     >
                       {shipment.status.replace(/_/g, " ")}
@@ -253,7 +253,7 @@ export default async function AdminDashboard() {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/admin/quotes?status=pending"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50 transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-warning bg-warning/10 text-warning hover:bg-warning/20 transition-colors text-sm font-medium"
           >
             <Clock className="h-4 w-4" />
             Review Pending Quotes
