@@ -14,6 +14,7 @@ export interface QuoteFormData {
   fullName: string;
   companyName: string;
   email: string;
+  phone?: string;
 }
 
 export interface ContactFormData {

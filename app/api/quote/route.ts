@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         contact_name: body.fullName,
         company_name: body.companyName,
         email: body.email,
+        phone: body.phone || null,
         status: "pending",
       };
 
@@ -87,6 +88,7 @@ CONTACT INFORMATION
 Name: ${body.fullName}
 Company: ${body.companyName}
 Email: ${body.email}
+${body.phone ? `Phone: ${body.phone}` : ""}
 
 SHIPMENT DETAILS
 ----------------

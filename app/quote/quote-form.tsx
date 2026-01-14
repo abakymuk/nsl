@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail, Phone } from "lucide-react";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
 import { BorderBeam } from "@/components/ui/magic/border-beam";
 import type { QuoteFormData } from "@/types";
@@ -53,6 +53,7 @@ export default function QuoteForm() {
     fullName: "",
     companyName: "",
     email: "",
+    phone: "",
   });
 
   // Validation for step 1: container + terminal + contact info
@@ -303,6 +304,27 @@ export default function QuoteForm() {
                       We&apos;ll send your quote confirmation here
                     </p>
                   </div>
+
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="block text-sm font-medium text-foreground">
+                      Phone <span className="text-muted-foreground text-xs">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone || ""}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="(310) 555-1234"
+                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      For faster communication about your quote
+                    </p>
+                  </div>
                 </div>
 
                 <div className="pt-4">
@@ -468,6 +490,12 @@ export default function QuoteForm() {
                     <div>{formData.fullName} ({formData.companyName})</div>
                     <div className="text-muted-foreground">Email:</div>
                     <div>{formData.email}</div>
+                    {formData.phone && (
+                      <>
+                        <div className="text-muted-foreground">Phone:</div>
+                        <div>{formData.phone}</div>
+                      </>
+                    )}
                     <div className="text-muted-foreground">Container:</div>
                     <div className="font-mono">{formData.containerNumber}</div>
                     <div className="text-muted-foreground">Terminal:</div>

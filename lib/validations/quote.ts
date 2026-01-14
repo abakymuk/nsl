@@ -31,6 +31,9 @@ const zipCodeRegex = /^\d{5}(-\d{4})?$/;
 // Email regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Phone regex: US phone format (optional)
+const phoneRegex = /^(\+1)?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
+
 export const quoteFormSchema = z.object({
   containerNumber: z
     .string()
@@ -94,6 +97,16 @@ export const quoteFormSchema = z.object({
     .min(1, "Email is required")
     .max(254, "Email too long")
     .refine((val) => emailRegex.test(val), "Invalid email address"),
+
+  phone: z
+    .string()
+    .max(20, "Phone number too long")
+    .optional()
+    .transform((val) => val?.trim() || undefined)
+    .refine(
+      (val) => !val || phoneRegex.test(val.replace(/\s/g, "")),
+      "Invalid phone number format"
+    ),
 });
 
 export type QuoteFormInput = z.input<typeof quoteFormSchema>;
