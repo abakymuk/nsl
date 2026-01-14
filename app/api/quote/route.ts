@@ -3,7 +3,7 @@ import { Resend } from "resend";
 import { quoteFormSchema } from "@/lib/validations/quote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sanitizeObject } from "@/lib/sanitize";
-import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import type { QuoteInsert } from "@/types/database";
 
 function getResend() {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Save to database if Supabase is configured
     if (isSupabaseConfigured()) {
-      const supabase = await createServerClient();
+      const supabase = createAdminClient();
 
       const quoteData: QuoteInsert = {
         container_number: body.containerNumber,
