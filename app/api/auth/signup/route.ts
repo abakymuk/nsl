@@ -77,6 +77,10 @@ export async function POST(request: NextRequest) {
       if (result) {
         organizationId = result.organization.id;
         organizationName = result.organization.name;
+      } else {
+        console.error("Failed to create organization for user:", userId);
+        // Don't fail the signup, but log the error
+        // User can set up org later from dashboard
       }
     } else if (orgAction === "join" && orgId) {
       // Join existing organization (by domain match or invitation)
