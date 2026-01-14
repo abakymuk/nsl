@@ -329,90 +329,106 @@ export async function createOrganization(params: {
   email: string;
   setEmailDomain?: boolean;
 }): Promise<{ organization: Organization; member: OrganizationMember } | null> {
-  const { name, userId, email, setEmailDomain = true } = params;
-  const supabase = createAdminClient();
+  try {
+    const { name, userId, email, setEmailDomain = true } = params;
+    const supabase = createAdminClient();
 
-  // Wait for profile to be created by trigger (with retries)
-  let profileExists = false;
-  console.log("Waiting for profile to be created for user:", userId);
-  for (let i = 0; i < 10; i++) {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", userId)
+    console.log("[createOrganization] Starting for:", { name, userId, email });
+
+    // Wait for profile to be created by trigger (with retries)
+    let profileExists = false;
+    for (let i = 0; i < 10; i++) {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .single();
+
+      if (profile) {
+        profileExists = true;
+        console.log("[createOrganization] Profile found on attempt", i + 1);
+        break;
+      }
+      console.log(`[createOrganization] Profile check ${i + 1}/10:`, profileError?.message);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    if (!profileExists) {
+      console.log("[createOrganization] Profile not found, creating manually");
+      const { error: insertError } = await supabase.from("profiles").insert({
+        id: userId,
+        email,
+      });
+      if (insertError) {
+        console.error("[createOrganization] Manual profile creation failed:", insertError);
+        return null;
+      }
+      console.log("[createOrganization] Manual profile created");
+    }
+
+    // Create slug from name - add random suffix to avoid collisions
+    const baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    const slug = `${baseSlug}-${Date.now().toString(36)}`;
+
+    // Extract domain if setting
+    const domain = setEmailDomain ? "@" + email.split("@")[1] : null;
+
+    // Create organization
+    console.log("[createOrganization] Creating org:", { name, slug, domain });
+    const { data: org, error: orgError } = await supabase
+      .from("organizations")
+      .insert({
+        name,
+        slug,
+        email_domain: domain,
+        primary_email: email,
+      })
+      .select()
       .single();
 
-    console.log(`Profile check attempt ${i + 1}:`, { profile, error: profileError?.message });
-
-    if (profile) {
-      profileExists = true;
-      console.log("Profile found on attempt", i + 1);
-      break;
+    if (orgError) {
+      console.error("[createOrganization] Org creation error:", orgError.message, orgError.code, orgError.details);
+      return null;
     }
-    // Wait 300ms before retrying
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  }
+    if (!org) {
+      console.error("[createOrganization] Org is null after insert");
+      return null;
+    }
+    console.log("[createOrganization] Org created:", org.id);
 
-  if (!profileExists) {
-    console.error("Profile not found after retries for user:", userId);
-    // Create profile manually as fallback
-    const { error: insertError } = await supabase.from("profiles").insert({
-      id: userId,
-      email,
-    });
-    console.log("Manual profile creation result:", insertError?.message || "success");
-  }
+    // Add user as admin
+    console.log("[createOrganization] Adding member:", { orgId: org.id, userId });
+    const { data: member, error: memberError } = await supabase
+      .from("organization_members")
+      .insert({
+        organization_id: org.id,
+        user_id: userId,
+        email,
+        role: "admin" as OrgRole,
+      })
+      .select()
+      .single();
 
-  // Create slug from name
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+    if (memberError) {
+      console.error("[createOrganization] Member creation error:", memberError.message, memberError.code, memberError.details);
+      await supabase.from("organizations").delete().eq("id", org.id);
+      return null;
+    }
+    if (!member) {
+      console.error("[createOrganization] Member is null after insert");
+      await supabase.from("organizations").delete().eq("id", org.id);
+      return null;
+    }
+    console.log("[createOrganization] Member added:", member.id);
 
-  // Extract domain if setting
-  const domain = setEmailDomain ? "@" + email.split("@")[1] : null;
-
-  // Create organization
-  console.log("Creating organization with:", { name, slug, domain, email });
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({
-      name,
-      slug,
-      email_domain: domain,
-      primary_email: email,
-    })
-    .select()
-    .single();
-
-  if (orgError || !org) {
-    console.error("Error creating organization:", orgError);
+    return { organization: org, member };
+  } catch (err) {
+    console.error("[createOrganization] Unexpected error:", err);
     return null;
   }
-  console.log("Organization created:", org.id);
-
-  // Add user as admin
-  console.log("Adding user as admin:", { orgId: org.id, userId, email });
-  const { data: member, error: memberError } = await supabase
-    .from("organization_members")
-    .insert({
-      organization_id: org.id,
-      user_id: userId,
-      email,
-      role: "admin" as OrgRole,
-    })
-    .select()
-    .single();
-
-  if (memberError || !member) {
-    console.error("Error adding org member:", memberError);
-    // Rollback org creation
-    await supabase.from("organizations").delete().eq("id", org.id);
-    return null;
-  }
-  console.log("Member added successfully:", member.id);
-
-  return { organization: org, member };
 }
 
 /**
