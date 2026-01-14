@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email via Resend
-    const emailTo = process.env.EMAIL_TO || "dispatcher@newstreamlogistics.com";
+    const emailTo = process.env.EMAIL_TO || "vlad@newstreamlogistics.com";
     const emailFrom = process.env.EMAIL_FROM || "quotes@newstreamlogistics.com";
 
     const emailBody = `
