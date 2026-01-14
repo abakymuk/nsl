@@ -1,6 +1,9 @@
 -- Auth System Migration
 -- Adds profiles table, invitations table, and updates organization_members
 
+-- Enable pgcrypto extension for gen_random_bytes
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- =====================================================
 -- 1. PROFILES TABLE
 -- Auto-created on auth.users signup via trigger
@@ -52,7 +55,7 @@ CREATE TABLE IF NOT EXISTS invitations (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   role TEXT DEFAULT 'member' CHECK (role IN ('admin', 'member')),
-  token TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  token TEXT UNIQUE NOT NULL DEFAULT encode(extensions.gen_random_bytes(32), 'hex'),
   invited_by UUID REFERENCES profiles(id),
   inviter_name TEXT, -- Cached for email display
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')),
