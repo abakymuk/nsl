@@ -332,6 +332,32 @@ export async function createOrganization(params: {
   const { name, userId, email, setEmailDomain = true } = params;
   const supabase = createAdminClient();
 
+  // Wait for profile to be created by trigger (with retries)
+  let profileExists = false;
+  for (let i = 0; i < 5; i++) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .single();
+
+    if (profile) {
+      profileExists = true;
+      break;
+    }
+    // Wait 200ms before retrying
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  if (!profileExists) {
+    console.error("Profile not found after retries for user:", userId);
+    // Create profile manually as fallback
+    await supabase.from("profiles").insert({
+      id: userId,
+      email,
+    });
+  }
+
   // Create slug from name
   const slug = name
     .toLowerCase()
@@ -392,6 +418,30 @@ export async function addUserToOrganization(params: {
 }): Promise<OrganizationMember | null> {
   const { userId, email, organizationId, role = "member", invitationId } = params;
   const supabase = createAdminClient();
+
+  // Wait for profile to be created by trigger (with retries)
+  let profileExists = false;
+  for (let i = 0; i < 5; i++) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .single();
+
+    if (profile) {
+      profileExists = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  if (!profileExists) {
+    console.error("Profile not found after retries for user:", userId);
+    await supabase.from("profiles").insert({
+      id: userId,
+      email,
+    });
+  }
 
   const { data, error } = await supabase
     .from("organization_members")
