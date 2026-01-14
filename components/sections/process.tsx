@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, Clock, MapPin, Package } from "lucide-react";
+import { FileText, UserCheck, MapPin, Package, Bell } from "lucide-react";
 import { SimpleTimeline } from "@/components/ui/aceternity/timeline";
 
 const steps = [
@@ -14,16 +14,16 @@ const steps = [
   },
   {
     step: 2,
-    title: "We confirm feasibility & timeline",
+    title: "You get assigned a dispatcher",
     description:
-      "A real dispatcher reviews your request and responds within 1–2 business hours with a confirmed quote and timeline.",
-    icon: Clock,
+      "A real dispatcher reviews your request and responds within 1–2 hours. They become your single point of contact throughout.",
+    icon: UserCheck,
   },
   {
     step: 3,
-    title: "You track the container",
+    title: "You track with real updates",
     description:
-      "Monitor your container's status in real-time without calling or emailing. We keep you updated.",
+      "Monitor your container in real-time. We send updates at pickup, delivery, and any changes — no need to call or email.",
     icon: MapPin,
   },
   {
@@ -60,13 +60,40 @@ export function ProcessSection() {
           <SimpleTimeline items={steps} />
         </div>
 
+        {/* Communication Promise */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          viewport={{ once: true }}
+          className="mt-16 mx-auto max-w-3xl"
+        >
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Bell className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">
+                  Our Communication Promise
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">One dispatcher, start to finish.</span>{" "}
+                  Updates at pickup, at delivery, and immediately if anything changes.
+                  No chasing. No wondering. No surprises.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Bottom Note */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           viewport={{ once: true }}
-          className="mt-16 mx-auto max-w-2xl"
+          className="mt-8 mx-auto max-w-2xl"
         >
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
             <p className="text-sm text-muted-foreground">

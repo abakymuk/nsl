@@ -66,9 +66,9 @@ export const BackgroundBeams = ({ className }: { className?: string }) => {
                 delay: Math.random() * 10,
               }}
             >
-              <stop stopColor="oklch(0.45 0.15 240 / 0)" offset="0%" />
-              <stop stopColor="oklch(0.45 0.15 240)" offset="50%" />
-              <stop stopColor="oklch(0.65 0.2 45)" offset="100%" />
+              <stop stopColor="oklch(0.45 0.16 245 / 0)" offset="0%" />
+              <stop stopColor="oklch(0.45 0.16 245)" offset="50%" />
+              <stop stopColor="oklch(0.62 0.19 38)" offset="100%" />
             </motion.linearGradient>
           ))}
         </defs>
@@ -116,7 +116,7 @@ export const BackgroundGradient = ({
         }}
         className={cn(
           "absolute inset-0 rounded-3xl z-[1] opacity-60 group-hover:opacity-100 blur-xl transition duration-500 will-change-transform",
-          "bg-[radial-gradient(circle_farthest-side_at_0_100%,oklch(0.45_0.15_240),transparent),radial-gradient(circle_farthest-side_at_100%_0,oklch(0.65_0.2_45),transparent),radial-gradient(circle_farthest-side_at_100%_100%,oklch(0.45_0.15_240),transparent),radial-gradient(circle_farthest-side_at_0_0,oklch(0.5_0.15_240),oklch(0.12_0.02_240))]"
+          "bg-[radial-gradient(circle_farthest-side_at_0_100%,oklch(0.45_0.16_245),transparent),radial-gradient(circle_farthest-side_at_100%_0,oklch(0.62_0.19_38),transparent),radial-gradient(circle_farthest-side_at_100%_100%,oklch(0.45_0.16_245),transparent),radial-gradient(circle_farthest-side_at_0_0,oklch(0.5_0.16_245),oklch(0.14_0.025_250))]"
         )}
       />
       <motion.div
@@ -137,7 +137,7 @@ export const BackgroundGradient = ({
         }}
         className={cn(
           "absolute inset-0 rounded-3xl z-[1] will-change-transform",
-          "bg-[radial-gradient(circle_farthest-side_at_0_100%,oklch(0.45_0.15_240),transparent),radial-gradient(circle_farthest-side_at_100%_0,oklch(0.65_0.2_45),transparent),radial-gradient(circle_farthest-side_at_100%_100%,oklch(0.45_0.15_240),transparent),radial-gradient(circle_farthest-side_at_0_0,oklch(0.5_0.15_240),oklch(0.12_0.02_240))]"
+          "bg-[radial-gradient(circle_farthest-side_at_0_100%,oklch(0.45_0.16_245),transparent),radial-gradient(circle_farthest-side_at_100%_0,oklch(0.62_0.19_38),transparent),radial-gradient(circle_farthest-side_at_100%_100%,oklch(0.45_0.16_245),transparent),radial-gradient(circle_farthest-side_at_0_0,oklch(0.5_0.16_245),oklch(0.14_0.025_250))]"
         )}
       />
 

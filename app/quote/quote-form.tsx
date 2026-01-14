@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail } from "lucide-react";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
 import { BorderBeam } from "@/components/ui/magic/border-beam";
 import type { QuoteFormData } from "@/types";
@@ -35,6 +35,9 @@ const steps = [
   { id: 3, name: "Details", icon: FileText },
 ];
 
+// Email validation regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function QuoteForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -47,9 +50,19 @@ export default function QuoteForm() {
     containerType: "",
     lfd: "",
     notes: "",
+    fullName: "",
+    companyName: "",
+    email: "",
   });
 
-  const canProceedStep1 = formData.containerNumber.length >= 4 && formData.terminal;
+  // Validation for step 1: container + terminal + contact info
+  const canProceedStep1 =
+    formData.containerNumber.length >= 4 &&
+    formData.terminal &&
+    formData.fullName.length >= 2 &&
+    formData.companyName.length >= 2 &&
+    emailRegex.test(formData.email);
+
   const canProceedStep2 = formData.deliveryZip.match(/^\d{5}(-\d{4})?$/) && formData.containerType;
 
   const handleSubmit = async () => {
@@ -100,6 +113,11 @@ export default function QuoteForm() {
           <p className="mt-4 text-lg text-muted-foreground">
             Takes 30 seconds. Real quote in 1–2 hours.
           </p>
+          {/* SLA Badge */}
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+            <CheckCircle2 className="h-4 w-4" />
+            Response within 2 hours guaranteed
+          </div>
         </motion.div>
 
         {/* Progress Steps */}
@@ -149,8 +167,8 @@ export default function QuoteForm() {
           <BorderBeam
             size={250}
             duration={10}
-            colorFrom="oklch(0.45 0.15 240)"
-            colorTo="oklch(0.65 0.2 45)"
+            colorFrom="oklch(0.45 0.16 245)"
+            colorTo="oklch(0.62 0.19 38)"
           />
 
           {error && (
@@ -164,7 +182,7 @@ export default function QuoteForm() {
           )}
 
           <AnimatePresence mode="wait">
-            {/* Step 1: Container Details */}
+            {/* Step 1: Container Details + Contact Info */}
             {currentStep === 1 && (
               <motion.div
                 key="step1"
@@ -175,9 +193,9 @@ export default function QuoteForm() {
                 className="space-y-6"
               >
                 <div>
-                  <h2 className="text-xl font-semibold mb-1">Container Details</h2>
+                  <h2 className="text-xl font-semibold mb-1">Container & Contact</h2>
                   <p className="text-sm text-muted-foreground">
-                    Enter your container number and select the terminal.
+                    Enter container details and how to reach you.
                   </p>
                 </div>
 
@@ -223,6 +241,70 @@ export default function QuoteForm() {
                   </div>
                 </div>
 
+                {/* Contact Info Section */}
+                <div className="pt-4 border-t border-border">
+                  <p className="text-sm font-medium mb-4 flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    Your Contact Information
+                  </p>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="fullName" className="text-sm font-medium">
+                        Full Name <span className="text-destructive">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="fullName"
+                          type="text"
+                          value={formData.fullName}
+                          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                          placeholder="John Smith"
+                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="companyName" className="text-sm font-medium">
+                        Company <span className="text-destructive">*</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="companyName"
+                          type="text"
+                          value={formData.companyName}
+                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          placeholder="Acme Logistics"
+                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium">
+                      Email <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="john@acmelogistics.com"
+                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      We&apos;ll send your quote confirmation here
+                    </p>
+                  </div>
+                </div>
+
                 <div className="pt-4">
                   <ShimmerButton
                     onClick={nextStep}
@@ -231,8 +313,8 @@ export default function QuoteForm() {
                       "w-full h-12 text-base",
                       !canProceedStep1 && "opacity-50 cursor-not-allowed"
                     )}
-                    shimmerColor="oklch(0.65 0.2 45)"
-                    background="oklch(0.45 0.15 240)"
+                    shimmerColor="oklch(0.62 0.19 38)"
+                    background="oklch(0.45 0.16 245)"
                   >
                     <span className="flex items-center gap-2">
                       Continue
@@ -319,8 +401,8 @@ export default function QuoteForm() {
                       "flex-1 h-12 text-base",
                       !canProceedStep2 && "opacity-50 cursor-not-allowed"
                     )}
-                    shimmerColor="oklch(0.65 0.2 45)"
-                    background="oklch(0.45 0.15 240)"
+                    shimmerColor="oklch(0.62 0.19 38)"
+                    background="oklch(0.45 0.16 245)"
                   >
                     <span className="flex items-center gap-2">
                       Continue
@@ -382,6 +464,10 @@ export default function QuoteForm() {
                 <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
                   <h3 className="text-sm font-semibold text-foreground">Quote Summary</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="text-muted-foreground">Contact:</div>
+                    <div>{formData.fullName} ({formData.companyName})</div>
+                    <div className="text-muted-foreground">Email:</div>
+                    <div>{formData.email}</div>
                     <div className="text-muted-foreground">Container:</div>
                     <div className="font-mono">{formData.containerNumber}</div>
                     <div className="text-muted-foreground">Terminal:</div>
@@ -407,8 +493,8 @@ export default function QuoteForm() {
                     onClick={handleSubmit}
                     disabled={loading}
                     className="flex-1 h-12 text-base"
-                    shimmerColor="oklch(0.65 0.2 45)"
-                    background="oklch(0.45 0.15 240)"
+                    shimmerColor="oklch(0.62 0.19 38)"
+                    background="oklch(0.45 0.16 245)"
                   >
                     <span className="flex items-center gap-2">
                       {loading ? (

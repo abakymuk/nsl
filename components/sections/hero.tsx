@@ -1,13 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Phone, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Phone, ArrowRight, CheckCircle2, Warehouse } from "lucide-react";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
-import { WordRotate } from "@/components/ui/magic/animated-text";
 import { NumberTicker } from "@/components/ui/magic/number-ticker";
 import { Marquee } from "@/components/ui/magic/marquee";
-import { BackgroundBeams } from "@/components/ui/aceternity/background-beams";
 
 const terminals = [
   "APM Terminals",
@@ -23,19 +23,39 @@ const terminals = [
 ];
 
 const stats = [
-  { value: 1200, label: "Containers Moved", suffix: "+" },
-  { value: 98, label: "On-Time Delivery", suffix: "%" },
-  { value: 10, label: "Terminals Served", suffix: "" },
+  { value: 50, label: "Yard Capacity", suffix: "+" },
+  { value: 98, label: "On-Time Rate", suffix: "%" },
+  { value: 10, label: "Terminals", suffix: "" },
+  { value: 2, label: "Hour Quotes", suffix: "" },
 ];
 
+// Set to true once you have real yard photos
+const HAS_HERO_IMAGE = false;
+
 export function HeroSection() {
+  const [imageError, setImageError] = useState(false);
+  const showImage = HAS_HERO_IMAGE && !imageError;
+
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-      {/* Background Effects */}
-      <BackgroundBeams className="opacity-40" />
-
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background pointer-events-none" />
+      {/* Background - Image or Gradient Fallback */}
+      <div className="absolute inset-0 -z-10">
+        {showImage ? (
+          <Image
+            src="/images/yard/hero-yard.jpg"
+            alt="New Stream Logistics secured container yard"
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
+        )}
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/85 to-background" />
+      </div>
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
@@ -64,17 +84,26 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl"
           >
-            Container stuck at{" "}
-            <span className="text-primary">
-              <WordRotate
-                words={["LBCT", "APM", "Fenix", "TraPac", "TTI"]}
-                className="inline-block"
-              />
-            </span>
-            ?
-            <br />
-            <span className="text-muted-foreground">We&apos;ll get it moving.</span>
+            LA/LB Drayage with{" "}
+            <span className="text-primary">Secure Private Yard</span>
           </motion.h1>
+
+          {/* Specs Line */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mt-4 flex flex-wrap items-center justify-center gap-2 text-muted-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <Warehouse className="h-4 w-4 text-primary" />
+              50+ container capacity
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span>24/7 security</span>
+            <span className="hidden sm:inline">•</span>
+            <span>All 10 terminals</span>
+          </motion.div>
 
           {/* Subheadline */}
           <motion.p
@@ -83,8 +112,8 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 text-lg leading-8 text-muted-foreground sm:text-xl max-w-2xl mx-auto"
           >
-            LA/LB drayage without the guesswork. Clear pricing. Real tracking.
-            A dispatcher who actually calls you back.
+            Avoid demurrage with our private secured yard. Real quotes in 2 hours
+            from real dispatchers — no bots, no fake pricing.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -96,8 +125,8 @@ export function HeroSection() {
           >
             <ShimmerButton
               className="h-12 px-8 text-base"
-              shimmerColor="oklch(0.65 0.2 45)"
-              background="oklch(0.45 0.15 240)"
+              shimmerColor="oklch(0.62 0.19 38)"
+              background="oklch(0.45 0.16 245)"
             >
               <Link href="/quote" className="flex items-center gap-2">
                 Get Quote in 2 Hours
@@ -106,10 +135,11 @@ export function HeroSection() {
             </ShimmerButton>
 
             <Link
-              href="/track"
+              href="#yard"
               className="h-12 px-8 inline-flex items-center justify-center rounded-full border border-border bg-card/50 backdrop-blur-sm text-base font-medium text-foreground hover:bg-secondary transition-colors"
             >
-              Track Container
+              <Warehouse className="h-4 w-4 mr-2" />
+              See Our Yard
             </Link>
           </motion.div>
 
@@ -118,7 +148,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-16 flex flex-wrap items-center justify-center gap-x-8 gap-y-4"
+            className="mt-16 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 sm:gap-x-8"
           >
             {stats.map((stat, index) => (
               <div key={stat.label} className="flex items-center gap-2">
@@ -129,7 +159,7 @@ export function HeroSection() {
                 </span>
                 <span className="text-sm text-muted-foreground">{stat.label}</span>
                 {index < stats.length - 1 && (
-                  <span className="hidden sm:block text-border ml-6">|</span>
+                  <span className="hidden sm:block text-border ml-4">|</span>
                 )}
               </div>
             ))}

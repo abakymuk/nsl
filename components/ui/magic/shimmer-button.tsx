@@ -21,7 +21,7 @@ export const ShimmerButton = React.forwardRef<HTMLButtonElement, ShimmerButtonPr
       shimmerSize = "0.1em",
       shimmerDuration = "2s",
       borderRadius = "100px",
-      background = "oklch(0.45 0.15 240)",
+      background = "oklch(0.45 0.16 245)",
       className,
       children,
       ...props

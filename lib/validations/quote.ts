@@ -28,6 +28,9 @@ const containerNumberRegex = /^[A-Z]{4}\d{7}$/;
 // ZIP code regex: 5 digits or 5+4 format
 const zipCodeRegex = /^\d{5}(-\d{4})?$/;
 
+// Email regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const quoteFormSchema = z.object({
   containerNumber: z
     .string()
@@ -72,6 +75,25 @@ export const quoteFormSchema = z.object({
     .max(1000, "Notes cannot exceed 1000 characters")
     .optional()
     .transform((val) => val?.trim() || undefined),
+
+  // Contact information fields
+  fullName: z
+    .string()
+    .min(2, "Full name is required")
+    .max(100, "Name too long")
+    .transform((val) => val.trim()),
+
+  companyName: z
+    .string()
+    .min(2, "Company name is required")
+    .max(150, "Company name too long")
+    .transform((val) => val.trim()),
+
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .max(254, "Email too long")
+    .refine((val) => emailRegex.test(val), "Invalid email address"),
 });
 
 export type QuoteFormInput = z.input<typeof quoteFormSchema>;

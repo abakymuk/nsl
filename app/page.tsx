@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
 import {
   HeroSection,
+  TrustBarSection,
+  YardSection,
   ServicesSection,
   ProcessSection,
+  OnboardingSection,
   TrustSection,
   TestimonialsSection,
   CTASection,
 } from "@/components/sections";
 
 export const metadata: Metadata = {
-  title: "New Stream Logistics | Reliable LA/LB Drayage — Without Guesswork",
+  title: "New Stream Logistics | LA/LB Drayage with Secure Private Yard",
   description:
-    "Reliable LA/LB Drayage — Without Guesswork. Clear pricing. Real tracking. Straightforward communication. Licensed, insured, and fully compliant.",
+    "LA/LB drayage with secure private yard. 50+ container capacity, 24/7 security, all 10 terminals served. Real quotes in 2 hours from real dispatchers.",
   openGraph: {
-    title: "New Stream Logistics | Reliable LA/LB Drayage",
+    title: "New Stream Logistics | LA/LB Drayage with Secure Private Yard",
     description:
-      "Clear pricing. Real tracking. Straightforward communication. Licensed, insured, and fully compliant.",
+      "Avoid demurrage with our private secured yard. Real quotes in 2 hours from real dispatchers — no bots, no fake pricing.",
     type: "website",
   },
 };
@@ -24,8 +27,11 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       <HeroSection />
+      <TrustBarSection />
+      <YardSection />
       <ServicesSection />
       <ProcessSection />
+      <OnboardingSection />
       <TrustSection />
       <TestimonialsSection />
       <CTASection />

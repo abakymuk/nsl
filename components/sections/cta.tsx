@@ -31,8 +31,8 @@ export function CTASection() {
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <ShimmerButton
                   className="h-12 px-8 text-base w-full sm:w-auto"
-                  shimmerColor="oklch(0.65 0.2 45)"
-                  background="oklch(0.45 0.15 240)"
+                  shimmerColor="oklch(0.62 0.19 38)"
+                  background="oklch(0.45 0.16 245)"
                 >
                   <Link href="/quote" className="flex items-center gap-2">
                     Request a Quote

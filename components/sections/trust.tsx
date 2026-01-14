@@ -75,8 +75,8 @@ export function TrustSection() {
             <BorderBeam
               size={300}
               duration={12}
-              colorFrom="oklch(0.45 0.15 240)"
-              colorTo="oklch(0.65 0.2 45)"
+              colorFrom="oklch(0.45 0.16 245)"
+              colorTo="oklch(0.62 0.19 38)"
             />
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">

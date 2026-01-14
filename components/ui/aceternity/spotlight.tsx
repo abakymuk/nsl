@@ -114,7 +114,7 @@ export const SpotlightCard = ({
         className="pointer-events-none absolute -inset-px opacity-0 transition duration-300"
         style={{
           opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, oklch(0.45 0.15 240 / 0.15), transparent 40%)`,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, oklch(0.45 0.16 245 / 0.15), transparent 40%)`,
         }}
       />
       {children}

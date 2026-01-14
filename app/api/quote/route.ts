@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
         container_type: body.containerType,
         lfd: body.lfd || null,
         special_instructions: body.notes || null,
+        contact_name: body.fullName,
+        company_name: body.companyName,
+        email: body.email,
         status: "pending",
       };
 
@@ -79,12 +82,20 @@ export async function POST(request: NextRequest) {
     const emailBody = `
 New Quote Request${referenceNumber ? ` - ${referenceNumber}` : ""}
 
+CONTACT INFORMATION
+-------------------
+Name: ${body.fullName}
+Company: ${body.companyName}
+Email: ${body.email}
+
+SHIPMENT DETAILS
+----------------
 Container Number: ${body.containerNumber}
 Terminal: ${body.terminal}
 Delivery ZIP: ${body.deliveryZip}
 Container Type: ${body.containerType}
 ${body.lfd ? `Last Free Day (LFD): ${body.lfd}` : ""}
-${body.notes ? `Notes: ${body.notes}` : ""}
+${body.notes ? `\nNotes: ${body.notes}` : ""}
 
 ---
 Submitted at: ${new Date().toISOString()}
@@ -94,7 +105,8 @@ Submitted at: ${new Date().toISOString()}
     await resend.emails.send({
       from: emailFrom,
       to: emailTo,
-      subject: `New Quote Request - Container ${body.containerNumber}${referenceNumber ? ` (${referenceNumber})` : ""}`,
+      replyTo: body.email,
+      subject: `New Quote Request - Container ${body.containerNumber}${referenceNumber ? ` (${referenceNumber})` : ""} - ${body.companyName}`,
       text: emailBody,
     });
 

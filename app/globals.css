@@ -1,42 +1,65 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Port Blue - Primary (trust, stability, ocean) */
-  --color-primary: oklch(0.45 0.15 240);
-  --color-primary-foreground: oklch(0.98 0 0);
+  /* ============================================
+     LIGHT MODE - Professional Maritime Theme
+     ============================================ */
 
-  /* Container Orange - Accent (urgency, CTAs) */
-  --color-accent: oklch(0.65 0.2 45);
-  --color-accent-foreground: oklch(0.98 0 0);
+  /* Primary - Deep Ocean Blue (trust, stability) */
+  --color-primary: oklch(0.45 0.16 245);
+  --color-primary-foreground: oklch(0.99 0 0);
 
-  /* Fog White - Background */
-  --color-background: oklch(0.985 0.005 240);
-  --color-foreground: oklch(0.15 0.03 240);
+  /* Accent - Sunset Orange (urgency, action, warmth) */
+  --color-accent: oklch(0.62 0.19 38);
+  --color-accent-foreground: oklch(0.99 0 0);
 
-  /* Card backgrounds */
+  /* Background - Warm off-white with subtle blue undertone */
+  --color-background: oklch(0.98 0.004 250);
+  --color-foreground: oklch(0.18 0.02 250);
+
+  /* Card - Pure white with depth */
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.15 0.03 240);
+  --color-card-foreground: oklch(0.18 0.02 250);
 
-  /* Popover */
+  /* Popover - Same as card for consistency */
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.15 0.03 240);
+  --color-popover-foreground: oklch(0.18 0.02 250);
 
-  /* Secondary - Muted blues */
-  --color-secondary: oklch(0.95 0.01 240);
-  --color-secondary-foreground: oklch(0.25 0.03 240);
+  /* Secondary - Cool slate gray */
+  --color-secondary: oklch(0.96 0.006 250);
+  --color-secondary-foreground: oklch(0.30 0.02 250);
 
-  /* Muted */
-  --color-muted: oklch(0.94 0.01 240);
-  --color-muted-foreground: oklch(0.45 0.02 240);
+  /* Muted - Subtle gray for less prominent elements */
+  --color-muted: oklch(0.95 0.006 250);
+  --color-muted-foreground: oklch(0.50 0.015 250);
 
-  /* Destructive */
-  --color-destructive: oklch(0.55 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0 0);
+  /* Destructive - Clear red for errors */
+  --color-destructive: oklch(0.55 0.22 25);
+  --color-destructive-foreground: oklch(0.99 0 0);
 
-  /* Borders & inputs */
-  --color-border: oklch(0.88 0.01 240);
-  --color-input: oklch(0.88 0.01 240);
-  --color-ring: oklch(0.45 0.15 240);
+  /* Success - Forest green */
+  --color-success: oklch(0.55 0.18 145);
+  --color-success-foreground: oklch(0.99 0 0);
+
+  /* Warning - Amber */
+  --color-warning: oklch(0.75 0.16 75);
+  --color-warning-foreground: oklch(0.20 0.02 75);
+
+  /* Borders & inputs - Subtle with blue tint */
+  --color-border: oklch(0.90 0.008 250);
+  --color-input: oklch(0.90 0.008 250);
+  --color-ring: oklch(0.45 0.16 245);
+
+  /* Chart colors for data visualization */
+  --color-chart-1: oklch(0.45 0.16 245);
+  --color-chart-2: oklch(0.62 0.19 38);
+  --color-chart-3: oklch(0.55 0.18 145);
+  --color-chart-4: oklch(0.60 0.15 280);
+  --color-chart-5: oklch(0.65 0.12 180);
+
+  /* Glow effects for animations */
+  --color-primary-glow: oklch(0.45 0.16 245 / 0.3);
+  --color-primary-glow-strong: oklch(0.45 0.16 245 / 0.5);
 
   /* Radius */
   --radius: 0.75rem;
@@ -47,45 +70,83 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
-/* Dark mode - class-based for manual toggle */
+/* ============================================
+   DARK MODE - Deep Navy Theme
+   ============================================ */
 .dark {
-  --color-primary: oklch(0.7 0.12 240);
-  --color-primary-foreground: oklch(0.1 0.02 240);
+  /* Primary - Brighter blue for dark backgrounds */
+  --color-primary: oklch(0.68 0.14 245);
+  --color-primary-foreground: oklch(0.12 0.02 245);
 
-  /* Container Orange - brighter in dark */
-  --color-accent: oklch(0.7 0.18 45);
-  --color-accent-foreground: oklch(0.1 0 0);
+  /* Accent - Warmer orange that pops on dark */
+  --color-accent: oklch(0.72 0.17 38);
+  --color-accent-foreground: oklch(0.12 0 0);
 
-  /* Dark backgrounds */
-  --color-background: oklch(0.12 0.02 240);
-  --color-foreground: oklch(0.95 0.01 240);
+  /* Background - Deep navy with warmth */
+  --color-background: oklch(0.14 0.025 250);
+  --color-foreground: oklch(0.94 0.008 250);
 
-  --color-card: oklch(0.15 0.02 240);
-  --color-card-foreground: oklch(0.95 0.01 240);
+  /* Card - Slightly elevated from background */
+  --color-card: oklch(0.18 0.022 250);
+  --color-card-foreground: oklch(0.94 0.008 250);
 
-  --color-popover: oklch(0.15 0.02 240);
-  --color-popover-foreground: oklch(0.95 0.01 240);
+  /* Popover - Same as card */
+  --color-popover: oklch(0.18 0.022 250);
+  --color-popover-foreground: oklch(0.94 0.008 250);
 
-  --color-secondary: oklch(0.2 0.02 240);
-  --color-secondary-foreground: oklch(0.9 0.01 240);
+  /* Secondary - Subtle elevation */
+  --color-secondary: oklch(0.22 0.018 250);
+  --color-secondary-foreground: oklch(0.88 0.008 250);
 
-  --color-muted: oklch(0.2 0.02 240);
-  --color-muted-foreground: oklch(0.65 0.02 240);
+  /* Muted - For subtle text and backgrounds */
+  --color-muted: oklch(0.22 0.018 250);
+  --color-muted-foreground: oklch(0.62 0.012 250);
 
-  --color-destructive: oklch(0.45 0.18 25);
-  --color-destructive-foreground: oklch(0.95 0 0);
+  /* Destructive - Brighter red for visibility */
+  --color-destructive: oklch(0.60 0.20 25);
+  --color-destructive-foreground: oklch(0.98 0 0);
 
-  --color-border: oklch(0.25 0.02 240);
-  --color-input: oklch(0.25 0.02 240);
-  --color-ring: oklch(0.6 0.12 240);
+  /* Success - Brighter green */
+  --color-success: oklch(0.65 0.16 145);
+  --color-success-foreground: oklch(0.12 0.02 145);
+
+  /* Warning - Brighter amber */
+  --color-warning: oklch(0.78 0.14 75);
+  --color-warning-foreground: oklch(0.18 0.02 75);
+
+  /* Borders & inputs - Visible but subtle */
+  --color-border: oklch(0.28 0.016 250);
+  --color-input: oklch(0.28 0.016 250);
+  --color-ring: oklch(0.68 0.14 245);
+
+  /* Chart colors - Brighter for dark mode */
+  --color-chart-1: oklch(0.68 0.14 245);
+  --color-chart-2: oklch(0.72 0.17 38);
+  --color-chart-3: oklch(0.65 0.16 145);
+  --color-chart-4: oklch(0.70 0.13 280);
+  --color-chart-5: oklch(0.72 0.10 180);
+
+  /* Glow effects for animations - Brighter on dark */
+  --color-primary-glow: oklch(0.68 0.14 245 / 0.3);
+  --color-primary-glow-strong: oklch(0.68 0.14 245 / 0.5);
 }
 
-/* Selection color for dark mode */
+/* ============================================
+   SELECTION STYLES
+   ============================================ */
+::selection {
+  background-color: oklch(0.45 0.16 245 / 0.25);
+  color: oklch(0.18 0.02 250);
+}
+
 .dark ::selection {
-  background-color: oklch(0.7 0.12 240 / 0.3);
-  color: oklch(0.95 0.01 240);
+  background-color: oklch(0.68 0.14 245 / 0.35);
+  color: oklch(0.94 0.008 250);
 }
 
+/* ============================================
+   BASE STYLES
+   ============================================ */
 * {
   border-color: var(--color-border);
 }
@@ -106,19 +167,15 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Selection color */
-::selection {
-  background-color: oklch(0.45 0.15 240 / 0.2);
-  color: oklch(0.15 0.03 240);
-}
-
 /* Focus ring */
 :focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
 
-/* Animation keyframes */
+/* ============================================
+   ANIMATION KEYFRAMES
+   ============================================ */
 @keyframes shimmer {
   from {
     transform: rotate(0deg);
@@ -178,14 +235,38 @@ html {
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px oklch(0.45 0.15 240 / 0.3);
+    box-shadow: 0 0 20px var(--color-primary-glow, oklch(0.45 0.16 245 / 0.3));
   }
   50% {
-    box-shadow: 0 0 40px oklch(0.45 0.15 240 / 0.5);
+    box-shadow: 0 0 40px var(--color-primary-glow-strong, oklch(0.45 0.16 245 / 0.5));
   }
 }
 
-/* Animation utilities */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   ANIMATION UTILITIES
+   ============================================ */
 .animate-shimmer {
   animation: shimmer var(--shimmer-duration, 2s) infinite linear;
 }
@@ -212,4 +293,40 @@ html {
 
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-muted);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-muted);
 }

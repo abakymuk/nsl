@@ -1,6 +1,9 @@
 export { HeroSection } from "./hero";
+export { TrustBarSection } from "./trust-bar";
+export { YardSection } from "./yard";
 export { ServicesSection } from "./services";
 export { ProcessSection } from "./process";
+export { OnboardingSection } from "./onboarding";
 export { TrustSection } from "./trust";
 export { TestimonialsSection } from "./testimonials";
 export { CTASection } from "./cta";

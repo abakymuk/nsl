@@ -208,8 +208,8 @@ export function Nav() {
 
             <ShimmerButton
               className="h-9 text-sm"
-              shimmerColor="oklch(0.65 0.2 45)"
-              background="oklch(0.45 0.15 240)"
+              shimmerColor="oklch(0.62 0.19 38)"
+              background="oklch(0.45 0.16 245)"
             >
               <Link href="/quote">Get Quote</Link>
             </ShimmerButton>

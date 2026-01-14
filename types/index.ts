@@ -10,6 +10,10 @@ export interface QuoteFormData {
   containerType: string;
   lfd?: string;
   notes?: string;
+  // Contact info for early capture
+  fullName: string;
+  companyName: string;
+  email: string;
 }
 
 export interface ContactFormData {
