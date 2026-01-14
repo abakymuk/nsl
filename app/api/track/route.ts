@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Try container number first
     const containerResult = await supabase
-      .from("shipments")
+      .from("loads")
       .select("id, tracking_number, container_number, container_size, status, created_at, updated_at, current_location, origin, destination, pickup_time, delivery_time, eta, driver_name, weight, seal_number, chassis_number, public_notes")
       .eq("container_number", sanitized)
       .order("created_at", { ascending: false })
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     // If not found by container, try tracking number
     if (!shipments || shipments.length === 0) {
       const trackingResult = await supabase
-        .from("shipments")
+        .from("loads")
         .select("id, tracking_number, container_number, container_size, status, created_at, updated_at, current_location, origin, destination, pickup_time, delivery_time, eta, driver_name, weight, seal_number, chassis_number, public_notes")
         .eq("tracking_number", sanitized)
         .order("created_at", { ascending: false })
@@ -83,15 +83,15 @@ export async function GET(request: NextRequest) {
 
       // Get events
       const { data: events } = await supabase
-        .from("shipment_events")
+        .from("load_events")
         .select("id, status, location, notes, created_at")
-        .eq("shipment_id", shipment.id)
+        .eq("load_id", shipment.id)
         .order("created_at", { ascending: false });
 
       return NextResponse.json({
         success: true,
         found: true,
-        type: "shipment",
+        type: "load",
         data: {
           trackingNumber: shipment.tracking_number || `NSL-${String(shipment.id).substring(0, 8).toUpperCase()}`,
           containerNumber: shipment.container_number,
@@ -172,7 +172,7 @@ function getQuoteStatusMessage(status: string): string {
     case "accepted":
       return "Your quote has been accepted.";
     case "completed":
-      return "This shipment has been completed.";
+      return "This load has been completed.";
     case "cancelled":
       return "This quote was cancelled.";
     default:

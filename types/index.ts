@@ -41,7 +41,7 @@ export interface ContainerStatus {
   contactEmail?: string;
 }
 
-export interface ShipmentEvent {
+export interface LoadEvent {
   id: string;
   timestamp: string;
   status: ShipmentStatus;
@@ -56,7 +56,7 @@ export interface Shipment {
   pickupTime?: string;
   deliveryTime?: string;
   currentLocation?: string;
-  events: ShipmentEvent[];
+  events: LoadEvent[];
   publicNotes?: string;
 }
 

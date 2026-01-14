@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Copy, Check, ExternalLink, RefreshCw } from "lucide-react";
 
-interface ShipmentActionsProps {
-  shipment: {
+interface LoadActionsProps {
+  load: {
     id: string;
     status: string;
     tracking_number: string;
@@ -13,13 +13,13 @@ interface ShipmentActionsProps {
   };
 }
 
-export function ShipmentActions({ shipment }: ShipmentActionsProps) {
+export function LoadActions({ load }: LoadActionsProps) {
   const [copied, setCopied] = useState(false);
   const [copiedContainer, setCopiedContainer] = useState(false);
 
   const trackingUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/track?number=${shipment.tracking_number}`
-    : `/track?number=${shipment.tracking_number}`;
+    ? `${window.location.origin}/track?number=${load.tracking_number}`
+    : `/track?number=${load.tracking_number}`;
 
   const copyToClipboard = async (text: string, type: "tracking" | "container") => {
     await navigator.clipboard.writeText(text);
@@ -43,7 +43,7 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
               Synced from PortPro
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              This shipment data is automatically synced from PortPro TMS. To make changes, update the load in PortPro.
+              This load data is automatically synced from PortPro TMS. To make changes, update the load in PortPro.
             </p>
           </div>
         </div>
@@ -53,7 +53,7 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <h2 className="font-semibold mb-2">Customer Tracking Link</h2>
         <p className="text-xs text-muted-foreground mb-3">
-          Share this link with the customer to track their shipment
+          Share this link with the customer to track their load
         </p>
         <div className="flex items-center gap-2">
           <code className="flex-1 p-3 rounded-lg bg-muted text-xs break-all">
@@ -83,15 +83,15 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
       </div>
 
       {/* Container Number */}
-      {shipment.container_number && (
+      {load.container_number && (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="font-semibold mb-2">Container Number</h2>
           <div className="flex items-center gap-2">
             <code className="flex-1 p-3 rounded-lg bg-muted font-mono text-sm">
-              {shipment.container_number}
+              {load.container_number}
             </code>
             <button
-              onClick={() => copyToClipboard(shipment.container_number!, "container")}
+              onClick={() => copyToClipboard(load.container_number!, "container")}
               className="shrink-0 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
               title="Copy container number"
             >
@@ -106,11 +106,11 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
       )}
 
       {/* PortPro Reference */}
-      {shipment.portpro_reference && (
+      {load.portpro_reference && (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="font-semibold mb-2">PortPro Reference</h2>
           <code className="block p-3 rounded-lg bg-muted font-mono text-sm">
-            {shipment.portpro_reference}
+            {load.portpro_reference}
           </code>
         </div>
       )}

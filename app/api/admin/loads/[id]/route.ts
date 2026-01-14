@@ -3,7 +3,7 @@ import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
 
 const supabase = createUntypedAdminClient();
 
-// Read-only endpoint - events come from PortPro
+// Read-only endpoint - shipment data comes from PortPro
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,22 +16,22 @@ export async function GET(
     const { id } = await params;
 
     const { data, error } = await supabase
-      .from("shipment_events")
+      .from("loads")
       .select("*")
-      .eq("shipment_id", id)
-      .order("created_at", { ascending: false });
+      .eq("id", id)
+      .single();
 
     if (error) {
-      console.error("Error fetching events:", error);
+      console.error("Error fetching shipment:", error);
       return NextResponse.json(
-        { error: "Failed to fetch events" },
-        { status: 500 }
+        { error: "Load not found" },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json({ events: data });
+    return NextResponse.json({ shipment: data });
   } catch (error) {
-    console.error("Error in GET /api/admin/shipments/[id]/events:", error);
+    console.error("Error in GET /api/admin/loads/[id]:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -69,9 +69,9 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check if shipment already exists by container_number
+        // Check if load already exists by container_number
         const { data: existing, error: selectError } = await supabase
-          .from("shipments")
+          .from("loads")
           .select("id")
           .eq("container_number", load.containerNo)
           .limit(1);
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Generate tracking number for new shipments
+        // Generate tracking number for new loads
         const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
         // Determine locations using the formatLocation helper
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         if (existing && existing.length > 0) {
           // Update existing shipment (don't change tracking_number)
           const { error: updateError } = await supabase
-            .from("shipments")
+            .from("loads")
             .update(shipmentData)
             .eq("id", existing[0].id);
 
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Create new shipment with tracking number
           const { error: insertError } = await supabase
-            .from("shipments")
+            .from("loads")
             .insert({
               ...shipmentData,
               tracking_number: trackingNumber,

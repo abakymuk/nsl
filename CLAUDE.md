@@ -24,8 +24,8 @@ pnpm lint             # Run ESLint
 ### App Structure (Next.js 16 App Router)
 
 - **Public pages**: `/`, `/quote`, `/track`, `/services`, `/process`, `/compliance`, `/about`, `/contact`
-- **Customer portal**: `/dashboard/*` - authenticated customer views (quotes, shipments)
-- **Admin portal**: `/admin/*` - internal dashboard for managing quotes, shipments, syncing with PortPro
+- **Customer portal**: `/dashboard/*` - authenticated customer views (quotes, loads)
+- **Admin portal**: `/admin/*` - internal dashboard for managing quotes, loads, syncing with PortPro
 - **Auth**: `/(auth)/*` - Supabase auth callback routes
 
 ### Key Directories
@@ -33,10 +33,10 @@ pnpm lint             # Run ESLint
 ```
 app/
 ├── (auth)/          # Route group for auth callbacks
-├── admin/           # Admin dashboard (shipments, quotes, sync, analytics)
+├── admin/           # Admin dashboard (loads, quotes, sync, analytics)
 ├── dashboard/       # Customer portal
 ├── api/
-│   ├── admin/       # Admin endpoints (quotes, shipments, PortPro sync)
+│   ├── admin/       # Admin endpoints (quotes, loads, PortPro sync)
 │   ├── webhooks/    # PortPro webhook handlers
 │   └── [public]/    # Contact, quote, track endpoints
 components/
@@ -58,14 +58,14 @@ types/
 ### Data Layer
 
 - **Supabase**: PostgreSQL with RLS for multi-tenant data isolation
-  - Tables: `quotes`, `shipments`, `shipment_events`, `organizations`, `organization_members`, `profiles`
+  - Tables: `quotes`, `loads`, `load_events`, `organizations`, `organization_members`, `profiles`
   - Auth: Email/password with magic links
   - Multi-tenancy: Users belong to organizations via `organization_members` join table
 
 - **PortPro Integration**:
   - `lib/portpro.ts` handles API client, auth, webhook processing
-  - Webhooks sync load/shipment data to `shipments` and `shipment_events` tables
-  - Status mapping: PortPro statuses → internal shipment lifecycle states
+  - Webhooks sync load/load data to `loads` and `load_events` tables
+  - Status mapping: PortPro statuses → internal load lifecycle states
   - Two-way sync: Admin can create/update loads in PortPro
 
 ### Authentication & Authorization
@@ -144,7 +144,7 @@ All queries must filter by organization. Use helpers in `lib/organizations.ts`:
 Webhooks arrive at `app/api/webhooks/portpro/route.ts`:
 - Validates signature
 - Processes load/document events
-- Creates/updates shipments and events in Supabase
+- Creates/updates loads and events in Supabase
 - Maps PortPro statuses to internal states using `PORTPRO_STATUS_MAP`
 
 ### Form Handling

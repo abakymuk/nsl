@@ -135,7 +135,7 @@ export function Footer() {
               >
                 <div>
                   <p className="text-sm font-medium text-foreground">Track Container</p>
-                  <p className="text-xs text-muted-foreground">Check your shipment status</p>
+                  <p className="text-xs text-muted-foreground">Check your load status</p>
                 </div>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </Link>

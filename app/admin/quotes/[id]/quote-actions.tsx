@@ -123,11 +123,11 @@ export function QuoteActions({ quote }: QuoteActionsProps) {
 
         {quote.status === "accepted" && (
           <a
-            href={`/admin/shipments/new?quote_id=${quote.id}`}
+            href={`/admin/loads/new?quote_id=${quote.id}`}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
           >
             <Truck className="h-4 w-4" />
-            Create Shipment
+            Create Load
           </a>
         )}
       </div>

@@ -38,7 +38,7 @@ interface TrackingEvent {
   timestamp: string;
 }
 
-interface ShipmentData {
+interface LoadData {
   trackingNumber: string;
   containerNumber: string;
   containerSize: string | null;
@@ -69,8 +69,8 @@ interface QuoteData {
 interface TrackingResult {
   success: boolean;
   found: boolean;
-  type?: "shipment" | "quote";
-  data?: ShipmentData | QuoteData;
+  type?: "load" | "quote";
+  data?: LoadData | QuoteData;
   message?: string;
   error?: string;
 }
@@ -143,7 +143,7 @@ const journeySteps = [
 ];
 
 // Helper to check shipment type
-const isShipment = (data: ShipmentData | QuoteData): data is ShipmentData => {
+const isLoad = (data: LoadData | QuoteData): data is LoadData => {
   return "events" in data;
 };
 
@@ -394,7 +394,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 // Shipment result component
-function ShipmentResult({ data, onTrackAnother }: { data: ShipmentData; onTrackAnother: () => void }) {
+function LoadResult({ data, onTrackAnother }: { data: LoadData; onTrackAnother: () => void }) {
   const config = statusConfig[data.status] || statusConfig.booked;
   const eta = data.eta ? formatETA(data.eta) : null;
   const isDelivered = data.status === "delivered";
@@ -593,7 +593,7 @@ function ShipmentResult({ data, onTrackAnother }: { data: ShipmentData; onTrackA
       {data.events.length > 0 && (
         <div className="rounded-2xl border bg-card p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold text-foreground">Shipment History</h3>
+            <h3 className="font-semibold text-foreground">Load History</h3>
             <span className="text-xs text-muted-foreground">
               {data.events.length} event{data.events.length !== 1 ? "s" : ""}
             </span>
@@ -759,7 +759,7 @@ function NotFound({ containerNumber, onTrackAnother }: { containerNumber: string
           Container Not Found
         </h2>
         <p className="text-muted-foreground mb-2">
-          We couldn&apos;t find a shipment for{" "}
+          We couldn&apos;t find a load for{" "}
           <span className="font-mono font-semibold">{containerNumber}</span>
         </p>
         <p className="text-sm text-muted-foreground">
@@ -904,7 +904,7 @@ export default function TrackForm() {
                   <Package className="h-8 w-8 text-primary" />
                 </div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
-                  Track Your Shipment
+                  Track Your Load
                 </h1>
                 <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">
                   Enter your container or tracking number to get real-time status updates and delivery information.
@@ -981,11 +981,11 @@ export default function TrackForm() {
         <AnimatePresence mode="wait">
           {result && (
             <>
-              {result.found && result.type === "shipment" && result.data && isShipment(result.data) && (
-                <ShipmentResult data={result.data} onTrackAnother={handleTrackAnother} />
+              {result.found && result.type === "load" && result.data && isLoad(result.data) && (
+                <LoadResult data={result.data} onTrackAnother={handleTrackAnother} />
               )}
 
-              {result.found && result.type === "quote" && result.data && !isShipment(result.data) && (
+              {result.found && result.type === "quote" && result.data && !isLoad(result.data) && (
                 <QuoteResult data={result.data as QuoteData} onTrackAnother={handleTrackAnother} />
               )}
 
@@ -1008,7 +1008,7 @@ export default function TrackForm() {
                 </div>
                 <h3 className="font-semibold text-foreground">Real-Time Updates</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Track your shipment status as it moves through the supply chain
+                  Track your load status as it moves through the supply chain
                 </p>
               </div>
               <div>

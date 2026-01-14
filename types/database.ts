@@ -150,7 +150,7 @@ export interface Database {
           status?: string;
         };
       };
-      shipments: {
+      loads: {
         Row: {
           id: string;
           quote_id: string | null;
@@ -234,10 +234,10 @@ export interface Database {
           weight?: number | null;
         };
       };
-      shipment_events: {
+      load_events: {
         Row: {
           id: string;
-          shipment_id: string;
+          load_id: string;
           created_at: string;
           status: string;
           description: string | null;
@@ -248,7 +248,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          shipment_id: string;
+          load_id: string;
           created_at?: string;
           status: string;
           description?: string | null;
@@ -259,7 +259,7 @@ export interface Database {
         };
         Update: {
           id?: string;
-          shipment_id?: string;
+          load_id?: string;
           created_at?: string;
           status?: string;
           description?: string | null;
@@ -290,9 +290,16 @@ export type QuoteUpdate = Database["public"]["Tables"]["quotes"]["Update"];
 export type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 export type ContactInsert = Database["public"]["Tables"]["contacts"]["Insert"];
 
-export type Shipment = Database["public"]["Tables"]["shipments"]["Row"];
-export type ShipmentInsert = Database["public"]["Tables"]["shipments"]["Insert"];
-export type ShipmentUpdate = Database["public"]["Tables"]["shipments"]["Update"];
+export type Load = Database["public"]["Tables"]["loads"]["Row"];
+export type LoadInsert = Database["public"]["Tables"]["loads"]["Insert"];
+export type LoadUpdate = Database["public"]["Tables"]["loads"]["Update"];
 
-export type ShipmentEvent = Database["public"]["Tables"]["shipment_events"]["Row"];
-export type ShipmentEventInsert = Database["public"]["Tables"]["shipment_events"]["Insert"];
+export type LoadEvent = Database["public"]["Tables"]["load_events"]["Row"];
+export type LoadEventInsert = Database["public"]["Tables"]["load_events"]["Insert"];
+
+// Backwards compatibility aliases (deprecated - use Load/LoadEvent instead)
+export type Shipment = Load;
+export type ShipmentInsert = LoadInsert;
+export type ShipmentUpdate = LoadUpdate;
+export type ShipmentEvent = LoadEvent;
+export type ShipmentEventInsert = LoadEventInsert;

@@ -190,8 +190,8 @@ export default function SyncPage() {
         <CardHeader>
           <CardTitle>Sync Loads from PortPro</CardTitle>
           <CardDescription>
-            This will fetch all loads from PortPro and create/update shipments in the database.
-            Existing shipments will be updated with the latest data.
+            This will fetch all loads from PortPro and create/update loads in the database.
+            Existing loads will be updated with the latest data.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -294,12 +294,12 @@ export default function SyncPage() {
           <p>1. Fetches all loads from PortPro API in batches of 50</p>
           <p>2. For each load with a container number:</p>
           <ul className="list-disc list-inside ml-4">
-            <li>If a shipment already exists (by container number), it updates it</li>
-            <li>Otherwise, creates a new shipment with a tracking number</li>
+            <li>If a load already exists (by container number), it updates it</li>
+            <li>Otherwise, creates a new load with a tracking number</li>
           </ul>
           <p>3. Synced data includes: origin, destination, customer info, ETA, weight, and more</p>
           <p>4. Loads without container numbers are skipped</p>
-          <p>5. After sync, all shipments will be trackable on the tracking page</p>
+          <p>5. After sync, all loads will be trackable on the tracking page</p>
         </CardContent>
       </Card>
 

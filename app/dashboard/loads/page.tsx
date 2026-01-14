@@ -18,7 +18,7 @@ async function getCustomerCompany(email: string) {
 
   // Fallback: check shipments for customer_name
   const { data: shipmentData } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("customer_name")
     .eq("customer_email", email)
     .limit(1)
@@ -28,13 +28,13 @@ async function getCustomerCompany(email: string) {
 }
 
 async function getShipments(email: string, companyName: string | null, status?: string) {
-  // Filter by company name if available (to show all company shipments)
+  // Filter by company name if available (to show all company loads)
   const filter = companyName
     ? { column: "customer_name", value: companyName }
     : { column: "customer_email", value: email };
 
   let query = supabase
-    .from("shipments")
+    .from("loads")
     .select("*")
     .eq(filter.column, filter.value)
     .order("created_at", { ascending: false });
@@ -67,9 +67,9 @@ export default async function ShipmentsPage({
   const email = user.email || "";
   const { status } = await searchParams;
 
-  // Get company name to show all company shipments
+  // Get company name to show all company loads
   const companyName = await getCustomerCompany(email);
-  const shipments = await getShipments(email, companyName, status);
+  const loads = await getShipments(email, companyName, status);
 
   const statuses = ["all", "booked", "in_transit", "delivered"];
 
@@ -80,7 +80,7 @@ export default async function ShipmentsPage({
         <div>
           <h1 className="text-2xl font-bold">Shipments</h1>
           <p className="text-muted-foreground mt-1">
-            Track and monitor your shipments
+            Track and monitor your loads
           </p>
         </div>
         <Link
@@ -99,8 +99,8 @@ export default async function ShipmentsPage({
             key={s}
             href={
               s === "all"
-                ? "/dashboard/shipments"
-                : `/dashboard/shipments?status=${s}`
+                ? "/dashboard/loads"
+                : `/dashboard/loads?status=${s}`
             }
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               (status || "all") === s
@@ -114,10 +114,10 @@ export default async function ShipmentsPage({
       </div>
 
       {/* Shipments List */}
-      {shipments.length === 0 ? (
+      {loads.length === 0 ? (
         <div className="rounded-xl border bg-card p-12 text-center">
           <Truck className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-          <h3 className="font-semibold text-lg mb-2">No shipments yet</h3>
+          <h3 className="font-semibold text-lg mb-2">No loads yet</h3>
           <p className="text-muted-foreground text-sm max-w-sm mx-auto">
             Once your quotes are accepted and shipments are scheduled,
             they&apos;ll appear here for easy tracking.
@@ -131,7 +131,7 @@ export default async function ShipmentsPage({
         </div>
       ) : (
         <div className="grid gap-4">
-          {shipments.map((shipment: any) => (
+          {loads.map((shipment: any) => (
             <Link
               key={shipment.id}
               href={`/track?number=${shipment.tracking_number}`}

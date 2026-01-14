@@ -37,16 +37,16 @@ async function getStats() {
 
   // Get shipment stats
   const { count: totalShipments } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*", { count: "exact", head: true });
 
   const { count: activeShipments } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*", { count: "exact", head: true })
     .in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]);
 
   const { count: completedShipments } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*", { count: "exact", head: true })
     .eq("status", "delivered");
 
@@ -72,7 +72,7 @@ async function getRecentQuotes() {
 
 async function getActiveShipments() {
   const { data } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*")
     .in("status", ["booked", "in_transit", "at_port", "out_for_delivery"])
     .order("updated_at", { ascending: false })
@@ -104,7 +104,7 @@ export default async function AdminDashboard() {
           icon={Clock}
         />
         <StatsCard
-          title="Active Shipments"
+          title="Active Loads"
           value={stats.activeShipments}
           description="Currently in transit"
           icon={Truck}
@@ -122,13 +122,13 @@ export default async function AdminDashboard() {
           icon={FileText}
         />
         <StatsCard
-          title="Completed Shipments"
+          title="Completed Loads"
           value={stats.completedShipments}
           description="Successfully delivered"
           icon={CheckCircle2}
         />
         <StatsCard
-          title="Total Shipments"
+          title="Total Loads"
           value={stats.totalShipments}
           description="All time"
           icon={Truck}
@@ -191,12 +191,12 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        {/* Active Shipments */}
+        {/* Active Loads */}
         <div className="rounded-xl border bg-card shadow-sm">
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="font-semibold">Active Shipments</h2>
+            <h2 className="font-semibold">Active Loads</h2>
             <Link
-              href="/admin/shipments"
+              href="/admin/loads"
               className="text-sm text-primary hover:underline"
             >
               View All
@@ -211,7 +211,7 @@ export default async function AdminDashboard() {
               activeShipments.map((shipment: any) => (
                 <Link
                   key={shipment.id}
-                  href={`/admin/shipments/${shipment.id}`}
+                  href={`/admin/loads/${shipment.id}`}
                   className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
                 >
                   <div>
@@ -259,11 +259,11 @@ export default async function AdminDashboard() {
             Review Pending Quotes
           </Link>
           <Link
-            href="/admin/shipments/new"
+            href="/admin/loads/new"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
           >
             <Truck className="h-4 w-4" />
-            Create New Shipment
+            Create New Load
           </Link>
           <Link
             href="/admin/analytics"

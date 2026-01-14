@@ -58,8 +58,8 @@ const navItems = [
     icon: FileText,
   },
   {
-    title: "Shipments",
-    href: "/admin/shipments",
+    title: "Loads",
+    href: "/admin/loads",
     icon: Truck,
   },
   {

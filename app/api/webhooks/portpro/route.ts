@@ -102,9 +102,9 @@ async function handleLoadCreated(payload: WebhookPayload) {
   const referenceNumber = data.reference_number;
   const status = mapPortProStatus(data.status || "PENDING");
 
-  // Check if shipment already exists
+  // Check if load already exists
   const { data: existing } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("id")
     .eq("portpro_reference", referenceNumber)
     .single();
@@ -119,7 +119,7 @@ async function handleLoadCreated(payload: WebhookPayload) {
 
   // Create new shipment
   const { data: shipment, error } = await supabase
-    .from("shipments")
+    .from("loads")
     .insert({
       tracking_number: trackingNumber,
       portpro_reference: referenceNumber,
@@ -141,8 +141,8 @@ async function handleLoadCreated(payload: WebhookPayload) {
   }
 
   // Create initial event
-  await supabase.from("shipment_events").insert({
-    shipment_id: shipment.id,
+  await supabase.from("load_events").insert({
+    load_id: shipment.id,
     status,
     description: `Load created in PortPro: ${referenceNumber}`,
     portpro_event: true,
@@ -167,7 +167,7 @@ async function handleLoadStatusUpdated(payload: WebhookPayload) {
 
   // Update shipment
   const { data: shipment, error } = await supabase
-    .from("shipments")
+    .from("loads")
     .update({
       status: mappedStatus,
       updated_at: new Date().toISOString(),
@@ -177,7 +177,7 @@ async function handleLoadStatusUpdated(payload: WebhookPayload) {
     .single();
 
   if (error) {
-    console.error("Error updating shipment status:", error);
+    console.error("Error updating load status:", error);
     return;
   }
 
@@ -188,15 +188,15 @@ async function handleLoadStatusUpdated(payload: WebhookPayload) {
 
   // Create status update event
   const statusDescriptions: Record<string, string> = {
-    booked: "Shipment booked and confirmed",
+    booked: "Load booked and confirmed",
     at_port: "Container at port",
     in_transit: "Container dispatched and in transit",
     out_for_delivery: "Container dropped for delivery",
-    delivered: "Shipment completed",
+    delivered: "Load completed",
   };
 
-  await supabase.from("shipment_events").insert({
-    shipment_id: shipment.id,
+  await supabase.from("load_events").insert({
+    load_id: shipment.id,
     status: mappedStatus,
     description: statusDescriptions[mappedStatus] || `Status updated to ${newStatus}`,
     portpro_event: true,
@@ -233,7 +233,7 @@ async function handleLoadInfoUpdated(payload: WebhookPayload) {
   if (data.containerSize) updates.container_size = data.containerSize;
 
   const { error } = await supabase
-    .from("shipments")
+    .from("loads")
     .update(updates)
     .eq("portpro_reference", referenceNumber);
 
@@ -260,7 +260,7 @@ async function handleEquipmentUpdated(payload: WebhookPayload) {
   if (data.sealNo) updates.seal_number = data.sealNo;
 
   const { error } = await supabase
-    .from("shipments")
+    .from("loads")
     .update(updates)
     .eq("portpro_reference", referenceNumber);
 
@@ -280,7 +280,7 @@ async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
 
   // Get shipment
   const { data: shipment } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("id")
     .eq("portpro_reference", referenceNumber)
     .single();
@@ -288,8 +288,8 @@ async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
   if (!shipment) return;
 
   // Create event for document addition
-  await supabase.from("shipment_events").insert({
-    shipment_id: shipment.id,
+  await supabase.from("load_events").insert({
+    load_id: shipment.id,
     status: "document",
     description: `${docType} document added`,
     portpro_event: true,
@@ -298,12 +298,12 @@ async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
   // If it's a POD, mark shipment as delivered
   if (docType === "POD") {
     await supabase
-      .from("shipments")
+      .from("loads")
       .update({ status: "delivered", updated_at: new Date().toISOString() })
       .eq("id", shipment.id);
 
-    await supabase.from("shipment_events").insert({
-      shipment_id: shipment.id,
+    await supabase.from("load_events").insert({
+      load_id: shipment.id,
       status: "delivered",
       description: "Proof of delivery received",
       portpro_event: true,
@@ -325,14 +325,14 @@ async function handleTenderStatusChanged(payload: WebhookPayload) {
 
   // Get shipment and add event
   const { data: shipment } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("id")
     .eq("portpro_reference", referenceNumber)
     .single();
 
   if (shipment) {
-    await supabase.from("shipment_events").insert({
-      shipment_id: shipment.id,
+    await supabase.from("load_events").insert({
+      load_id: shipment.id,
       status: "tender",
       description: `Tender ${tenderStatus.toLowerCase()}`,
       portpro_event: true,

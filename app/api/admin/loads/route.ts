@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
 
     let query = supabase
-      .from("shipments")
+      .from("loads")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -27,14 +27,14 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Error fetching shipments:", error);
       return NextResponse.json(
-        { error: "Failed to fetch shipments" },
+        { error: "Failed to fetch loads" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ shipments: data });
   } catch (error) {
-    console.error("Error in GET /api/admin/shipments:", error);
+    console.error("Error in GET /api/admin/loads:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

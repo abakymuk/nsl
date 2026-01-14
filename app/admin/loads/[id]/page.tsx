@@ -16,17 +16,17 @@ import {
   RotateCcw,
   Navigation,
 } from "lucide-react";
-import { ShipmentActions } from "./shipment-actions";
-import { ShipmentTimeline } from "./shipment-timeline";
+import { LoadActions } from "./load-actions";
+import { LoadTimeline } from "./load-timeline";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function getShipment(id: string) {
+async function getLoad(id: string) {
   const { data, error } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*")
     .eq("id", id)
     .single();
@@ -38,11 +38,11 @@ async function getShipment(id: string) {
   return data;
 }
 
-async function getShipmentEvents(shipmentId: string) {
+async function getLoadEvents(loadId: string) {
   const { data, error } = await supabase
-    .from("shipment_events")
+    .from("load_events")
     .select("*")
-    .eq("shipment_id", shipmentId)
+    .eq("load_id", loadId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -53,55 +53,55 @@ async function getShipmentEvents(shipmentId: string) {
   return data || [];
 }
 
-export default async function ShipmentDetailPage({
+export default async function LoadDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const shipment = await getShipment(id);
+  const load = await getLoad(id);
 
-  if (!shipment) {
+  if (!load) {
     notFound();
   }
 
-  const events = await getShipmentEvents(id);
+  const events = await getLoadEvents(id);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link
-          href="/admin/shipments"
+          href="/admin/loads"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Shipments
+          Back to Loads
         </Link>
       </div>
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-mono">{shipment.tracking_number}</h1>
+          <h1 className="text-3xl font-bold font-mono">{load.tracking_number}</h1>
           <p className="text-muted-foreground mt-1">
-            Container: {shipment.container_number}
+            Container: {load.container_number}
           </p>
         </div>
         <span
           className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-            shipment.status === "delivered"
+            load.status === "delivered"
               ? "bg-success/15 text-success"
-              : shipment.status === "in_transit"
+              : load.status === "in_transit"
               ? "bg-primary/15 text-primary"
-              : shipment.status === "at_port"
+              : load.status === "at_port"
               ? "bg-chart-4/15 text-chart-4"
-              : shipment.status === "out_for_delivery"
+              : load.status === "out_for_delivery"
               ? "bg-accent/15 text-accent"
-              : shipment.status === "cancelled"
+              : load.status === "cancelled"
               ? "bg-destructive/15 text-destructive"
               : "bg-warning/15 text-warning"
           }`}
         >
-          {shipment.status.replace(/_/g, " ")}
+          {load.status.replace(/_/g, " ")}
         </span>
       </div>
 
@@ -109,42 +109,42 @@ export default async function ShipmentDetailPage({
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Route - only show if origin, destination, or return_location exists */}
-          {(shipment.origin || shipment.destination || shipment.return_location) && (
+          {(load.origin || load.destination || load.return_location) && (
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h2 className="font-semibold mb-4">Route Information</h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {shipment.origin && (
+                {load.origin && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin className="h-4 w-4 text-green-500" />
                       <p className="text-xs text-muted-foreground font-medium">Pick Up Location</p>
                     </div>
-                    <p className="text-sm whitespace-pre-line">{shipment.origin}</p>
+                    <p className="text-sm whitespace-pre-line">{load.origin}</p>
                   </div>
                 )}
-                {shipment.destination && (
+                {load.destination && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Truck className="h-4 w-4 text-blue-500" />
                       <p className="text-xs text-muted-foreground font-medium">Delivery Location</p>
                     </div>
-                    <p className="text-sm whitespace-pre-line">{shipment.destination}</p>
+                    <p className="text-sm whitespace-pre-line">{load.destination}</p>
                   </div>
                 )}
-                {shipment.return_location && (
+                {load.return_location && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <RotateCcw className="h-4 w-4 text-orange-500" />
                       <p className="text-xs text-muted-foreground font-medium">Return Location</p>
                     </div>
-                    <p className="text-sm whitespace-pre-line">{shipment.return_location}</p>
+                    <p className="text-sm whitespace-pre-line">{load.return_location}</p>
                   </div>
                 )}
               </div>
-              {shipment.total_miles && (
+              {load.total_miles && (
                 <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm text-muted-foreground">
                   <Navigation className="h-4 w-4" />
-                  <span>Total Distance: <strong className="text-foreground">{shipment.total_miles.toFixed(2)} miles</strong></span>
+                  <span>Total Distance: <strong className="text-foreground">{load.total_miles.toFixed(2)} miles</strong></span>
                 </div>
               )}
             </div>
@@ -160,10 +160,10 @@ export default async function ShipmentDetailPage({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Container #</p>
-                  <code className="font-mono font-medium">{shipment.container_number}</code>
+                  <code className="font-mono font-medium">{load.container_number}</code>
                 </div>
               </div>
-              {(shipment.container_size || shipment.container_type) && (
+              {(load.container_size || load.container_type) && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2 shrink-0">
                     <Package className="h-4 w-4 text-primary" />
@@ -171,41 +171,41 @@ export default async function ShipmentDetailPage({
                   <div>
                     <p className="text-xs text-muted-foreground">Size / Type</p>
                     <p className="font-medium">
-                      {[shipment.container_size, shipment.container_type].filter(Boolean).join(" ")}
+                      {[load.container_size, load.container_type].filter(Boolean).join(" ")}
                     </p>
                   </div>
                 </div>
               )}
-              {shipment.chassis_number && (
+              {load.chassis_number && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2 shrink-0">
                     <Truck className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Chassis #</p>
-                    <code className="font-mono font-medium">{shipment.chassis_number}</code>
+                    <code className="font-mono font-medium">{load.chassis_number}</code>
                   </div>
                 </div>
               )}
-              {shipment.seal_number && (
+              {load.seal_number && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2 shrink-0">
                     <Package className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Seal #</p>
-                    <code className="font-mono font-medium">{shipment.seal_number}</code>
+                    <code className="font-mono font-medium">{load.seal_number}</code>
                   </div>
                 </div>
               )}
-              {shipment.weight && (
+              {load.weight && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2 shrink-0">
                     <Scale className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Weight</p>
-                    <p className="font-medium">{shipment.weight.toLocaleString()} LBS</p>
+                    <p className="font-medium">{load.weight.toLocaleString()} LBS</p>
                   </div>
                 </div>
               )}
@@ -213,40 +213,40 @@ export default async function ShipmentDetailPage({
           </div>
 
           {/* Booking & Shipping Info - only show if any field exists */}
-          {(shipment.booking_number || shipment.shipping_line || shipment.commodity) && (
+          {(load.booking_number || load.shipping_line || load.commodity) && (
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h2 className="font-semibold mb-4">Booking & Shipping</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {shipment.booking_number && (
+                {load.booking_number && (
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-primary/10 p-2 shrink-0">
                       <FileText className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Booking #</p>
-                      <code className="font-mono font-medium">{shipment.booking_number}</code>
+                      <code className="font-mono font-medium">{load.booking_number}</code>
                     </div>
                   </div>
                 )}
-                {shipment.shipping_line && (
+                {load.shipping_line && (
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-primary/10 p-2 shrink-0">
                       <Ship className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Shipping Line (SSL)</p>
-                      <p className="font-medium">{shipment.shipping_line}</p>
+                      <p className="font-medium">{load.shipping_line}</p>
                     </div>
                   </div>
                 )}
-                {shipment.commodity && (
+                {load.commodity && (
                   <div className="flex items-start gap-3 sm:col-span-2 lg:col-span-1">
                     <div className="rounded-full bg-primary/10 p-2 shrink-0">
                       <Package className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Commodity</p>
-                      <p className="font-medium">{shipment.commodity}</p>
+                      <p className="font-medium">{load.commodity}</p>
                     </div>
                   </div>
                 )}
@@ -255,22 +255,22 @@ export default async function ShipmentDetailPage({
           )}
 
           {/* Customer Info */}
-          {(shipment.customer_name || shipment.customer_email || shipment.customer_phone) && (
+          {(load.customer_name || load.customer_email || load.customer_phone) && (
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h2 className="font-semibold mb-4">Customer Information</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {shipment.customer_name && (
+                {load.customer_name && (
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-primary/10 p-2 shrink-0">
                       <User className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Customer</p>
-                      <p className="font-medium">{shipment.customer_name}</p>
+                      <p className="font-medium">{load.customer_name}</p>
                     </div>
                   </div>
                 )}
-                {shipment.customer_email && (
+                {load.customer_email && (
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-primary/10 p-2 shrink-0">
                       <Mail className="h-4 w-4 text-primary" />
@@ -278,15 +278,15 @@ export default async function ShipmentDetailPage({
                     <div>
                       <p className="text-xs text-muted-foreground">Email</p>
                       <a
-                        href={`mailto:${shipment.customer_email}`}
+                        href={`mailto:${load.customer_email}`}
                         className="font-medium text-primary hover:underline"
                       >
-                        {shipment.customer_email}
+                        {load.customer_email}
                       </a>
                     </div>
                   </div>
                 )}
-                {shipment.customer_phone && (
+                {load.customer_phone && (
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-primary/10 p-2 shrink-0">
                       <Phone className="h-4 w-4 text-primary" />
@@ -294,10 +294,10 @@ export default async function ShipmentDetailPage({
                     <div>
                       <p className="text-xs text-muted-foreground">Phone</p>
                       <a
-                        href={`tel:${shipment.customer_phone}`}
+                        href={`tel:${load.customer_phone}`}
                         className="font-medium text-primary hover:underline"
                       >
-                        {shipment.customer_phone}
+                        {load.customer_phone}
                       </a>
                     </div>
                   </div>
@@ -317,8 +317,8 @@ export default async function ShipmentDetailPage({
                 <div>
                   <p className="text-xs text-muted-foreground">ETA</p>
                   <p className="font-medium">
-                    {shipment.eta
-                      ? new Date(shipment.eta).toLocaleDateString("en-US", {
+                    {load.eta
+                      ? new Date(load.eta).toLocaleDateString("en-US", {
                           weekday: "short",
                           month: "short",
                           day: "numeric",
@@ -329,7 +329,7 @@ export default async function ShipmentDetailPage({
                   </p>
                 </div>
               </div>
-              {shipment.last_free_day && (
+              {load.last_free_day && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-orange-100 dark:bg-orange-900/30 p-2 shrink-0">
                     <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
@@ -337,7 +337,7 @@ export default async function ShipmentDetailPage({
                   <div>
                     <p className="text-xs text-muted-foreground">Last Free Day</p>
                     <p className="font-medium text-orange-600 dark:text-orange-400">
-                      {new Date(shipment.last_free_day).toLocaleDateString("en-US", {
+                      {new Date(load.last_free_day).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
@@ -346,7 +346,7 @@ export default async function ShipmentDetailPage({
                   </div>
                 </div>
               )}
-              {shipment.pickup_time && (
+              {load.pickup_time && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2 shrink-0">
                     <Calendar className="h-4 w-4 text-primary" />
@@ -354,7 +354,7 @@ export default async function ShipmentDetailPage({
                   <div>
                     <p className="text-xs text-muted-foreground">Pickup Time</p>
                     <p className="font-medium">
-                      {new Date(shipment.pickup_time).toLocaleDateString("en-US", {
+                      {new Date(load.pickup_time).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
@@ -371,15 +371,15 @@ export default async function ShipmentDetailPage({
           {/* Timeline */}
           <div className="rounded-xl border bg-card p-6 shadow-sm">
             <h2 className="font-semibold mb-4">Tracking History</h2>
-            <ShipmentTimeline events={events} />
+            <LoadTimeline events={events} />
           </div>
 
           {/* Notes */}
-          {shipment.notes && (
+          {load.notes && (
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h2 className="font-semibold mb-4">Notes</h2>
               <p className="text-muted-foreground whitespace-pre-wrap">
-                {shipment.notes}
+                {load.notes}
               </p>
             </div>
           )}
@@ -387,7 +387,7 @@ export default async function ShipmentDetailPage({
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <ShipmentActions shipment={shipment} />
+          <LoadActions load={load} />
         </div>
       </div>
     </div>

@@ -10,11 +10,11 @@ interface Event {
   created_at: string;
 }
 
-interface ShipmentTimelineProps {
+interface LoadTimelineProps {
   events: Event[];
 }
 
-export function ShipmentTimeline({ events }: ShipmentTimelineProps) {
+export function LoadTimeline({ events }: LoadTimelineProps) {
   if (events.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">No tracking events yet</p>

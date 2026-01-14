@@ -176,7 +176,7 @@ export async function getOrganizationQuotes(organizationId: string, status?: str
  */
 export async function getOrganizationShipments(organizationId: string, status?: string) {
   let query = supabase
-    .from("shipments")
+    .from("loads")
     .select("*")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
@@ -213,12 +213,12 @@ export async function getOrganizationStats(organizationId: string) {
       .eq("organization_id", organizationId)
       .eq("status", "pending"),
     supabase
-      .from("shipments")
+      .from("loads")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]),
     supabase
-      .from("shipments")
+      .from("loads")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .eq("status", "delivered"),

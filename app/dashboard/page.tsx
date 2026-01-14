@@ -38,13 +38,13 @@ async function getCustomerStats(email: string, companyName: string | null) {
     : { column: "customer_email", value: email };
 
   const { count: activeShipments } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*", { count: "exact", head: true })
     .eq(shipmentFilter.column, shipmentFilter.value)
     .in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]);
 
   const { count: completedShipments } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("*", { count: "exact", head: true })
     .eq(shipmentFilter.column, shipmentFilter.value)
     .eq("status", "delivered");
@@ -89,7 +89,7 @@ async function getRecentActivity(email: string, companyName: string | null) {
     .limit(3);
 
   const { data: shipments } = await supabase
-    .from("shipments")
+    .from("loads")
     .select("id, container_number, status, updated_at")
     .eq(shipmentFilter.column, shipmentFilter.value)
     .order("updated_at", { ascending: false })
@@ -104,7 +104,7 @@ async function getRecentActivity(email: string, companyName: string | null) {
       date: q.created_at,
     })),
     ...(shipments || []).map((s) => ({
-      type: "shipment",
+      type: "load",
       id: s.id,
       title: `Shipment: ${s.container_number}`,
       status: s.status,
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
           icon={Clock}
         />
         <StatsCard
-          title="Active Shipments"
+          title="Active Loads"
           value={stats.activeShipments}
           description="Currently in transit"
           icon={Truck}
@@ -163,7 +163,7 @@ export default async function DashboardPage() {
         <StatsCard
           title="Completed"
           value={stats.completedShipments}
-          description="Delivered shipments"
+          description="Delivered loads"
           icon={CheckCircle2}
         />
       </div>
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
               className="flex items-center justify-center gap-2 rounded-lg border bg-background px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
             >
               <Truck className="h-4 w-4" />
-              Track Shipment
+              Track Load
             </Link>
           </div>
         </div>
@@ -207,7 +207,7 @@ export default async function DashboardPage() {
                   href={
                     item.type === "quote"
                       ? "/dashboard/quotes"
-                      : "/dashboard/shipments"
+                      : "/dashboard/loads"
                   }
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
                 >

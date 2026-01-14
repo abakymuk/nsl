@@ -7,9 +7,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function getShipments(status?: string) {
+async function getLoads(status?: string) {
   let query = supabase
-    .from("shipments")
+    .from("loads")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -27,13 +27,13 @@ async function getShipments(status?: string) {
   return data || [];
 }
 
-export default async function AdminShipmentsPage({
+export default async function AdminLoadsPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const shipments = await getShipments(status);
+  const loads = await getLoads(status);
 
   const statuses = [
     "all",
@@ -68,7 +68,7 @@ export default async function AdminShipmentsPage({
         {statuses.map((s) => (
           <Link
             key={s}
-            href={s === "all" ? "/admin/shipments" : `/admin/shipments?status=${s}`}
+            href={s === "all" ? "/admin/loads" : `/admin/loads?status=${s}`}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               (status || "all") === s
                 ? "bg-primary text-primary-foreground"
@@ -107,12 +107,12 @@ export default async function AdminShipmentsPage({
               </tr>
             </thead>
             <tbody className="divide-y">
-              {shipments.length === 0 ? (
+              {loads.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
                     <Truck className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <p className="mt-4 text-sm text-muted-foreground">
-                      No shipments found
+                      No loads found
                     </p>
                     <Link
                       href="/admin/sync"
@@ -124,7 +124,7 @@ export default async function AdminShipmentsPage({
                   </td>
                 </tr>
               ) : (
-                shipments.map((shipment: any) => (
+                loads.map((shipment: any) => (
                   <tr key={shipment.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4">
                       <code className="font-mono font-medium text-sm">
@@ -171,7 +171,7 @@ export default async function AdminShipmentsPage({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link
-                        href={`/admin/shipments/${shipment.id}`}
+                        href={`/admin/loads/${shipment.id}`}
                         className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                       >
                         View
