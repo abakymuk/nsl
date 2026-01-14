@@ -7,18 +7,25 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { isAdminEmail } from "@/lib/constants";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertCircle, Loader2, Mail, Sparkles } from "lucide-react";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const explicitRedirect = searchParams.get("redirect"); // Only use if explicitly provided
+  const explicitRedirect = searchParams.get("redirect");
+  const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(errorParam);
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -28,7 +35,7 @@ export default function SignInPage() {
 
     const supabase = createClient();
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -40,36 +47,43 @@ export default function SignInPage() {
     }
 
     // Determine redirect destination
-    let destination: string;
     if (explicitRedirect) {
-      // Use explicit redirect if provided (e.g., from protected page)
-      destination = explicitRedirect;
-    } else {
-      // Route based on user role
-      destination = isAdminEmail(data.user?.email) ? "/admin" : "/dashboard";
+      router.push(explicitRedirect);
+      router.refresh();
+      return;
     }
 
-    router.push(destination);
-    router.refresh();
+    // Fetch permissions to determine redirect (DB-driven)
+    try {
+      const res = await fetch("/api/auth/permissions");
+      const data = await res.json();
+      const destination = data.isSuperAdmin ? "/admin" : "/dashboard";
+      router.push(destination);
+      router.refresh();
+    } catch {
+      router.push("/dashboard");
+      router.refresh();
+    }
   };
 
   return (
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription>
-            Enter your email and password to access your account
+            Sign in to your account to continue
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSignIn}>
           <CardContent className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <AlertCircle className="h-4 w-4" />
+              <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                <AlertCircle className="h-4 w-4 shrink-0" />
                 {error}
               </div>
             )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -82,6 +96,7 @@ export default function SignInPage() {
                 disabled={loading}
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -94,6 +109,7 @@ export default function SignInPage() {
               />
             </div>
           </CardContent>
+
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
@@ -102,9 +118,31 @@ export default function SignInPage() {
                   Signing in...
                 </>
               ) : (
-                "Sign in"
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Sign in
+                </>
               )}
             </Button>
+
+            {/* Divider */}
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            {/* Magic link option */}
+            <Link href="/magic-link" className="w-full">
+              <Button type="button" variant="outline" className="w-full">
+                <Mail className="mr-2 h-4 w-4" />
+                Sign in with magic link
+              </Button>
+            </Link>
+
             <p className="text-sm text-muted-foreground text-center">
               Don&apos;t have an account?{" "}
               <Link href="/sign-up" className="text-primary hover:underline">

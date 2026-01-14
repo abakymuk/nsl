@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
+import { createUntypedAdminClient } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/auth";
 
 const supabase = createUntypedAdminClient();
 
@@ -9,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await isAdmin())) {
+    if (!(await isSuperAdmin())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

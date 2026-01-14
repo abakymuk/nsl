@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Phone, Mail, MapPin, ArrowUpRight } from "lucide-react";
@@ -32,9 +33,13 @@ export function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold">NS</span>
-              </div>
+              <Image
+                src="/images/logo/newstream-logo.svg"
+                alt="New Stream Logistics"
+                width={40}
+                height={40}
+                className="h-10 w-10"
+              />
               <span className="font-semibold text-lg text-foreground">
                 New Stream Logistics
               </span>

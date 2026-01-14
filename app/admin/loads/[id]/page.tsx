@@ -331,12 +331,12 @@ export default async function LoadDetailPage({
               </div>
               {load.last_free_day && (
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-orange-100 dark:bg-orange-900/30 p-2 shrink-0">
-                    <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <div className="rounded-full bg-orange-100 p-2 shrink-0">
+                    <Calendar className="h-4 w-4 text-orange-600" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Last Free Day</p>
-                    <p className="font-medium text-orange-600 dark:text-orange-400">
+                    <p className="font-medium text-orange-600">
                       {new Date(load.last_free_day).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",

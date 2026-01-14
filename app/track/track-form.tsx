@@ -273,7 +273,7 @@ function InfoCard({
     <div
       className={`rounded-xl border p-4 ${
         highlight
-          ? "border-primary/30 bg-primary/5 dark:bg-primary/10"
+          ? "border-primary/30 bg-primary/5"
           : "bg-card"
       }`}
     >

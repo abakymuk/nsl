@@ -269,6 +269,140 @@ export interface Database {
           portpro_event?: boolean;
         };
       };
+      profiles: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string | null;
+          avatar_url: string | null;
+          role: "super_admin" | "user";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: "super_admin" | "user";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: "super_admin" | "user";
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      organizations: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string | null;
+          email_domain: string | null;
+          primary_email: string | null;
+          phone: string | null;
+          address: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug?: string | null;
+          email_domain?: string | null;
+          primary_email?: string | null;
+          phone?: string | null;
+          address?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string | null;
+          email_domain?: string | null;
+          primary_email?: string | null;
+          phone?: string | null;
+          address?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      organization_members: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string | null;
+          email: string;
+          role: "admin" | "member";
+          invitation_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id?: string | null;
+          email: string;
+          role?: "admin" | "member";
+          invitation_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string | null;
+          email?: string;
+          role?: "admin" | "member";
+          invitation_id?: string | null;
+          created_at?: string;
+        };
+      };
+      invitations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          email: string;
+          role: "admin" | "member";
+          token: string;
+          invited_by: string | null;
+          inviter_name: string | null;
+          status: "pending" | "accepted" | "expired" | "revoked";
+          expires_at: string;
+          created_at: string;
+          accepted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          email: string;
+          role?: "admin" | "member";
+          token?: string;
+          invited_by?: string | null;
+          inviter_name?: string | null;
+          status?: "pending" | "accepted" | "expired" | "revoked";
+          expires_at?: string;
+          created_at?: string;
+          accepted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          email?: string;
+          role?: "admin" | "member";
+          token?: string;
+          invited_by?: string | null;
+          inviter_name?: string | null;
+          status?: "pending" | "accepted" | "expired" | "revoked";
+          expires_at?: string;
+          created_at?: string;
+          accepted_at?: string | null;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -303,3 +437,24 @@ export type ShipmentInsert = LoadInsert;
 export type ShipmentUpdate = LoadUpdate;
 export type ShipmentEvent = LoadEvent;
 export type ShipmentEventInsert = LoadEventInsert;
+
+// Auth & Organization types
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
+export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+
+export type Organization = Database["public"]["Tables"]["organizations"]["Row"];
+export type OrganizationInsert = Database["public"]["Tables"]["organizations"]["Insert"];
+export type OrganizationUpdate = Database["public"]["Tables"]["organizations"]["Update"];
+
+export type OrganizationMember = Database["public"]["Tables"]["organization_members"]["Row"];
+export type OrganizationMemberInsert = Database["public"]["Tables"]["organization_members"]["Insert"];
+
+export type Invitation = Database["public"]["Tables"]["invitations"]["Row"];
+export type InvitationInsert = Database["public"]["Tables"]["invitations"]["Insert"];
+export type InvitationUpdate = Database["public"]["Tables"]["invitations"]["Update"];
+
+// Role types
+export type PlatformRole = "super_admin" | "user";
+export type OrgRole = "admin" | "member";
+export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked";

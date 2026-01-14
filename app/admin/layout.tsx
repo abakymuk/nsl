@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { getUser, isAdmin } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/auth";
 import { SidebarProvider } from "@/components/admin/sidebar";
 
 export default async function AdminLayout({
@@ -13,7 +14,7 @@ export default async function AdminLayout({
     redirect("/sign-in");
   }
 
-  const admin = await isAdmin();
+  const admin = await isSuperAdmin(user.id);
 
   if (!admin) {
     redirect("/dashboard");

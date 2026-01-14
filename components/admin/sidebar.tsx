@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard,
   FileText,
@@ -18,6 +18,8 @@ import {
   LogOut,
   Menu,
   X,
+  Building2,
+  UserCog,
 } from "lucide-react";
 
 // Sidebar context for sharing collapsed state
@@ -76,6 +78,16 @@ const navItems = [
     title: "PortPro Sync",
     href: "/admin/sync",
     icon: RefreshCw,
+  },
+  {
+    title: "Users",
+    href: "/admin/users",
+    icon: UserCog,
+  },
+  {
+    title: "Organizations",
+    href: "/admin/organizations",
+    icon: Building2,
   },
   {
     title: "Settings",
@@ -167,9 +179,13 @@ function DesktopSidebar({ user }: { user: { email: string; name?: string } }) {
         collapsed ? "justify-center px-2" : "px-4"
       )}>
         <Link href="/admin" className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-bold text-sm">NS</span>
-          </div>
+          <Image
+            src="/images/logo/newstream-logo.svg"
+            alt="New Stream Logistics"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0"
+          />
           {!collapsed && (
             <div className="overflow-hidden">
               <p className="font-semibold text-sm truncate">New Stream</p>
@@ -239,17 +255,6 @@ function DesktopSidebar({ user }: { user: { email: string; name?: string } }) {
         "border-t py-4",
         collapsed ? "px-2" : "px-3"
       )}>
-        {/* Theme Toggle */}
-        <div className={cn(
-          "flex items-center mb-2",
-          collapsed ? "justify-center" : "px-3"
-        )}>
-          <ThemeToggle />
-          {!collapsed && (
-            <span className="ml-3 text-sm text-muted-foreground">Theme</span>
-          )}
-        </div>
-
         {/* Sign Out */}
         <Link
           href="/sign-in"
@@ -316,9 +321,13 @@ function MobileSidebar({ user }: { user: { email: string; name?: string } }) {
       {/* Header */}
       <div className="flex items-center justify-between h-16 px-4 border-b">
         <Link href="/admin" className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">NS</span>
-          </div>
+          <Image
+            src="/images/logo/newstream-logo.svg"
+            alt="New Stream Logistics"
+            width={40}
+            height={40}
+            className="h-10 w-10"
+          />
           <div>
             <p className="font-semibold text-sm">New Stream</p>
             <p className="text-xs text-muted-foreground">Logistics</p>
@@ -374,11 +383,6 @@ function MobileSidebar({ user }: { user: { email: string; name?: string } }) {
 
       {/* Footer */}
       <div className="border-t px-3 py-4 space-y-1">
-        <div className="flex items-center px-3 py-2">
-          <ThemeToggle />
-          <span className="ml-3 text-sm text-muted-foreground">Theme</span>
-        </div>
-
         <Link
           href="/sign-in"
           onClick={async (e) => {
@@ -415,9 +419,13 @@ function MobileHeader({ user }: { user: { email: string; name?: string } }) {
       </button>
 
       <Link href="/admin" className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-xs">NS</span>
-        </div>
+        <Image
+          src="/images/logo/newstream-logo.svg"
+          alt="New Stream Logistics"
+          width={32}
+          height={32}
+          className="h-8 w-8"
+        />
         <span className="font-semibold text-sm">New Stream</span>
       </Link>
 

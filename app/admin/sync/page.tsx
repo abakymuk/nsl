@@ -249,8 +249,8 @@ export default function SyncPage() {
                   key={index}
                   className={`p-4 rounded-lg border ${
                     result.success
-                      ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900"
-                      : "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900"
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">

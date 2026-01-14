@@ -2,7 +2,6 @@ import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
-import { isAdminEmail } from "@/lib/constants";
 
 // Server-side Supabase client with auth (for server components and API routes)
 export async function createServerClient() {
@@ -80,8 +79,4 @@ export async function getUser() {
   return user;
 }
 
-// Check if user is admin
-export async function isAdmin() {
-  const user = await getUser();
-  return isAdminEmail(user?.email);
-}
+// Note: For admin checks, use isSuperAdmin() from @/lib/auth instead

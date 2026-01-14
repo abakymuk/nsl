@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -8,7 +9,6 @@ import type { User } from "@supabase/supabase-js";
 import { FloatingNav } from "@/components/ui/aceternity/floating-navbar";
 import { FloatingDock } from "@/components/ui/aceternity/floating-dock";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,7 +31,6 @@ import {
   User as UserIcon,
   ShieldCheck,
 } from "lucide-react";
-import { isAdminEmail } from "@/lib/constants";
 
 const navItems = [
   { name: "Services", link: "/services", icon: <Package className="h-4 w-4" /> },
@@ -52,16 +51,25 @@ export function Nav() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Check if on admin pages
-  const isAdminPage = pathname?.startsWith("/admin");
+  const isSuperAdminPage = pathname?.startsWith("/admin");
 
-  // Check if current user is admin
-  const isAdmin = isAdminEmail(user?.email);
+  // Determine the appropriate portal link based on role (DB-driven)
+  const portalLink = isSuperAdmin ? "/admin" : "/dashboard";
+  const portalLabel = isSuperAdmin ? "Admin Panel" : "Dashboard";
 
-  // Determine the appropriate portal link based on role
-  const portalLink = isAdmin ? "/admin" : "/dashboard";
-  const portalLabel = isAdmin ? "Admin Panel" : "Dashboard";
+  // Fetch user permissions from API
+  const fetchPermissions = async () => {
+    try {
+      const res = await fetch("/api/auth/permissions");
+      const data = await res.json();
+      setIsSuperAdmin(data.isSuperAdmin ?? false);
+    } catch {
+      setIsSuperAdmin(false);
+    }
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -70,12 +78,20 @@ export function Nav() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);
+      if (user) {
+        fetchPermissions();
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchPermissions();
+        } else {
+          setIsSuperAdmin(false);
+        }
       }
     );
 
@@ -83,7 +99,7 @@ export function Nav() {
   }, []);
 
   // Don't render nav on admin pages (admin has its own sidebar navigation)
-  if (isAdminPage) {
+  if (isSuperAdminPage) {
     return null;
   }
 
@@ -100,9 +116,13 @@ export function Nav() {
         navItems={navItems}
         logo={
           <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">NS</span>
-            </div>
+            <Image
+              src="/images/logo/newstream-logo.svg"
+              alt="New Stream Logistics"
+              width={36}
+              height={36}
+              className="h-9 w-9"
+            />
             <span className="font-semibold text-foreground hidden sm:inline-block">
               New Stream Logistics
             </span>
@@ -116,7 +136,6 @@ export function Nav() {
             >
               Track
             </Link>
-            <ThemeToggle />
 
             {/* Auth buttons */}
             {!loading && !user && (
@@ -135,7 +154,7 @@ export function Nav() {
                   href={portalLink}
                   className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {isAdmin ? (
+                  {isSuperAdmin ? (
                     <ShieldCheck className="h-4 w-4" />
                   ) : (
                     <LayoutDashboard className="h-4 w-4" />
@@ -146,7 +165,7 @@ export function Nav() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                        isAdmin
+                        isSuperAdmin
                           ? "bg-gradient-to-br from-primary to-accent"
                           : "bg-primary"
                       }`}>
@@ -159,7 +178,7 @@ export function Nav() {
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-medium">{user.email}</p>
-                      {isAdmin && (
+                      {isSuperAdmin && (
                         <p className="text-xs text-primary font-medium flex items-center gap-1 mt-0.5">
                           <ShieldCheck className="h-3 w-3" />
                           Administrator
@@ -171,7 +190,7 @@ export function Nav() {
                     {/* Show appropriate portal link */}
                     <DropdownMenuItem asChild>
                       <Link href={portalLink} className="cursor-pointer">
-                        {isAdmin ? (
+                        {isSuperAdmin ? (
                           <ShieldCheck className="mr-2 h-4 w-4" />
                         ) : (
                           <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -181,7 +200,7 @@ export function Nav() {
                     </DropdownMenuItem>
 
                     {/* Admin users can also access customer dashboard */}
-                    {isAdmin && (
+                    {isSuperAdmin && (
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard" className="cursor-pointer">
                           <LayoutDashboard className="mr-2 h-4 w-4" />

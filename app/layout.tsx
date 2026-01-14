@@ -3,7 +3,6 @@ import { Inter, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
-import { ThemeProvider } from "@/components/theme-provider";
 import { LocalBusinessSchema, ServiceSchema } from "@/components/structured-data";
 import { PhoneBanner } from "@/components/phone-banner";
 
@@ -75,34 +74,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('nsl-theme');
-                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.classList.add('dark');
-                  }
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
         <LocalBusinessSchema />
         <ServiceSchema />
       </head>
       <body className={`${inter.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}>
-        <ThemeProvider defaultTheme="system" storageKey="nsl-theme">
-          <div className="flex min-h-screen flex-col">
-            <Nav />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-          <PhoneBanner />
-        </ThemeProvider>
+        <div className="flex min-h-screen flex-col">
+          <Nav />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+        <PhoneBanner />
       </body>
     </html>
   );

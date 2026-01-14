@@ -172,20 +172,24 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border bg-card p-6">
           <h2 className="font-semibold text-lg mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <Link
               href="/quote"
-              className="flex items-center justify-center gap-2 rounded-lg border bg-background px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+              className="group relative flex flex-col items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 px-4 py-6 text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-200"
             >
-              <FileText className="h-4 w-4" />
-              New Quote
+              <div className="rounded-full bg-white/20 p-3">
+                <FileText className="h-6 w-6" />
+              </div>
+              <span className="text-sm">New Quote</span>
             </Link>
             <Link
               href="/track"
-              className="flex items-center justify-center gap-2 rounded-lg border bg-background px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+              className="group relative flex flex-col items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-accent to-accent/80 px-4 py-6 text-accent-foreground font-medium shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 hover:scale-[1.02] transition-all duration-200"
             >
-              <Truck className="h-4 w-4" />
-              Track Load
+              <div className="rounded-full bg-white/20 p-3">
+                <Truck className="h-6 w-6" />
+              </div>
+              <span className="text-sm">Track Load</span>
             </Link>
           </div>
         </div>

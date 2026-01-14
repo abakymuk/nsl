@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { isAdminEmail } from "@/lib/constants";
+import { checkInitialSuperAdmin, getPostLoginRedirect } from "@/lib/auth";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -34,14 +34,18 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && data.user) {
+      // Check if this user should be auto-promoted to super admin (from env var)
+      if (data.user.email) {
+        await checkInitialSuperAdmin(data.user.email);
+      }
+
       // If explicit redirect was requested, use it
       if (next) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // Otherwise, route based on user role
-      const destination = isAdminEmail(data.user.email) ? "/admin" : "/dashboard";
-
+      // Otherwise, route based on user role (DB-driven)
+      const destination = await getPostLoginRedirect(data.user.id);
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }

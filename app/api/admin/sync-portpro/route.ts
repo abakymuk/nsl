@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
+import { createUntypedAdminClient } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/auth";
 import { getPortProClient, mapPortProStatus, formatLocation, PortProLoad } from "@/lib/portpro";
 
 const supabase = createUntypedAdminClient();
@@ -7,7 +8,7 @@ const supabase = createUntypedAdminClient();
 export async function POST(request: NextRequest) {
   try {
     // Check admin authorization
-    if (!(await isAdmin())) {
+    if (!(await isSuperAdmin())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

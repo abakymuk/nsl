@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -9,9 +10,17 @@ import {
   Truck,
   User,
   Settings,
+  Users,
 } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
@@ -32,15 +41,45 @@ const navItems = [
     href: "/dashboard/profile",
     icon: User,
   },
+  {
+    title: "Team",
+    href: "/dashboard/settings/team",
+    icon: Users,
+    adminOnly: true,
+  },
+  {
+    title: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+    adminOnly: true,
+  },
 ];
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const res = await fetch("/api/auth/permissions");
+        const data = await res.json();
+        setIsOrgAdmin(data.orgRole === "admin");
+      } catch {
+        // Ignore errors
+      }
+    };
+    checkPermissions();
+  }, []);
+
+  const visibleItems = navItems.filter(
+    (item) => !item.adminOnly || isOrgAdmin
+  );
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:pt-16 lg:border-r bg-card">
       <nav className="flex-1 px-4 py-6 space-y-1">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -83,11 +122,32 @@ export function DashboardSidebar() {
 
 export function MobileDashboardNav() {
   const pathname = usePathname();
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const res = await fetch("/api/auth/permissions");
+        const data = await res.json();
+        setIsOrgAdmin(data.orgRole === "admin");
+      } catch {
+        // Ignore errors
+      }
+    };
+    checkPermissions();
+  }, []);
+
+  // For mobile, show limited items (exclude Team, keep Settings for admins)
+  const mobileItems = navItems.filter(
+    (item) =>
+      (!item.adminOnly || (item.adminOnly && isOrgAdmin)) &&
+      item.href !== "/dashboard/settings/team"
+  );
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t px-4 py-2">
       <div className="flex justify-around items-center">
-        {navItems.map((item) => {
+        {mobileItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname.startsWith(item.href));

@@ -71,77 +71,11 @@
 }
 
 /* ============================================
-   DARK MODE - Deep Navy Theme
-   ============================================ */
-.dark {
-  /* Primary - Brighter blue for dark backgrounds */
-  --color-primary: oklch(0.68 0.14 245);
-  --color-primary-foreground: oklch(0.12 0.02 245);
-
-  /* Accent - Warmer orange that pops on dark */
-  --color-accent: oklch(0.72 0.17 38);
-  --color-accent-foreground: oklch(0.12 0 0);
-
-  /* Background - Deep navy with warmth */
-  --color-background: oklch(0.14 0.025 250);
-  --color-foreground: oklch(0.94 0.008 250);
-
-  /* Card - Slightly elevated from background */
-  --color-card: oklch(0.18 0.022 250);
-  --color-card-foreground: oklch(0.94 0.008 250);
-
-  /* Popover - Same as card */
-  --color-popover: oklch(0.18 0.022 250);
-  --color-popover-foreground: oklch(0.94 0.008 250);
-
-  /* Secondary - Subtle elevation */
-  --color-secondary: oklch(0.22 0.018 250);
-  --color-secondary-foreground: oklch(0.88 0.008 250);
-
-  /* Muted - For subtle text and backgrounds */
-  --color-muted: oklch(0.22 0.018 250);
-  --color-muted-foreground: oklch(0.62 0.012 250);
-
-  /* Destructive - Brighter red for visibility */
-  --color-destructive: oklch(0.60 0.20 25);
-  --color-destructive-foreground: oklch(0.98 0 0);
-
-  /* Success - Brighter green */
-  --color-success: oklch(0.65 0.16 145);
-  --color-success-foreground: oklch(0.12 0.02 145);
-
-  /* Warning - Brighter amber */
-  --color-warning: oklch(0.78 0.14 75);
-  --color-warning-foreground: oklch(0.18 0.02 75);
-
-  /* Borders & inputs - Visible but subtle */
-  --color-border: oklch(0.28 0.016 250);
-  --color-input: oklch(0.28 0.016 250);
-  --color-ring: oklch(0.68 0.14 245);
-
-  /* Chart colors - Brighter for dark mode */
-  --color-chart-1: oklch(0.68 0.14 245);
-  --color-chart-2: oklch(0.72 0.17 38);
-  --color-chart-3: oklch(0.65 0.16 145);
-  --color-chart-4: oklch(0.70 0.13 280);
-  --color-chart-5: oklch(0.72 0.10 180);
-
-  /* Glow effects for animations - Brighter on dark */
-  --color-primary-glow: oklch(0.68 0.14 245 / 0.3);
-  --color-primary-glow-strong: oklch(0.68 0.14 245 / 0.5);
-}
-
-/* ============================================
    SELECTION STYLES
    ============================================ */
 ::selection {
   background-color: oklch(0.45 0.16 245 / 0.25);
   color: oklch(0.18 0.02 250);
-}
-
-.dark ::selection {
-  background-color: oklch(0.68 0.14 245 / 0.35);
-  color: oklch(0.94 0.008 250);
 }
 
 /* ============================================

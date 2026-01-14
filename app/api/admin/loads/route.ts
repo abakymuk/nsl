@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin, createUntypedAdminClient } from "@/lib/supabase/server";
+import { createUntypedAdminClient } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/auth";
 import { Resend } from "resend";
 
 const supabase = createUntypedAdminClient();
@@ -17,7 +18,7 @@ function generateTrackingNumber(): string {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!(await isAdmin())) {
+    if (!(await isSuperAdmin())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!(await isAdmin())) {
+    if (!(await isSuperAdmin())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
