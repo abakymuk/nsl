@@ -35,14 +35,14 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
   return (
     <div className="space-y-6">
       {/* Data Source Notice */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-4">
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
         <div className="flex items-start gap-3">
-          <RefreshCw className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+          <RefreshCw className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            <p className="text-sm font-medium text-foreground">
               Synced from PortPro
             </p>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               This shipment data is automatically synced from PortPro TMS. To make changes, update the load in PortPro.
             </p>
           </div>
@@ -65,7 +65,7 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
             title="Copy link"
           >
             {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-success" />
             ) : (
               <Copy className="h-4 w-4 text-muted-foreground" />
             )}
@@ -96,7 +96,7 @@ export function ShipmentActions({ shipment }: ShipmentActionsProps) {
               title="Copy container number"
             >
               {copiedContainer ? (
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4 text-success" />
               ) : (
                 <Copy className="h-4 w-4 text-muted-foreground" />
               )}
