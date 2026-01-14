@@ -25,12 +25,13 @@ import {
   ArrowLeft,
   Mail,
   Sparkles,
+  Ticket,
 } from "lucide-react";
 
 type Step = "account" | "organization" | "complete";
 
 interface OrgOption {
-  type: "invitation" | "domain" | "create";
+  type: "invitation" | "domain" | "create" | "invite-code";
   organizationId?: string;
   organizationName?: string;
   inviterName?: string;
@@ -57,6 +58,8 @@ export default function SignUpPage() {
   const [selectedOrgOption, setSelectedOrgOption] = useState<OrgOption | null>(null);
   const [newOrgName, setNewOrgName] = useState("");
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [manualInviteCode, setManualInviteCode] = useState("");
+  const [checkingInviteCode, setCheckingInviteCode] = useState(false);
 
   // UI state
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +138,55 @@ export default function SignUpPage() {
       setOrgOptions([{ type: "create" }]);
     } finally {
       setCheckingEmail(false);
+    }
+  };
+
+  const handleCheckInviteCode = async () => {
+    if (!manualInviteCode.trim()) return;
+
+    setCheckingInviteCode(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/invitations/${manualInviteCode.trim()}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.invitation) {
+        setError("Invalid or expired invitation code");
+        setCheckingInviteCode(false);
+        return;
+      }
+
+      const inv = data.invitation;
+
+      // Check if email matches
+      if (inv.email.toLowerCase() !== email.toLowerCase()) {
+        setError(`This invitation is for ${inv.email}. Please use that email address.`);
+        setCheckingInviteCode(false);
+        return;
+      }
+
+      // Add invitation to options and select it
+      const invOption: OrgOption = {
+        type: "invitation",
+        organizationId: inv.organizationId,
+        organizationName: inv.organizationName,
+        inviterName: inv.inviterName,
+        role: inv.role,
+        token: manualInviteCode.trim(),
+      };
+
+      setOrgOptions((prev) => {
+        // Remove any existing invitation and add new one at the start
+        const filtered = prev.filter((o) => o.type !== "invitation");
+        return [invOption, ...filtered];
+      });
+      setSelectedOrgOption(invOption);
+      setManualInviteCode("");
+    } catch {
+      setError("Failed to verify invitation code");
+    } finally {
+      setCheckingInviteCode(false);
     }
   };
 
@@ -464,6 +516,40 @@ export default function SignUpPage() {
                     onChange={(e) => setNewOrgName(e.target.value)}
                     disabled={loading}
                   />
+                </div>
+              )}
+
+              {/* Invite code input - show when no invitation/domain match found */}
+              {!orgOptions.some((o) => o.type === "invitation" || o.type === "domain") && (
+                <div className="border-t pt-4 mt-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Ticket className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Have an invitation code?
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter invite code"
+                      value={manualInviteCode}
+                      onChange={(e) => setManualInviteCode(e.target.value)}
+                      disabled={loading || checkingInviteCode}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCheckInviteCode}
+                      disabled={loading || checkingInviteCode || !manualInviteCode.trim()}
+                    >
+                      {checkingInviteCode ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
