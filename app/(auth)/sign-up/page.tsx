@@ -30,6 +30,33 @@ import {
 
 type Step = "account" | "organization" | "complete";
 
+// Personal email domains that are not allowed
+const BLOCKED_EMAIL_DOMAINS = [
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "msn.com",
+  "aol.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "protonmail.com",
+  "proton.me",
+  "mail.com",
+  "yandex.com",
+  "zoho.com",
+  "gmx.com",
+  "gmx.net",
+];
+
+function isWorkEmail(email: string): boolean {
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain) return false;
+  return !BLOCKED_EMAIL_DOMAINS.includes(domain);
+}
+
 interface OrgOption {
   type: "invitation" | "domain" | "create" | "invite-code";
   organizationId?: string;
@@ -193,6 +220,12 @@ export default function SignUpPage() {
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate work email
+    if (!isWorkEmail(email)) {
+      setError("Please use your work email address. Personal email addresses (Gmail, Yahoo, etc.) are not allowed.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");

@@ -6,6 +6,33 @@ import {
   createOrganization,
 } from "@/lib/auth";
 
+// Personal email domains that are not allowed
+const BLOCKED_EMAIL_DOMAINS = [
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "msn.com",
+  "aol.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "protonmail.com",
+  "proton.me",
+  "mail.com",
+  "yandex.com",
+  "zoho.com",
+  "gmx.com",
+  "gmx.net",
+];
+
+function isWorkEmail(email: string): boolean {
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain) return false;
+  return !BLOCKED_EMAIL_DOMAINS.includes(domain);
+}
+
 // Create admin client for signup operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,6 +66,14 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json(
         { error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Validate work email
+    if (!isWorkEmail(email)) {
+      return NextResponse.json(
+        { error: "Please use your work email address. Personal email addresses (Gmail, Yahoo, etc.) are not allowed." },
         { status: 400 }
       );
     }
@@ -146,6 +181,14 @@ export async function GET(request: NextRequest) {
     if (!email) {
       return NextResponse.json(
         { error: "Email is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate work email
+    if (!isWorkEmail(email)) {
+      return NextResponse.json(
+        { error: "Please use your work email address. Personal email addresses are not allowed." },
         { status: 400 }
       );
     }
