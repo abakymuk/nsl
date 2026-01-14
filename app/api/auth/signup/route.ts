@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       userId,
       organizationId,
       organizationName,
-      redirect: organizationId ? "/dashboard" : "/onboarding",
+      redirect: "/dashboard",
     });
   } catch (error) {
     console.error("Signup error:", error);
