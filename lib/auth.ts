@@ -334,28 +334,33 @@ export async function createOrganization(params: {
 
   // Wait for profile to be created by trigger (with retries)
   let profileExists = false;
-  for (let i = 0; i < 5; i++) {
-    const { data: profile } = await supabase
+  console.log("Waiting for profile to be created for user:", userId);
+  for (let i = 0; i < 10; i++) {
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id")
       .eq("id", userId)
       .single();
 
+    console.log(`Profile check attempt ${i + 1}:`, { profile, error: profileError?.message });
+
     if (profile) {
       profileExists = true;
+      console.log("Profile found on attempt", i + 1);
       break;
     }
-    // Wait 200ms before retrying
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Wait 300ms before retrying
+    await new Promise((resolve) => setTimeout(resolve, 300));
   }
 
   if (!profileExists) {
     console.error("Profile not found after retries for user:", userId);
     // Create profile manually as fallback
-    await supabase.from("profiles").insert({
+    const { error: insertError } = await supabase.from("profiles").insert({
       id: userId,
       email,
     });
+    console.log("Manual profile creation result:", insertError?.message || "success");
   }
 
   // Create slug from name
@@ -368,6 +373,7 @@ export async function createOrganization(params: {
   const domain = setEmailDomain ? "@" + email.split("@")[1] : null;
 
   // Create organization
+  console.log("Creating organization with:", { name, slug, domain, email });
   const { data: org, error: orgError } = await supabase
     .from("organizations")
     .insert({
@@ -383,8 +389,10 @@ export async function createOrganization(params: {
     console.error("Error creating organization:", orgError);
     return null;
   }
+  console.log("Organization created:", org.id);
 
   // Add user as admin
+  console.log("Adding user as admin:", { orgId: org.id, userId, email });
   const { data: member, error: memberError } = await supabase
     .from("organization_members")
     .insert({
@@ -402,6 +410,7 @@ export async function createOrganization(params: {
     await supabase.from("organizations").delete().eq("id", org.id);
     return null;
   }
+  console.log("Member added successfully:", member.id);
 
   return { organization: org, member };
 }

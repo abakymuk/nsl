@@ -26,6 +26,8 @@ export async function POST(request: NextRequest) {
       invitationToken, // For accepting invitation
     } = body;
 
+    console.log("Signup request:", { email, fullName, orgAction, orgName, orgId });
+
     // Validate required fields
     if (!email || !password) {
       return NextResponse.json(
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
     let organizationName: string | null = null;
 
     if (orgAction === "create" && orgName) {
+      console.log("Creating organization:", orgName, "for user:", userId);
       // Create new organization with user as admin
       const result = await createOrganization({
         name: orgName,
@@ -74,9 +77,12 @@ export async function POST(request: NextRequest) {
         setEmailDomain: true,
       });
 
+      console.log("Create organization result:", result);
+
       if (result) {
         organizationId = result.organization.id;
         organizationName = result.organization.name;
+        console.log("Organization created successfully:", organizationId);
       } else {
         console.error("Failed to create organization for user:", userId);
         // Don't fail the signup, but log the error
