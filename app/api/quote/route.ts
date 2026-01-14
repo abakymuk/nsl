@@ -2,9 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { quoteFormSchema } from "@/lib/validations/quote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { sanitizeObject } from "@/lib/sanitize";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import type { QuoteInsert } from "@/types/database";
+
+// Simple sanitizer (avoid isomorphic-dompurify issues on serverless)
+function sanitizeString(input: string | undefined | null): string {
+  if (!input) return "";
+  return input
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/[<>"'&]/g, "") // Remove special chars
+    .trim();
+}
+
+function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
+  const result = { ...obj };
+  for (const key in result) {
+    const value = result[key];
+    if (typeof value === "string") {
+      (result as Record<string, unknown>)[key] = sanitizeString(value);
+    }
+  }
+  return result;
+}
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -127,4 +146,3 @@ Submitted at: ${new Date().toISOString()}
     );
   }
 }
-// Build trigger 1768393569
