@@ -90,6 +90,8 @@ export default function QuoteForm() {
         throw new Error(errorData.error || "Failed to submit quote request");
       }
 
+      const result = await response.json();
+
       // Track successful submission
       IntercomEvents.quoteSubmitted({
         container: formData.containerNumber,
@@ -98,7 +100,12 @@ export default function QuoteForm() {
         containerType: formData.containerType,
       });
 
-      router.push("/quote/thank-you");
+      // Pass reference number and container to thank-you page
+      const params = new URLSearchParams();
+      if (result.referenceNumber) params.set("ref", result.referenceNumber);
+      params.set("container", formData.containerNumber);
+
+      router.push(`/quote/thank-you?${params.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setLoading(false);

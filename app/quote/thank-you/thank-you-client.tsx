@@ -1,17 +1,33 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, MessageCircle } from "lucide-react";
+import { CheckCircle2, MessageCircle, Copy, Check } from "lucide-react";
 import { showNewMessage } from "@intercom/messenger-js-sdk";
+import { useState } from "react";
 
 export function ThankYouClient() {
+  const searchParams = useSearchParams();
+  const referenceNumber = searchParams.get("ref");
+  const containerNumber = searchParams.get("container");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyRef = async () => {
+    if (referenceNumber) {
+      await navigator.clipboard.writeText(referenceNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const handleChatClick = () => {
     try {
-      showNewMessage(
-        "Hi! I just submitted a quote request. I have a question about pricing or timeline."
-      );
+      const message = referenceNumber
+        ? `Hi! I just submitted quote ${referenceNumber} for container ${containerNumber}. I have a question about pricing or timeline.`
+        : `Hi! I just submitted a quote request for container ${containerNumber}. I have a question about pricing or timeline.`;
+      showNewMessage(message);
     } catch {
       // Fallback if Intercom not loaded
       window.location.href = "/contact";
@@ -32,6 +48,31 @@ export function ThankYouClient() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Reference Number */}
+            {referenceNumber && (
+              <div className="rounded-lg bg-muted/50 p-4 text-center">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  Your Reference Number
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="font-mono text-lg font-bold text-foreground">
+                    {referenceNumber}
+                  </span>
+                  <button
+                    onClick={handleCopyRef}
+                    className="p-1.5 rounded-md hover:bg-muted transition-colors"
+                    title="Copy reference number"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="rounded-lg bg-muted/50 p-6 text-center">
               <p className="text-lg font-medium text-foreground">
                 You&apos;ll hear from a real dispatcher within 1–2 business hours.
