@@ -11,17 +11,20 @@ interface PortProConfig {
 }
 
 // PortPro Load/Shipment statuses
+// Maps to: booked, dispatched, at_terminal, picked_up, in_transit, at_yard, out_for_delivery, delivered, completed, cancelled, exception
 export const PORTPRO_STATUS_MAP: Record<string, string> = {
   PENDING: "booked",
-  "CUSTOMS HOLD": "at_port",
-  "FREIGHT HOLD": "at_port",
-  AVAILABLE: "at_port",
+  "CUSTOMS HOLD": "at_terminal",
+  "FREIGHT HOLD": "at_terminal",
+  AVAILABLE: "at_terminal",
   DISPATCHED: "in_transit",
+  "PICKED UP": "picked_up",
   DROPPED: "out_for_delivery",
   COMPLETED: "delivered",
   BILLING: "delivered",
   PARTIAL_PAID: "delivered",
   FULL_PAID: "delivered",
+  CANCELLED: "cancelled",
 };
 
 // PortPro Load Types
