@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail, Phone } from "lucide-react";
@@ -8,6 +8,7 @@ import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
 import { BorderBeam } from "@/components/ui/magic/border-beam";
 import type { QuoteFormData } from "@/types";
 import { cn } from "@/lib/utils";
+import { IntercomEvents } from "@/lib/intercom";
 
 const terminals = [
   { value: "APM Terminals", short: "APM" },
@@ -56,6 +57,11 @@ export default function QuoteForm() {
     phone: "",
   });
 
+  // Track form started on mount
+  useEffect(() => {
+    IntercomEvents.quoteStarted();
+  }, []);
+
   // Validation for step 1: container + terminal + contact info
   const canProceedStep1 =
     formData.containerNumber.length >= 4 &&
@@ -84,6 +90,14 @@ export default function QuoteForm() {
         throw new Error(errorData.error || "Failed to submit quote request");
       }
 
+      // Track successful submission
+      IntercomEvents.quoteSubmitted({
+        container: formData.containerNumber,
+        terminal: formData.terminal,
+        zip: formData.deliveryZip,
+        containerType: formData.containerType,
+      });
+
       router.push("/quote/thank-you");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -92,7 +106,10 @@ export default function QuoteForm() {
   };
 
   const nextStep = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+    if (currentStep < 3) {
+      IntercomEvents.quoteStepCompleted(currentStep);
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const prevStep = () => {

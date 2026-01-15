@@ -5,6 +5,8 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { LocalBusinessSchema, ServiceSchema } from "@/components/structured-data";
 import { PhoneBanner } from "@/components/phone-banner";
+import { IntercomProvider } from "@/lib/intercom";
+import { ChatLauncher } from "@/components/intercom/chat-launcher";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -80,12 +82,15 @@ export default function RootLayout({
         <ServiceSchema />
       </head>
       <body className={`${inter.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}>
-        <div className="flex min-h-screen flex-col">
-          <Nav />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <PhoneBanner />
+        <IntercomProvider>
+          <div className="flex min-h-screen flex-col">
+            <Nav />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <PhoneBanner />
+          <ChatLauncher />
+        </IntercomProvider>
       </body>
     </html>
   );

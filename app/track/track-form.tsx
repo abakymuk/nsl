@@ -28,7 +28,10 @@ import {
   Ship,
   Building2,
   Navigation,
+  MessageCircle,
 } from "lucide-react";
+import { showNewMessage } from "@intercom/messenger-js-sdk";
+import { IntercomEvents } from "@/lib/intercom";
 
 // Types
 interface TrackingEvent {
@@ -744,6 +747,22 @@ function QuoteResult({ data, onTrackAnother }: { data: QuoteData; onTrackAnother
 
 // Not found component
 function NotFound({ containerNumber, onTrackAnother }: { containerNumber: string; onTrackAnother: () => void }) {
+  const handleChatClick = () => {
+    try {
+      showNewMessage(
+        `Hi! I'm trying to track container ${containerNumber} but it's not showing up. Can you help me find my shipment?`
+      );
+    } catch {
+      // Fallback if Intercom not loaded
+      window.location.href = "/contact";
+    }
+  };
+
+  // Track not found event
+  useEffect(() => {
+    IntercomEvents.trackNotFound(containerNumber);
+  }, [containerNumber]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -765,6 +784,20 @@ function NotFound({ containerNumber, onTrackAnother }: { containerNumber: string
         <p className="text-sm text-muted-foreground">
           If you recently submitted a quote, please allow 1-2 hours for processing.
         </p>
+      </div>
+
+      {/* Chat CTA */}
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6">
+        <p className="text-sm text-muted-foreground mb-3 text-center">
+          Can&apos;t find your container? Chat with us and we&apos;ll help track it down.
+        </p>
+        <Button
+          onClick={handleChatClick}
+          className="w-full"
+        >
+          <MessageCircle className="h-4 w-4 mr-2" />
+          Chat With Support
+        </Button>
       </div>
 
       {/* Suggestions */}
@@ -849,6 +882,9 @@ export default function TrackForm() {
       return;
     }
 
+    // Track search event
+    IntercomEvents.trackSearched(searchNumber);
+
     try {
       const response = await fetch(
         `/api/track?container=${encodeURIComponent(searchNumber)}`
@@ -859,6 +895,11 @@ export default function TrackForm() {
         setError(data.error || "Failed to track container");
         setLoading(false);
         return;
+      }
+
+      // Track result viewed
+      if (data.found && data.type && data.data) {
+        IntercomEvents.trackResultViewed(data.data.status, data.type);
       }
 
       setResult(data);
