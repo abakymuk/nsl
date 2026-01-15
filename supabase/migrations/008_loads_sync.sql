@@ -9,6 +9,8 @@ ALTER TABLE loads ADD COLUMN IF NOT EXISTS customer_name TEXT;
 ALTER TABLE loads ADD COLUMN IF NOT EXISTS customer_email TEXT;
 
 -- Update status constraint to include all statuses
+-- Drop both old and new constraint names to handle migration from shipments to loads
+ALTER TABLE loads DROP CONSTRAINT IF EXISTS shipments_status_check;
 ALTER TABLE loads DROP CONSTRAINT IF EXISTS loads_status_check;
 ALTER TABLE loads ADD CONSTRAINT loads_status_check
   CHECK (status IN ('booked', 'dispatched', 'at_terminal', 'picked_up', 'in_transit', 'at_yard', 'out_for_delivery', 'delivered', 'completed', 'cancelled', 'exception'));
