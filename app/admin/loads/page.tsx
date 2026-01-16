@@ -1,13 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Truck, ChevronRight, RefreshCw } from "lucide-react";
+import { LoadSearch } from "@/components/admin/loads/load-search";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function getLoads(status?: string) {
+async function getLoads(status?: string, search?: string) {
   // Only select columns needed for the list view
   let query = supabase
     .from("loads")
@@ -16,6 +18,13 @@ async function getLoads(status?: string) {
 
   if (status && status !== "all") {
     query = query.eq("status", status);
+  }
+
+  if (search) {
+    // Search across tracking_number, container_number, origin, destination
+    query = query.or(
+      `tracking_number.ilike.%${search}%,container_number.ilike.%${search}%,origin.ilike.%${search}%,destination.ilike.%${search}%`
+    );
   }
 
   const { data, error } = await query;
@@ -31,10 +40,10 @@ async function getLoads(status?: string) {
 export default async function AdminLoadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
-  const { status } = await searchParams;
-  const loads = await getLoads(status);
+  const { status, q } = await searchParams;
+  const loads = await getLoads(status, q);
 
   const statuses = [
     "all",
@@ -64,21 +73,32 @@ export default async function AdminLoadsPage({
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {statuses.map((s) => (
-          <Link
-            key={s}
-            href={s === "all" ? "/admin/loads" : `/admin/loads?status=${s}`}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              (status || "all") === s
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted hover:bg-muted/80"
-            }`}
-          >
-            {s.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-          </Link>
-        ))}
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Suspense fallback={<div className="h-10 w-full max-w-sm bg-muted animate-pulse rounded-lg" />}>
+          <LoadSearch />
+        </Suspense>
+        <div className="flex flex-wrap gap-2">
+          {statuses.map((s) => {
+            const params = new URLSearchParams();
+            if (s !== "all") params.set("status", s);
+            if (q) params.set("q", q);
+            const href = params.toString() ? `/admin/loads?${params}` : "/admin/loads";
+            return (
+              <Link
+                key={s}
+                href={href}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  (status || "all") === s
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted hover:bg-muted/80"
+                }`}
+              >
+                {s.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {/* Shipments Table */}
