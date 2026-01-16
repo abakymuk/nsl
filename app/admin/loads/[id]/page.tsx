@@ -47,17 +47,18 @@ function convertEventsToTrackingMoves(
   events: Array<Record<string, unknown>>,
   load: Record<string, unknown>
 ): TrackingMove[] {
-  // Group events by move_number
-  const moveEvents = events.filter(e => e.event_type === "stop" || e.move_number);
+  // Filter for tracking events (stops and move_starts)
+  const stopEvents = events.filter(e => e.event_type === "stop");
+  const moveStartEvents = events.filter(e => e.event_type === "move_start");
 
-  if (moveEvents.length === 0) {
+  if (stopEvents.length === 0 && moveStartEvents.length === 0) {
     // If no detailed tracking events, create a basic tracking view from load data
     return createBasicTrackingFromLoad(load);
   }
 
-  // Group by move number
+  // Group stops by move number
   const moveGroups = new Map<number, Array<Record<string, unknown>>>();
-  moveEvents.forEach(event => {
+  stopEvents.forEach(event => {
     const moveNum = (event.move_number as number) || 1;
     if (!moveGroups.has(moveNum)) {
       moveGroups.set(moveNum, []);
@@ -65,37 +66,72 @@ function convertEventsToTrackingMoves(
     moveGroups.get(moveNum)!.push(event);
   });
 
+  // Get move_start metadata (driver info, total distance) indexed by move number
+  const moveStartMap = new Map<number, Record<string, unknown>>();
+  moveStartEvents.forEach(event => {
+    const moveNum = (event.move_number as number) || 1;
+    moveStartMap.set(moveNum, event);
+  });
+
   // Convert to TrackingMove format
   const moves: TrackingMove[] = [];
-  moveGroups.forEach((groupEvents, moveNumber) => {
-    const stops: TrackingStop[] = groupEvents.map((event, idx) => ({
-      id: event.id as string,
-      stopNumber: (event.stop_number as number) || idx + 1,
-      type: (event.stop_type as TrackingStop["type"]) || "terminal",
-      locationName: (event.location_name as string) || (event.location as string) || "Unknown",
-      locationAddress: event.location_address as string | undefined,
-      startTime: event.start_time as string | undefined,
-      arrivalTime: event.arrival_time as string | undefined,
-      departureTime: event.departure_time as string | undefined,
-      durationMinutes: event.duration_minutes as number | undefined,
-      distanceMiles: event.distance_miles as number | undefined,
-      isCompleted: !!(event.departure_time || event.arrival_time),
-      isActive: !event.departure_time && !!event.arrival_time,
-    }));
 
-    const firstEvent = groupEvents[0];
+  // Process all move numbers from either stops or move_starts
+  const allMoveNumbers = new Set([...moveGroups.keys(), ...moveStartMap.keys()]);
+
+  allMoveNumbers.forEach(moveNumber => {
+    const groupStops = moveGroups.get(moveNumber) || [];
+    const moveStartEvent = moveStartMap.get(moveNumber);
+
+    // Sort stops by stop_number
+    const sortedStops = [...groupStops].sort(
+      (a, b) => ((a.stop_number as number) || 0) - ((b.stop_number as number) || 0)
+    );
+
+    const stops: TrackingStop[] = sortedStops.map((event, idx) => {
+      const isCompleted = event.status === "completed" || !!(event.departure_time);
+      const isActive = event.status === "in_progress" || (!event.departure_time && !!event.arrival_time);
+
+      return {
+        id: event.id as string,
+        stopNumber: (event.stop_number as number) || idx + 1,
+        type: (event.stop_type as TrackingStop["type"]) || "terminal",
+        locationName: (event.location_name as string) || (event.location as string) || "Unknown",
+        locationAddress: event.location_address as string | undefined,
+        startTime: event.start_time as string | undefined,
+        arrivalTime: event.arrival_time as string | undefined,
+        departureTime: event.departure_time as string | undefined,
+        durationMinutes: event.duration_minutes as number | undefined,
+        distanceMiles: event.distance_miles as number | undefined,
+        isCompleted,
+        isActive,
+      };
+    });
+
+    // Use move_start event for driver info if available, otherwise use first stop
+    const driverSource = moveStartEvent || sortedStops[0] || {};
+
+    // Determine move status
+    let moveStatus: "completed" | "in_progress" | "pending" = "pending";
+    if (moveStartEvent?.status === "completed" || stops.every(s => s.isCompleted)) {
+      moveStatus = "completed";
+    } else if (moveStartEvent?.status === "in_progress" || stops.some(s => s.isActive || s.isCompleted)) {
+      moveStatus = "in_progress";
+    }
+
+    // Calculate total distance from move_start or sum of stops
+    const totalDistance = (moveStartEvent?.distance_miles as number)
+      || stops.reduce((sum, s) => sum + (s.distanceMiles || 0), 0)
+      || undefined;
+
     moves.push({
       id: `move-${moveNumber}`,
       moveNumber,
-      driverName: (firstEvent.driver_name as string) || "Driver",
-      driverAvatar: firstEvent.driver_avatar as string | undefined,
-      driverId: firstEvent.driver_id as string | undefined,
-      status: stops.every(s => s.isCompleted)
-        ? "completed"
-        : stops.some(s => s.isActive)
-          ? "in_progress"
-          : "pending",
-      totalDistance: stops.reduce((sum, s) => sum + (s.distanceMiles || 0), 0),
+      driverName: (driverSource.driver_name as string) || "Pending Assignment",
+      driverAvatar: driverSource.driver_avatar as string | undefined,
+      driverId: driverSource.driver_id as string | undefined,
+      status: moveStatus,
+      totalDistance,
       stops,
     });
   });
