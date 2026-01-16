@@ -47,9 +47,16 @@ function convertEventsToTrackingMoves(
   events: Array<Record<string, unknown>>,
   load: Record<string, unknown>
 ): TrackingMove[] {
+  // Sort events chronologically (oldest first) for tracking timeline
+  const sortedEvents = [...events].sort((a, b) => {
+    const dateA = new Date(a.created_at as string).getTime();
+    const dateB = new Date(b.created_at as string).getTime();
+    return dateA - dateB;
+  });
+
   // Filter for tracking events (stops and move_starts)
-  const stopEvents = events.filter(e => e.event_type === "stop");
-  const moveStartEvents = events.filter(e => e.event_type === "move_start");
+  const stopEvents = sortedEvents.filter(e => e.event_type === "stop");
+  const moveStartEvents = sortedEvents.filter(e => e.event_type === "move_start");
 
   if (stopEvents.length === 0 && moveStartEvents.length === 0) {
     // If no detailed tracking events, create a basic tracking view from load data
@@ -627,7 +634,9 @@ export default async function LoadDetailPage({
               <span className="font-semibold">Event Log ({events.length} events)</span>
             </summary>
             <div className="px-6 pb-6">
-              <LoadTimeline events={events} />
+              <LoadTimeline events={[...events].sort((a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              )} />
             </div>
           </details>
 
