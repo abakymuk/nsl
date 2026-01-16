@@ -28,16 +28,18 @@ interface LoadCreationFormProps {
 }
 
 const TERMINALS: Record<string, string> = {
-  APM: "APM Terminals",
-  Fenix: "Fenix Marine Services",
+  YTI: "YTI (Yusen Terminals)",
+  PCT: "PCT (Pacific Container Terminal)",
+  "Pier A": "Pier A",
+  FMS: "FMS (Fenix Marine Services)",
+  LBCT: "LBCT (Long Beach Container Terminal)",
+  WBCT: "WBCT (West Basin Container Terminal)",
   TraPac: "TraPac",
-  Yusen: "Yusen Terminal",
-  LBCT: "Long Beach Container Terminal",
-  TTI: "Total Terminals International",
   Everport: "Everport Terminal Services",
-  PCT: "Pacific Container Terminal",
-  WBCT: "West Basin Container Terminal",
-  LACT: "Los Angeles Container Terminal",
+  TTI: "TTI (Total Terminals International)",
+  Shippers: "Shippers Transport",
+  APM: "APM Terminals",
+  ITS: "ITS",
 };
 
 export function LoadCreationForm({ quote }: LoadCreationFormProps) {

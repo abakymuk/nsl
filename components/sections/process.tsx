@@ -16,7 +16,7 @@ const steps = [
     step: 2,
     title: "You get assigned a dispatcher",
     description:
-      "A real dispatcher reviews your request and responds within 1–2 hours. They become your single point of contact throughout.",
+      "A real dispatcher reviews your request and responds within 15 minutes. They become your single point of contact throughout.",
     icon: UserCheck,
   },
   {

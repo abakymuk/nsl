@@ -127,7 +127,7 @@ export function FAQSchema() {
         name: "How quickly can I get a quote for drayage services?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We provide honest quotes within 1-2 hours. We believe it's better to give you an accurate quote than an instant fake one.",
+          text: "We provide honest quotes within 15 minutes. We believe it's better to give you an accurate quote than an instant fake one.",
         },
       },
       {
@@ -135,7 +135,7 @@ export function FAQSchema() {
         name: "Which terminals do you service?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We service all major LA/LB terminals including APM, Fenix Marine Services, TraPac, Yusen, LBCT, TTI, Everport, PCT, WBCT, and LACT.",
+          text: "We service all major LA/LB terminals including YTI, PCT, Pier A, FMS, LBCT, WBCT, TraPac, Everport, TTI, Shippers Transport, APM, and ITS.",
         },
       },
       {

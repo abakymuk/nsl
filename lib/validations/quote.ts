@@ -2,16 +2,18 @@ import { z } from "zod";
 
 // List of valid terminals
 export const VALID_TERMINALS = [
-  "APM Terminals",
-  "Fenix Marine Services",
+  "YTI (Yusen Terminals)",
+  "PCT (Pacific Container Terminal)",
+  "Pier A",
+  "FMS (Fenix Marine Services)",
+  "LBCT (Long Beach Container Terminal)",
+  "WBCT (West Basin Container Terminal)",
   "TraPac",
-  "Yusen Terminals",
-  "Long Beach Container Terminal (LBCT)",
-  "Total Terminals International (TTI)",
   "Everport Terminal Services",
-  "Pacific Container Terminal",
-  "West Basin Container Terminal",
-  "Los Angeles Container Terminal (LACT)",
+  "TTI (Total Terminals International)",
+  "Shippers Transport",
+  "APM Terminals",
+  "ITS",
 ] as const;
 
 // List of valid container types

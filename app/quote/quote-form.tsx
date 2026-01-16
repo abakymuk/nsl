@@ -11,16 +11,18 @@ import { cn } from "@/lib/utils";
 import { IntercomEvents } from "@/lib/intercom";
 
 const terminals = [
-  { value: "APM Terminals", short: "APM" },
-  { value: "Fenix Marine Services", short: "Fenix" },
+  { value: "YTI (Yusen Terminals)", short: "YTI" },
+  { value: "PCT (Pacific Container Terminal)", short: "PCT" },
+  { value: "Pier A", short: "Pier A" },
+  { value: "FMS (Fenix Marine Services)", short: "FMS" },
+  { value: "LBCT (Long Beach Container Terminal)", short: "LBCT" },
+  { value: "WBCT (West Basin Container Terminal)", short: "WBCT" },
   { value: "TraPac", short: "TraPac" },
-  { value: "Yusen Terminals", short: "Yusen" },
-  { value: "Long Beach Container Terminal (LBCT)", short: "LBCT" },
-  { value: "Total Terminals International (TTI)", short: "TTI" },
   { value: "Everport Terminal Services", short: "Everport" },
-  { value: "Pacific Container Terminal", short: "PCT" },
-  { value: "West Basin Container Terminal", short: "WBCT" },
-  { value: "Los Angeles Container Terminal (LACT)", short: "LACT" },
+  { value: "TTI (Total Terminals International)", short: "TTI" },
+  { value: "Shippers Transport", short: "Shippers" },
+  { value: "APM Terminals", short: "APM" },
+  { value: "ITS", short: "ITS" },
 ];
 
 const containerTypes = [
@@ -141,7 +143,7 @@ export default function QuoteForm() {
           {/* SLA Badge */}
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
             <CheckCircle2 className="h-4 w-4" />
-            Response within 2 hours guaranteed
+            Response within 15 minutes guaranteed
           </div>
         </motion.div>
 

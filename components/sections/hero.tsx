@@ -10,23 +10,25 @@ import { NumberTicker } from "@/components/ui/magic/number-ticker";
 import { Marquee } from "@/components/ui/magic/marquee";
 
 const terminals = [
-  "APM Terminals",
-  "Fenix Marine",
-  "TraPac",
-  "Yusen Terminals",
-  "LBCT",
-  "TTI",
-  "Everport",
+  "YTI",
   "PCT",
+  "Pier A",
+  "FMS",
+  "LBCT",
   "WBCT",
-  "LACT",
+  "TraPac",
+  "Everport",
+  "TTI",
+  "Shippers Transport",
+  "APM",
+  "ITS",
 ];
 
 const stats = [
   { value: 50, label: "Yard Capacity", suffix: "+" },
   { value: 98, label: "On-Time Rate", suffix: "%" },
-  { value: 10, label: "Terminals", suffix: "" },
-  { value: 2, label: "Hour Quotes", suffix: "" },
+  { value: 12, label: "Terminals", suffix: "" },
+  { value: 15, label: "Min Quotes", suffix: "" },
 ];
 
 // Set to true once you have real yard photos
