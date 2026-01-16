@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 
 interface NavItem {
   title: string;
@@ -57,23 +58,11 @@ const navItems: NavItem[] = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
-  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
+  const { isOrgAdmin } = usePermissions();
 
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const res = await fetch("/api/auth/permissions");
-        const data = await res.json();
-        setIsOrgAdmin(data.orgRole === "admin");
-      } catch {
-        // Ignore errors
-      }
-    };
-    checkPermissions();
-  }, []);
-
-  const visibleItems = navItems.filter(
-    (item) => !item.adminOnly || isOrgAdmin
+  const visibleItems = useMemo(
+    () => navItems.filter((item) => !item.adminOnly || isOrgAdmin),
+    [isOrgAdmin]
   );
 
   return (
@@ -122,26 +111,17 @@ export function DashboardSidebar() {
 
 export function MobileDashboardNav() {
   const pathname = usePathname();
-  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const res = await fetch("/api/auth/permissions");
-        const data = await res.json();
-        setIsOrgAdmin(data.orgRole === "admin");
-      } catch {
-        // Ignore errors
-      }
-    };
-    checkPermissions();
-  }, []);
+  const { isOrgAdmin } = usePermissions();
 
   // For mobile, show limited items (exclude Team, keep Settings for admins)
-  const mobileItems = navItems.filter(
-    (item) =>
-      (!item.adminOnly || (item.adminOnly && isOrgAdmin)) &&
-      item.href !== "/dashboard/settings/team"
+  const mobileItems = useMemo(
+    () =>
+      navItems.filter(
+        (item) =>
+          (!item.adminOnly || (item.adminOnly && isOrgAdmin)) &&
+          item.href !== "/dashboard/settings/team"
+      ),
+    [isOrgAdmin]
   );
 
   return (

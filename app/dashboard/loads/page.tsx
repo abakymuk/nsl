@@ -33,9 +33,10 @@ async function getShipments(email: string, companyName: string | null, status?: 
     ? { column: "customer_name", value: companyName }
     : { column: "customer_email", value: email };
 
+  // Only select columns needed for the list view
   let query = supabase
     .from("loads")
-    .select("*")
+    .select("id, tracking_number, container_number, origin, destination, status, eta, created_at")
     .eq(filter.column, filter.value)
     .order("created_at", { ascending: false });
 

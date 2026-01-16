@@ -604,7 +604,7 @@ function LoadResult({ data, onTrackAnother }: { data: LoadData; onTrackAnother: 
           <div className="space-y-0">
             {data.events.map((event, index) => (
               <TimelineEvent
-                key={index}
+                key={`${event.timestamp}-${event.status}`}
                 event={event}
                 isFirst={index === 0}
                 isLast={index === data.events.length - 1}

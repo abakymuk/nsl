@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { FileText, Plus, ChevronRight } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 
 const supabase = createUntypedAdminClient();
 
@@ -22,9 +22,10 @@ async function getQuotes(email: string, companyName: string | null, status?: str
     ? { column: "company_name", value: companyName }
     : { column: "email", value: email };
 
+  // Only select columns needed for the list view
   let query = supabase
     .from("quotes")
-    .select("*")
+    .select("id, service_type, container_number, pickup_location, delivery_location, status, quoted_price, created_at")
     .eq(filter.column, filter.value)
     .order("created_at", { ascending: false });
 

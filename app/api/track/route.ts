@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         .eq("load_id", shipment.id)
         .order("created_at", { ascending: false });
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         found: true,
         type: "load",
@@ -117,6 +117,9 @@ export async function GET(request: NextRequest) {
           })),
         },
       });
+      // Cache tracking data for 5 minutes
+      response.headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+      return response;
     }
 
     // Check quotes

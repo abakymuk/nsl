@@ -317,7 +317,8 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
     .eq("load_id", loadId)
     .in("event_type", ["move_start", "stop"]);
 
-  let totalEventsCreated = 0;
+  // Collect all events to insert in a single batch
+  const eventsToInsert: Record<string, unknown>[] = [];
 
   // Each driverOrder is a separate container move with its own driver
   // Process them in order (moveNumber or index)
@@ -338,7 +339,7 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
     const isActive = moveStatus === "in_progress" || moveStatus === "dispatched" || moveStatus === "started";
 
     // Create move_start event for this container move
-    const moveStartEvent = {
+    eventsToInsert.push({
       load_id: loadId,
       event_type: "move_start",
       status: isCompleted ? "completed" : isActive ? "in_progress" : "pending",
@@ -350,14 +351,7 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
       distance_miles: totalDistance,
       portpro_move_id: order._id,
       created_at: new Date().toISOString(),
-    };
-
-    const { error: moveError } = await supabase
-      .from("load_events")
-      .insert(moveStartEvent);
-
-    if (!moveError) totalEventsCreated++;
-    else console.error(`Error creating move_start:`, moveError);
+    });
 
     // Process stops (nested moves array) for this container move
     if (order.moves && order.moves.length > 0) {
@@ -369,9 +363,7 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
         const stopEvent = createStopEventFromMove(loadId, move, order, moveNumber, stopNumber);
 
         if (stopEvent) {
-          const { error } = await supabase.from("load_events").insert(stopEvent);
-          if (!error) totalEventsCreated++;
-          else console.error(`Error creating stop:`, error);
+          eventsToInsert.push(stopEvent);
         }
       }
     } else {
@@ -379,13 +371,20 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
       // No nested moves - try to create a single stop from the order itself
       const stopEvent = createStopEventFromDriverOrder(loadId, order, moveNumber, 1);
       if (stopEvent) {
-        const { error } = await supabase.from("load_events").insert(stopEvent);
-        if (!error) totalEventsCreated++;
+        eventsToInsert.push(stopEvent);
       }
     }
   }
 
-  console.log(`Created ${totalEventsCreated} tracking events for load ${loadId}`);
+  // Batch insert all events at once
+  if (eventsToInsert.length > 0) {
+    const { error } = await supabase.from("load_events").insert(eventsToInsert);
+    if (error) {
+      console.error(`Error batch inserting events:`, error);
+    } else {
+      console.log(`Created ${eventsToInsert.length} tracking events for load ${loadId}`);
+    }
+  }
 }
 
 // Helper to get driver name from various possible fields

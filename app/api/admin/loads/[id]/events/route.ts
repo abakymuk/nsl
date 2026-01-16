@@ -6,7 +6,7 @@ const supabase = createUntypedAdminClient();
 
 // Read-only endpoint - events come from PortPro
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -30,7 +30,10 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ events: data });
+    const response = NextResponse.json({ events: data });
+    // Cache events for 2 minutes (private - admin only)
+    response.headers.set("Cache-Control", "private, max-age=120, stale-while-revalidate=30");
+    return response;
   } catch (error) {
     console.error("Error in GET /api/admin/loads/[id]/events:", error);
     return NextResponse.json(

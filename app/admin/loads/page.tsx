@@ -8,9 +8,10 @@ const supabase = createClient(
 );
 
 async function getLoads(status?: string) {
+  // Only select columns needed for the list view
   let query = supabase
     .from("loads")
-    .select("*")
+    .select("id, tracking_number, container_number, origin, destination, status, eta, created_at")
     .order("created_at", { ascending: false });
 
   if (status && status !== "all") {

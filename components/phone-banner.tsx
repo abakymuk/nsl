@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Phone, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +9,7 @@ export function PhoneBanner() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollYRef = useRef(0);
 
   // Check if on admin pages
   const isAdminPage = pathname?.startsWith("/admin");
@@ -20,6 +20,7 @@ export function PhoneBanner() {
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      const lastScrollY = lastScrollYRef.current;
 
       // Show banner when scrolling up and past 200px, hide when scrolling down
       if (currentScrollY < lastScrollY && currentScrollY > 200) {
@@ -33,12 +34,12 @@ export function PhoneBanner() {
         setIsVisible(false);
       }
 
-      setLastScrollY(currentScrollY);
+      lastScrollYRef.current = currentScrollY;
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY, isAdminPage]);
+  }, [isAdminPage]);
 
   const handleDismiss = () => {
     setIsDismissed(true);

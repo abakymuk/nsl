@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
-import { FileText, Search, Filter, ChevronRight } from "lucide-react";
+import { FileText, ChevronRight } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,9 +8,10 @@ const supabase = createClient(
 );
 
 async function getQuotes(status?: string) {
+  // Only select columns needed for the list view
   let query = supabase
     .from("quotes")
-    .select("*")
+    .select("id, company_name, contact_name, email, service_type, container_number, status, created_at")
     .order("created_at", { ascending: false });
 
   if (status && status !== "all") {

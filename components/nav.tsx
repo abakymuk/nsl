@@ -31,6 +31,7 @@ import {
   User as UserIcon,
   ShieldCheck,
 } from "lucide-react";
+import { usePermissions, clearPermissionsCache } from "@/lib/hooks/use-permissions";
 
 const navItems = [
   { name: "Services", link: "/services", icon: <Package className="h-4 w-4" /> },
@@ -51,7 +52,7 @@ export function Nav() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const { isSuperAdmin } = usePermissions();
 
   // Check if on admin pages
   const isSuperAdminPage = pathname?.startsWith("/admin");
@@ -60,17 +61,6 @@ export function Nav() {
   const portalLink = isSuperAdmin ? "/admin" : "/dashboard";
   const portalLabel = isSuperAdmin ? "Admin Panel" : "Dashboard";
 
-  // Fetch user permissions from API
-  const fetchPermissions = async () => {
-    try {
-      const res = await fetch("/api/auth/permissions");
-      const data = await res.json();
-      setIsSuperAdmin(data.isSuperAdmin ?? false);
-    } catch {
-      setIsSuperAdmin(false);
-    }
-  };
-
   useEffect(() => {
     const supabase = createClient();
 
@@ -78,19 +68,14 @@ export function Nav() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);
-      if (user) {
-        fetchPermissions();
-      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchPermissions();
-        } else {
-          setIsSuperAdmin(false);
+        if (!session?.user) {
+          clearPermissionsCache();
         }
       }
     );

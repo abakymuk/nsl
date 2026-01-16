@@ -11,28 +11,31 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all organizations with member count
-    const { data: orgs, error } = await supabase
-      .from("organizations")
-      .select(`
-        id,
-        name,
-        slug,
-        email_domain,
-        primary_email,
-        created_at
-      `)
-      .order("created_at", { ascending: false });
+    // Run both queries in parallel
+    const [orgsResult, memberCountsResult] = await Promise.all([
+      supabase
+        .from("organizations")
+        .select(`
+          id,
+          name,
+          slug,
+          email_domain,
+          primary_email,
+          created_at
+        `)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("organization_members")
+        .select("organization_id"),
+    ]);
+
+    const { data: orgs, error } = orgsResult;
+    const { data: memberCounts } = memberCountsResult;
 
     if (error) {
       console.error("Error fetching organizations:", error);
       return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
     }
-
-    // Get member counts
-    const { data: memberCounts } = await supabase
-      .from("organization_members")
-      .select("organization_id");
 
     // Count members per org
     const countMap = new Map<string, number>();
