@@ -31,8 +31,14 @@ const stats = [
   { value: 15, label: "Min Quotes", suffix: "" },
 ];
 
-// Set to true once you have real yard photos
-const HAS_HERO_IMAGE = false;
+// Hero background configuration
+// Set to true to enable the hero background image
+const HAS_HERO_IMAGE = true;
+
+// Overlay opacity: adjust this value (0.5 - 0.75) to control text readability
+// Higher = darker overlay = more readable text, less visible image
+const OVERLAY_OPACITY = 0.65; // Desktop overlay strength
+const OVERLAY_OPACITY_MOBILE = 0.75; // Mobile overlay strength (busier on small screens)
 
 export function HeroSection() {
   const [imageError, setImageError] = useState(false);
@@ -42,21 +48,48 @@ export function HeroSection() {
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Background - Image or Gradient Fallback */}
       <div className="absolute inset-0 -z-10">
+        {/* Fallback background color in case image fails */}
+        <div className="absolute inset-0 bg-background" />
+
         {showImage ? (
-          <Image
-            src="/images/yard/hero-yard.jpg"
-            alt="New Stream Logistics secured container yard"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-            onError={() => setImageError(true)}
-          />
+          <>
+            {/* Background Image with subtle treatment for premium feel */}
+            <Image
+              src="/images/hero/hero-bg.jpg"
+              alt=""
+              fill
+              className="object-cover saturate-[0.85] pointer-events-none"
+              priority
+              sizes="100vw"
+              onError={() => setImageError(true)}
+            />
+            {/* Dark overlay - Desktop: OVERLAY_OPACITY, Mobile: OVERLAY_OPACITY_MOBILE */}
+            {/* Adjust opacity values at top of file to control readability vs image visibility */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `linear-gradient(to bottom,
+                  rgba(0,0,0,${OVERLAY_OPACITY_MOBILE}) 0%,
+                  rgba(0,0,0,${OVERLAY_OPACITY_MOBILE * 0.9}) 50%,
+                  rgba(0,0,0,${OVERLAY_OPACITY_MOBILE * 0.95}) 100%)`
+              }}
+            />
+            {/* Desktop-specific lighter overlay (hidden on mobile) */}
+            <div
+              className="absolute inset-0 pointer-events-none hidden sm:block"
+              style={{
+                background: `linear-gradient(to bottom,
+                  rgba(0,0,0,${OVERLAY_OPACITY - OVERLAY_OPACITY_MOBILE}) 0%,
+                  rgba(0,0,0,${(OVERLAY_OPACITY * 0.9) - (OVERLAY_OPACITY_MOBILE * 0.9)}) 50%,
+                  rgba(0,0,0,${(OVERLAY_OPACITY * 0.95) - (OVERLAY_OPACITY_MOBILE * 0.95)}) 100%)`
+              }}
+            />
+            {/* Subtle top gradient for nav readability */}
+            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
+          </>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />
         )}
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/85 to-background" />
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
@@ -70,11 +103,11 @@ export function HeroSection() {
           >
             <Link
               href="tel:+13105551234"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 backdrop-blur-sm px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-2 text-sm font-medium text-white/80 hover:text-white hover:border-white/40 hover:bg-white/15 transition-all"
             >
               <Phone className="h-4 w-4 text-primary" />
               <span>Call (310) 555-1234</span>
-              <span className="text-muted-foreground/50">·</span>
+              <span className="text-white/40">·</span>
               <span>Mon-Fri 6AM-6PM PST</span>
             </Link>
           </motion.div>
@@ -84,7 +117,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl"
+            className="text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl drop-shadow-lg"
           >
             LA/LB Drayage with{" "}
             <span className="text-primary">Secure Private Yard</span>
@@ -95,15 +128,15 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
-            className="mt-4 flex flex-wrap items-center justify-center gap-2 text-muted-foreground"
+            className="mt-4 flex flex-wrap items-center justify-center gap-2 text-white/80"
           >
             <span className="flex items-center gap-1.5">
               <Warehouse className="h-4 w-4 text-primary" />
               50+ container capacity
             </span>
-            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline text-white/50">•</span>
             <span>24/7 security</span>
-            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline text-white/50">•</span>
             <span>All 10 terminals</span>
           </motion.div>
 
@@ -112,7 +145,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-6 text-lg leading-8 text-muted-foreground sm:text-xl max-w-2xl mx-auto"
+            className="mt-6 text-lg leading-8 text-white/75 sm:text-xl max-w-2xl mx-auto"
           >
             Avoid demurrage with our private secured yard. Real quotes in 15 min
             from real dispatchers — no bots, no fake pricing.
@@ -138,7 +171,7 @@ export function HeroSection() {
 
             <Link
               href="#yard"
-              className="h-12 px-8 inline-flex items-center justify-center rounded-full border border-border bg-card/50 backdrop-blur-sm text-base font-medium text-foreground hover:bg-secondary transition-colors"
+              className="h-12 px-8 inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-sm text-base font-medium text-white hover:bg-white/20 hover:border-white/40 transition-colors"
             >
               <Warehouse className="h-4 w-4 mr-2" />
               See Our Yard
@@ -155,13 +188,13 @@ export function HeroSection() {
             {stats.map((stat, index) => (
               <div key={stat.label} className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
-                <span className="text-2xl font-bold text-foreground">
+                <span className="text-2xl font-bold text-white">
                   <NumberTicker value={stat.value} />
                   {stat.suffix}
                 </span>
-                <span className="text-sm text-muted-foreground">{stat.label}</span>
+                <span className="text-sm text-white/70">{stat.label}</span>
                 {index < stats.length - 1 && (
-                  <span className="hidden sm:block text-border ml-4">|</span>
+                  <span className="hidden sm:block text-white/30 ml-4">|</span>
                 )}
               </div>
             ))}
@@ -175,14 +208,14 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.5 }}
           className="mt-20"
         >
-          <p className="text-center text-sm text-muted-foreground mb-6">
+          <p className="text-center text-sm text-white/60 mb-6">
             Serving all major LA/LB terminals
           </p>
           <Marquee pauseOnHover className="[--duration:30s]">
             {terminals.map((terminal) => (
               <div
                 key={terminal}
-                className="mx-4 flex items-center justify-center rounded-lg border border-border bg-card/50 backdrop-blur-sm px-6 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
+                className="mx-4 flex items-center justify-center rounded-lg border border-white/15 bg-white/10 backdrop-blur-sm px-6 py-3 text-sm font-medium text-white/70 hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
               >
                 {terminal}
               </div>
