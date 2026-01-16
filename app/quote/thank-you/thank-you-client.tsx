@@ -75,7 +75,7 @@ export function ThankYouClient() {
 
             <div className="rounded-lg bg-muted/50 p-6 text-center">
               <p className="text-lg font-medium text-foreground">
-                You&apos;ll hear from a real dispatcher within 15 minutes.
+                You&apos;ll hear from a real dispatcher shortly.
               </p>
             </div>
 

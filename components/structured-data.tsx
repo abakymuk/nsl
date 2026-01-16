@@ -127,7 +127,7 @@ export function FAQSchema() {
         name: "How quickly can I get a quote for drayage services?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We provide honest quotes within 15 minutes. We believe it's better to give you an accurate quote than an instant fake one.",
+          text: "We provide honest quotes promptly. We believe it's better to give you an accurate quote than an instant fake one.",
         },
       },
       {

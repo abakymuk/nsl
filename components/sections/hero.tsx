@@ -131,7 +131,7 @@ export function HeroSection() {
               background="oklch(0.45 0.16 245)"
             >
               <Link href="/quote" className="flex items-center gap-2">
-                Get Quote in 2 Hours
+                Get Quote in 15 min
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </ShimmerButton>
