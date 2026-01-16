@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail, Phone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail, Phone, Import, Upload } from "lucide-react";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
 import { BorderBeam } from "@/components/ui/magic/border-beam";
 import type { QuoteFormData } from "@/types";
@@ -51,6 +51,8 @@ export default function QuoteForm() {
     terminal: "",
     deliveryZip: "",
     containerType: "",
+    moveType: "import",
+    commodityType: "",
     lfd: "",
     notes: "",
     fullName: "",
@@ -433,6 +435,64 @@ export default function QuoteForm() {
                   </div>
                 </div>
 
+                {/* Import/Export Toggle */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Move Type <span className="text-destructive">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, moveType: "import" })}
+                      className={cn(
+                        "px-4 py-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2",
+                        formData.moveType === "import"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      )}
+                    >
+                      <Import className="h-4 w-4" />
+                      Import
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, moveType: "export" })}
+                      className={cn(
+                        "px-4 py-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2",
+                        formData.moveType === "export"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      )}
+                    >
+                      <Upload className="h-4 w-4" />
+                      Export
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.moveType === "import"
+                      ? "Container arriving from overseas for delivery"
+                      : "Empty container return to terminal"}
+                  </p>
+                </div>
+
+                {/* Commodity Type */}
+                <div className="space-y-2">
+                  <label htmlFor="commodityType" className="text-sm font-medium">
+                    Commodity Type <span className="text-muted-foreground text-xs">(optional)</span>
+                  </label>
+                  <input
+                    id="commodityType"
+                    type="text"
+                    value={formData.commodityType || ""}
+                    onChange={(e) => setFormData({ ...formData, commodityType: e.target.value })}
+                    placeholder="e.g., Electronics, Furniture, Textiles"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Helps us provide a more accurate quote
+                  </p>
+                </div>
+
                 <div className="pt-4 flex gap-3">
                   <button
                     type="button"
@@ -522,6 +582,8 @@ export default function QuoteForm() {
                         <div>{formData.phone}</div>
                       </>
                     )}
+                    <div className="text-muted-foreground">Move Type:</div>
+                    <div className="capitalize">{formData.moveType}</div>
                     <div className="text-muted-foreground">Container:</div>
                     <div className="font-mono">{formData.containerNumber}</div>
                     <div className="text-muted-foreground">Terminal:</div>
@@ -530,6 +592,12 @@ export default function QuoteForm() {
                     <div className="font-mono">{formData.deliveryZip}</div>
                     <div className="text-muted-foreground">Type:</div>
                     <div>{formData.containerType}</div>
+                    {formData.commodityType && (
+                      <>
+                        <div className="text-muted-foreground">Commodity:</div>
+                        <div>{formData.commodityType}</div>
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -72,8 +72,11 @@ export async function POST(request: NextRequest) {
         pickup_terminal: body.terminal,
         delivery_zip: body.deliveryZip,
         container_type: body.containerType,
+        service_type: body.moveType,
         lfd: body.lfd || null,
-        special_instructions: body.notes || null,
+        special_instructions: body.commodityType
+          ? `Commodity: ${body.commodityType}${body.notes ? `\n${body.notes}` : ""}`
+          : body.notes || null,
         contact_name: body.fullName,
         company_name: body.companyName,
         email: body.email,
@@ -111,10 +114,12 @@ ${body.phone ? `Phone: ${body.phone}` : ""}
 
 SHIPMENT DETAILS
 ----------------
+Move Type: ${body.moveType.toUpperCase()}
 Container Number: ${body.containerNumber}
 Terminal: ${body.terminal}
 Delivery ZIP: ${body.deliveryZip}
 Container Type: ${body.containerType}
+${body.commodityType ? `Commodity: ${body.commodityType}` : ""}
 ${body.lfd ? `Last Free Day (LFD): ${body.lfd}` : ""}
 ${body.notes ? `\nNotes: ${body.notes}` : ""}
 

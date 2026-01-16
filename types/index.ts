@@ -10,6 +10,9 @@ export interface QuoteFormData {
   containerType: string;
   lfd?: string;
   notes?: string;
+  // New fields
+  moveType: "import" | "export";
+  commodityType?: string;
   // Contact info for early capture
   fullName: string;
   companyName: string;

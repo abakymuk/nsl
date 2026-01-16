@@ -24,6 +24,9 @@ export const VALID_CONTAINER_TYPES = [
   "45ft",
 ] as const;
 
+// Valid move types
+export const VALID_MOVE_TYPES = ["import", "export"] as const;
+
 // Container number regex: 4 letters + 7 digits
 const containerNumberRegex = /^[A-Z]{4}\d{7}$/;
 
@@ -68,6 +71,17 @@ export const quoteFormSchema = z.object({
       (val) => VALID_CONTAINER_TYPES.includes(val as typeof VALID_CONTAINER_TYPES[number]),
       "Invalid container type"
     ),
+
+  moveType: z
+    .enum(VALID_MOVE_TYPES, {
+      message: "Please select import or export",
+    }),
+
+  commodityType: z
+    .string()
+    .max(100, "Commodity type too long")
+    .optional()
+    .transform((val) => val?.trim() || undefined),
 
   lfd: z
     .string()
