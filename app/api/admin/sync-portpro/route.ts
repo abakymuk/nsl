@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth";
-import { getPortProClient, mapPortProStatus, formatLocation, extractLookupValue, PortProLoad, PortProDriverOrder, PortProMove } from "@/lib/portpro";
+import { getPortProClient, mapPortProStatus, formatLocation, extractLookupValue, PortProLoad, PortProDriverOrder, PortProMove, PortProLocation } from "@/lib/portpro";
 
 const supabase = createUntypedAdminClient();
 
@@ -305,8 +305,11 @@ function formatMoveLocation(move: PortProMove): { name: string | null; address: 
 }
 
 // Sync tracking events from PortPro driverOrder to load_events
+// PortPro driverOrder structure: each entry can be a driver assignment with nested moves,
+// OR each entry might itself be a stop/move. We handle both cases.
 async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrder[]) {
   console.log(`Syncing ${driverOrders.length} driver orders for load ${loadId}`);
+  console.log(`DriverOrder sample:`, JSON.stringify(driverOrders[0], null, 2));
 
   // First, clear existing portpro tracking events for this load (to avoid duplicates)
   await supabase
@@ -317,33 +320,43 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
 
   let totalEventsCreated = 0;
 
-  for (const driverOrder of driverOrders) {
-    const moveNumber = driverOrder.moveNumber || 1;
-    const driverName = driverOrder.driver?.name
-      || (driverOrder.driver?.firstName && driverOrder.driver?.lastName
-        ? `${driverOrder.driver.firstName} ${driverOrder.driver.lastName}`
-        : null)
-      || "Unknown Driver";
-    const driverAvatar = driverOrder.driver?.profilePicture || null;
-    const driverId = driverOrder.driver?._id || null;
+  // Group driver orders by moveNumber to identify actual moves
+  const moveGroups = new Map<number, PortProDriverOrder[]>();
+  driverOrders.forEach((order, idx) => {
+    // Use moveNumber if available, otherwise use index + 1
+    const moveNum = order.moveNumber || Math.floor(idx / 5) + 1; // Assume ~5 stops per move as fallback
+    if (!moveGroups.has(moveNum)) {
+      moveGroups.set(moveNum, []);
+    }
+    moveGroups.get(moveNum)!.push(order);
+  });
 
-    // Determine move status
-    const moveStatus = driverOrder.status?.toLowerCase() || "pending";
-    const isMoveCompleted = moveStatus === "completed" || moveStatus === "delivered";
-    const isMoveActive = moveStatus === "in_progress" || moveStatus === "dispatched";
+  // If all orders have moveNumber=1 or undefined, treat each order as a stop in a single move
+  const uniqueMoveNumbers = new Set(driverOrders.map(o => o.moveNumber || 1));
+  const treatAsStops = uniqueMoveNumbers.size === 1 && driverOrders.length > 1;
 
-    // Create move start event
+  if (treatAsStops) {
+    // All driverOrders are stops within a single move
+    console.log(`Treating ${driverOrders.length} driver orders as stops in a single move`);
+
+    // Get driver info from first order
+    const firstOrder = driverOrders[0];
+    const driverName = getDriverName(firstOrder);
+    const driverId = firstOrder.driver?._id || null;
+    const driverAvatar = firstOrder.driver?.profilePicture || null;
+
+    // Create single move_start event
     const moveStartEvent = {
       load_id: loadId,
       event_type: "move_start",
-      status: isMoveCompleted ? "completed" : isMoveActive ? "in_progress" : "pending",
-      description: `Container Move ${moveNumber} - ${driverName}`,
-      move_number: moveNumber,
+      status: "in_progress",
+      description: `Container Move 1 - ${driverName}`,
+      move_number: 1,
       driver_id: driverId,
       driver_name: driverName,
       driver_avatar: driverAvatar,
-      distance_miles: driverOrder.distance || null,
-      portpro_move_id: driverOrder._id,
+      distance_miles: driverOrders.reduce((sum, o) => sum + (o.distance || 0), 0) || null,
+      portpro_move_id: firstOrder._id,
       created_at: new Date().toISOString(),
     };
 
@@ -351,80 +364,255 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
       .from("load_events")
       .insert(moveStartEvent);
 
-    if (moveError) {
-      console.error(`Error creating move start event:`, moveError);
-    } else {
-      totalEventsCreated++;
-    }
+    if (!moveError) totalEventsCreated++;
 
-    // Process stops/moves within this driver order
-    if (driverOrder.moves && driverOrder.moves.length > 0) {
-      for (let i = 0; i < driverOrder.moves.length; i++) {
-        const move = driverOrder.moves[i];
-        const stopNumber = i + 1;
-        const location = formatMoveLocation(move);
-        const stopType = mapMoveTypeToStopType(move.type);
+    // Create stop events for each driver order
+    for (let i = 0; i < driverOrders.length; i++) {
+      const order = driverOrders[i];
+      const stopNumber = i + 1;
 
-        // Determine stop status
-        const isStopCompleted = move.isCompleted === true || move.status === "COMPLETED";
-        const hasArrived = !!move.arrived;
+      // Try to extract stop info from the driverOrder itself
+      // PortPro might store stop data directly on driverOrder or in nested moves
+      const stopEvent = createStopEventFromDriverOrder(loadId, order, 1, stopNumber);
+      if (stopEvent) {
+        const { error } = await supabase.from("load_events").insert(stopEvent);
+        if (!error) totalEventsCreated++;
+      }
 
-        // Calculate duration if both arrived and departed
-        let durationMinutes: number | null = null;
-        if (move.arrived && move.departed) {
-          const arrivedTime = new Date(move.arrived).getTime();
-          const departedTime = new Date(move.departed).getTime();
-          durationMinutes = Math.round((departedTime - arrivedTime) / (1000 * 60));
-        } else if (move.duration) {
-          durationMinutes = move.duration;
+      // Also process nested moves if they exist
+      if (order.moves && order.moves.length > 0) {
+        for (let j = 0; j < order.moves.length; j++) {
+          const move = order.moves[j];
+          const nestedStopEvent = createStopEventFromMove(loadId, move, order, 1, stopNumber + j);
+          if (nestedStopEvent) {
+            const { error } = await supabase.from("load_events").insert(nestedStopEvent);
+            if (!error) totalEventsCreated++;
+          }
         }
+      }
+    }
+  } else {
+    // Multiple moves - process each move group
+    console.log(`Processing ${moveGroups.size} distinct moves`);
 
-        // Build description based on stop type
-        const stopTypeLabels: Record<string, string> = {
-          pickup: "Pick Up Container",
-          hook: "Hook Container",
-          drop: "Drop Container",
-          deliver: "Deliver Container",
-          return: "Return Container",
-        };
-        const description = stopType
-          ? stopTypeLabels[stopType] || move.type || "Stop"
-          : move.type || "Stop";
+    for (const [moveNumber, orders] of moveGroups) {
+      const firstOrder = orders[0];
+      const driverName = getDriverName(firstOrder);
+      const driverId = firstOrder.driver?._id || null;
+      const driverAvatar = firstOrder.driver?.profilePicture || null;
 
-        const stopEvent = {
-          load_id: loadId,
-          event_type: "stop",
-          status: isStopCompleted ? "completed" : hasArrived ? "in_progress" : "pending",
-          description: `${description}${location.name ? ` at ${location.name}` : ""}`,
-          move_number: moveNumber,
-          stop_number: stopNumber,
-          stop_type: stopType,
-          location_name: location.name,
-          location_address: location.address,
-          driver_id: driverId,
-          driver_name: driverName,
-          driver_avatar: driverAvatar,
-          arrival_time: move.arrived || null,
-          departure_time: move.departed || null,
-          duration_minutes: durationMinutes,
-          distance_miles: move.distance || null,
-          portpro_move_id: driverOrder._id,
-          portpro_stop_id: move._id,
-          created_at: move.arrived || move.appointmentFrom || new Date().toISOString(),
-        };
+      // Determine move status
+      const allCompleted = orders.every(o =>
+        o.status?.toLowerCase() === "completed" || o.status?.toLowerCase() === "delivered"
+      );
+      const anyActive = orders.some(o =>
+        o.status?.toLowerCase() === "in_progress" || o.status?.toLowerCase() === "dispatched"
+      );
 
-        const { error: stopError } = await supabase
-          .from("load_events")
-          .insert(stopEvent);
+      // Create move_start event
+      const moveStartEvent = {
+        load_id: loadId,
+        event_type: "move_start",
+        status: allCompleted ? "completed" : anyActive ? "in_progress" : "pending",
+        description: `Container Move ${moveNumber} - ${driverName}`,
+        move_number: moveNumber,
+        driver_id: driverId,
+        driver_name: driverName,
+        driver_avatar: driverAvatar,
+        distance_miles: orders.reduce((sum, o) => sum + (o.distance || 0), 0) || null,
+        portpro_move_id: firstOrder._id,
+        created_at: new Date().toISOString(),
+      };
 
-        if (stopError) {
-          console.error(`Error creating stop event:`, stopError);
+      const { error: moveError } = await supabase.from("load_events").insert(moveStartEvent);
+      if (!moveError) totalEventsCreated++;
+
+      // Create stops from orders and their nested moves
+      let stopCounter = 1;
+      for (const order of orders) {
+        // Process nested moves
+        if (order.moves && order.moves.length > 0) {
+          for (const move of order.moves) {
+            const stopEvent = createStopEventFromMove(loadId, move, order, moveNumber, stopCounter);
+            if (stopEvent) {
+              const { error } = await supabase.from("load_events").insert(stopEvent);
+              if (!error) {
+                totalEventsCreated++;
+                stopCounter++;
+              }
+            }
+          }
         } else {
-          totalEventsCreated++;
+          // No nested moves - treat the order itself as a stop
+          const stopEvent = createStopEventFromDriverOrder(loadId, order, moveNumber, stopCounter);
+          if (stopEvent) {
+            const { error } = await supabase.from("load_events").insert(stopEvent);
+            if (!error) {
+              totalEventsCreated++;
+              stopCounter++;
+            }
+          }
         }
       }
     }
   }
 
   console.log(`Created ${totalEventsCreated} tracking events for load ${loadId}`);
+}
+
+// Helper to get driver name from various possible fields
+function getDriverName(order: PortProDriverOrder): string {
+  if (order.driver?.name) return order.driver.name;
+  if (order.driver?.firstName && order.driver?.lastName) {
+    return `${order.driver.firstName} ${order.driver.lastName}`;
+  }
+  if (order.driver?.firstName) return order.driver.firstName;
+  // Check if driver info is stored differently
+  const anyOrder = order as unknown as Record<string, unknown>;
+  if (typeof anyOrder.driverName === "string") return anyOrder.driverName;
+  return "Unknown Driver";
+}
+
+// Create stop event from a PortProMove (nested in driverOrder)
+function createStopEventFromMove(
+  loadId: string,
+  move: PortProMove,
+  order: PortProDriverOrder,
+  moveNumber: number,
+  stopNumber: number
+): Record<string, unknown> | null {
+  const location = formatMoveLocation(move);
+  const stopType = mapMoveTypeToStopType(move.type);
+  const driverName = getDriverName(order);
+
+  // Determine stop status
+  const isCompleted = move.isCompleted === true || move.status === "COMPLETED";
+  const hasArrived = !!move.arrived;
+
+  // Calculate duration
+  let durationMinutes: number | null = null;
+  if (move.arrived && move.departed) {
+    durationMinutes = Math.round(
+      (new Date(move.departed).getTime() - new Date(move.arrived).getTime()) / (1000 * 60)
+    );
+  } else if (move.duration) {
+    durationMinutes = move.duration;
+  }
+
+  const stopTypeLabels: Record<string, string> = {
+    pickup: "Pick Up Container",
+    hook: "Hook Container",
+    drop: "Drop Container",
+    deliver: "Deliver Container",
+    return: "Return Container",
+  };
+  const description = stopType
+    ? stopTypeLabels[stopType] || move.type || "Stop"
+    : move.type || "Stop";
+
+  return {
+    load_id: loadId,
+    event_type: "stop",
+    status: isCompleted ? "completed" : hasArrived ? "in_progress" : "pending",
+    description: `${description}${location.name ? ` at ${location.name}` : ""}`,
+    move_number: moveNumber,
+    stop_number: stopNumber,
+    stop_type: stopType,
+    location_name: location.name,
+    location_address: location.address,
+    driver_id: order.driver?._id || null,
+    driver_name: driverName,
+    driver_avatar: order.driver?.profilePicture || null,
+    arrival_time: move.arrived || null,
+    departure_time: move.departed || null,
+    duration_minutes: durationMinutes,
+    distance_miles: move.distance || null,
+    portpro_move_id: order._id,
+    portpro_stop_id: move._id,
+    created_at: move.arrived || move.appointmentFrom || new Date().toISOString(),
+  };
+}
+
+// Create stop event from driverOrder itself (when no nested moves)
+function createStopEventFromDriverOrder(
+  loadId: string,
+  order: PortProDriverOrder,
+  moveNumber: number,
+  stopNumber: number
+): Record<string, unknown> | null {
+  const anyOrder = order as unknown as Record<string, unknown>;
+  const driverName = getDriverName(order);
+
+  // Try to extract location info from various possible fields
+  let locationName: string | null = null;
+  let locationAddress: string | null = null;
+  let stopType: string | null = null;
+
+  // Check for type field on the order itself
+  if (typeof anyOrder.type === "string") {
+    stopType = mapMoveTypeToStopType(anyOrder.type);
+  }
+
+  // Check for location/address fields
+  if (typeof anyOrder.company_name === "string") {
+    locationName = anyOrder.company_name;
+  }
+  if (anyOrder.address && typeof anyOrder.address === "object") {
+    const addr = anyOrder.address as PortProLocation;
+    locationName = locationName || addr.company_name || null;
+    if (addr.address) {
+      const parts: string[] = [];
+      if (addr.address.address1) parts.push(addr.address.address1);
+      if (addr.address.city) parts.push(addr.address.city);
+      if (addr.address.state) parts.push(addr.address.state);
+      locationAddress = parts.join(", ") || null;
+    }
+  }
+
+  // Check for arrival/departure times
+  const arrived = anyOrder.arrived as string | undefined;
+  const departed = anyOrder.departed as string | undefined;
+  const isCompleted = anyOrder.isCompleted === true || order.status === "COMPLETED";
+  const hasArrived = !!arrived;
+
+  // Calculate duration
+  let durationMinutes: number | null = null;
+  if (arrived && departed) {
+    durationMinutes = Math.round(
+      (new Date(departed).getTime() - new Date(arrived).getTime()) / (1000 * 60)
+    );
+  }
+
+  const stopTypeLabels: Record<string, string> = {
+    pickup: "Pick Up Container",
+    hook: "Hook Container",
+    drop: "Drop Container",
+    deliver: "Deliver Container",
+    return: "Return Container",
+  };
+  const description = stopType
+    ? stopTypeLabels[stopType] || (anyOrder.type as string) || "Stop"
+    : (anyOrder.type as string) || `Stop ${stopNumber}`;
+
+  return {
+    load_id: loadId,
+    event_type: "stop",
+    status: isCompleted ? "completed" : hasArrived ? "in_progress" : "pending",
+    description: `${description}${locationName ? ` at ${locationName}` : ""}`,
+    move_number: moveNumber,
+    stop_number: stopNumber,
+    stop_type: stopType,
+    location_name: locationName,
+    location_address: locationAddress,
+    driver_id: order.driver?._id || null,
+    driver_name: driverName,
+    driver_avatar: order.driver?.profilePicture || null,
+    arrival_time: arrived || null,
+    departure_time: departed || null,
+    duration_minutes: durationMinutes,
+    distance_miles: order.distance || null,
+    portpro_move_id: order._id,
+    portpro_stop_id: order._id,
+    created_at: arrived || new Date().toISOString(),
+  };
 }
