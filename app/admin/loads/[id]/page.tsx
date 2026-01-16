@@ -105,65 +105,100 @@ function convertEventsToTrackingMoves(
 
 // Create basic tracking from load origin/destination when no detailed events exist
 function createBasicTrackingFromLoad(load: Record<string, unknown>): TrackingMove[] {
-  const status = load.status as string;
+  const status = load.status as string || "booked";
   const isDelivered = ["delivered", "completed"].includes(status);
   const isInTransit = ["in_transit", "out_for_delivery", "picked_up"].includes(status);
   const isAtTerminal = ["at_terminal", "at_yard"].includes(status);
+  const isBooked = status === "booked" || status === "dispatched";
 
   const stops: TrackingStop[] = [];
 
-  // Pickup stop
-  if (load.origin) {
-    const originLines = (load.origin as string).split("\n");
+  // Helper to parse location string (may have company name on first line, address on subsequent lines)
+  const parseLocation = (loc: string | null | undefined): { name: string; address?: string } | null => {
+    if (!loc || typeof loc !== "string") return null;
+    const lines = loc.split("\n").filter(l => l.trim());
+    if (lines.length === 0) return null;
+    return {
+      name: lines[0],
+      address: lines.slice(1).join(", ") || undefined,
+    };
+  };
+
+  // Pickup stop (from origin)
+  const originParsed = parseLocation(load.origin as string);
+  if (originParsed) {
     stops.push({
       id: "pickup",
       stopNumber: 1,
       type: "pickup",
-      locationName: originLines[0] || "Pickup Location",
-      locationAddress: originLines.slice(1).join(", ") || undefined,
+      locationName: originParsed.name,
+      locationAddress: originParsed.address,
       arrivalTime: load.pickup_time as string | undefined,
       isCompleted: isInTransit || isDelivered,
       isActive: isAtTerminal,
     });
   }
 
-  // Delivery stop
-  if (load.destination) {
-    const destLines = (load.destination as string).split("\n");
+  // Delivery stop (from destination)
+  const destParsed = parseLocation(load.destination as string);
+  if (destParsed) {
     stops.push({
       id: "delivery",
-      stopNumber: 2,
+      stopNumber: stops.length + 1,
       type: "deliver",
-      locationName: destLines[0] || "Delivery Location",
-      locationAddress: destLines.slice(1).join(", ") || undefined,
+      locationName: destParsed.name,
+      locationAddress: destParsed.address,
       arrivalTime: isDelivered ? (load.delivery_time as string) || (load.updated_at as string) : undefined,
       isCompleted: isDelivered,
       isActive: status === "out_for_delivery",
     });
   }
 
-  // Return stop
-  if (load.return_location) {
-    const returnLines = (load.return_location as string).split("\n");
+  // Return stop (from return_location)
+  const returnParsed = parseLocation(load.return_location as string);
+  if (returnParsed) {
     stops.push({
       id: "return",
-      stopNumber: 3,
+      stopNumber: stops.length + 1,
       type: "return",
-      locationName: returnLines[0] || "Return Location",
-      locationAddress: returnLines.slice(1).join(", ") || undefined,
+      locationName: returnParsed.name,
+      locationAddress: returnParsed.address,
       isCompleted: status === "completed",
       isActive: false,
     });
   }
 
+  // If no location data, create placeholder stops based on current_location or status
   if (stops.length === 0) {
-    return [];
+    const currentLoc = load.current_location as string;
+
+    // Pickup placeholder
+    stops.push({
+      id: "pickup",
+      stopNumber: 1,
+      type: "terminal",
+      locationName: currentLoc || "Terminal Pickup",
+      locationAddress: "Awaiting location details",
+      isCompleted: isInTransit || isDelivered,
+      isActive: isAtTerminal || isBooked,
+    });
+
+    // Delivery placeholder
+    stops.push({
+      id: "delivery",
+      stopNumber: 2,
+      type: "deliver",
+      locationName: "Delivery Location",
+      locationAddress: "Pending from dispatch",
+      isCompleted: isDelivered,
+      isActive: status === "out_for_delivery",
+    });
   }
 
   return [{
     id: "move-1",
     moveNumber: 1,
-    driverName: (load.assigned_driver_name as string) || (load.driver_name as string) || "Assigned Driver",
+    driverName: (load.assigned_driver_name as string) || (load.driver_name as string) || "Pending Assignment",
     status: isDelivered ? "completed" : isInTransit ? "in_progress" : "pending",
     totalDistance: load.total_miles as number | undefined,
     stops,
