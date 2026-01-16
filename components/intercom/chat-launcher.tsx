@@ -23,10 +23,18 @@ interface ChatLauncherProps {
 export function ChatLauncher({ className }: ChatLauncherProps) {
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const [isReady, setIsReady] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check if Intercom is available
   useEffect(() => {
+    if (!mounted) return;
+
     // Give Intercom time to initialize
     const timer = setTimeout(() => {
       if (typeof window !== "undefined" && window.Intercom) {
@@ -35,7 +43,7 @@ export function ChatLauncher({ className }: ChatLauncherProps) {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [mounted]);
 
   // Listen for unread count changes
   useEffect(() => {
@@ -60,8 +68,8 @@ export function ChatLauncher({ className }: ChatLauncherProps) {
     }
   }, []);
 
-  // Hide on admin pages
-  if (pathname?.startsWith("/admin")) {
+  // Hide on admin pages or before mounting (prevents hydration mismatch)
+  if (!mounted || pathname?.startsWith("/admin")) {
     return null;
   }
 
