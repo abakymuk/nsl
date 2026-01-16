@@ -782,7 +782,7 @@ function NotFound({ containerNumber, onTrackAnother }: { containerNumber: string
           <span className="font-mono font-semibold">{containerNumber}</span>
         </p>
         <p className="text-sm text-muted-foreground">
-          If you recently submitted a quote, please allow 1-2 hours for processing.
+          If you recently submitted a quote, please allow 15 minutes for processing.
         </p>
       </div>
 

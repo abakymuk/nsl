@@ -107,7 +107,7 @@ types/
 ## Key Principles (V1)
 
 - **Trust-First**: Build confidence through transparency and honesty
-- **No False Promises**: Better an honest quote in 1-2 hours than a fake instant quote
+- **No False Promises**: Better an honest quote in 15 min than a fake instant quote
 - **Process Over Promises**: Show systems, not chaos
 - **Minimal but Effective**: Focus on what matters, remove distractions
 

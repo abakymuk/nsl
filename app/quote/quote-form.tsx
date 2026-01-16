@@ -138,7 +138,7 @@ export default function QuoteForm() {
             Request a Quote
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Takes 30 seconds. Real quote in 1–2 hours.
+            Takes 30 seconds. Real quote in 15 min.
           </p>
           {/* SLA Badge */}
           <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
@@ -578,7 +578,7 @@ export default function QuoteForm() {
           className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4 text-center"
         >
           <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Better an honest quote in 1–2 hours</span>{" "}
+            <span className="font-semibold text-foreground">Better an honest quote in 15 min</span>{" "}
             than a fake instant quote in 30 seconds.
           </p>
         </motion.div>

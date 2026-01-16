@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       found: false,
-      message: "No shipment found. If you recently submitted a quote, please allow 1-2 hours for processing.",
+      message: "No shipment found. If you recently submitted a quote, please allow 15 minutes for processing.",
     });
 
   } catch (error) {

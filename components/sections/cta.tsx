@@ -24,7 +24,7 @@ export function CTASection() {
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
                 Get a quote from a real dispatcher. No bots, no fake instant pricing.
-                Just honest numbers in 1–2 hours.
+                Just honest numbers in 15 min.
               </p>
 
               {/* CTA Buttons */}

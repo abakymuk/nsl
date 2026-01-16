@@ -98,7 +98,7 @@ export function ProcessSection() {
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
             <p className="text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">
-                Better an honest quote in 1–2 hours
+                Better an honest quote in 15 min
               </span>{" "}
               than a fake instant quote in 30 seconds.
             </p>

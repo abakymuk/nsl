@@ -129,7 +129,7 @@ export function Footer() {
               >
                 <div>
                   <p className="text-sm font-medium text-foreground">Request a Quote</p>
-                  <p className="text-xs text-muted-foreground">Get pricing in 1-2 hours</p>
+                  <p className="text-xs text-muted-foreground">Get pricing in 15 min</p>
                 </div>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </Link>
