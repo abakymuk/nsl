@@ -89,6 +89,16 @@ export interface PortProLocation {
   fullAddress?: string;
 }
 
+// PortPro lookup field (can be string or object with label)
+export type PortProLookupField = string | { _id?: string; name?: string; label?: string } | null;
+
+// Helper to extract value from PortPro lookup field
+export function extractLookupValue(field: PortProLookupField): string | null {
+  if (!field) return null;
+  if (typeof field === "string") return field;
+  return field.label || field.name || null;
+}
+
 // Load data structure - matches actual PortPro API response
 export interface PortProLoad {
   _id: string;
@@ -97,8 +107,8 @@ export interface PortProLoad {
   status: string;
   // Container info
   containerNo?: string;
-  containerSize?: string; // 20', 40', 45'
-  containerType?: string; // HC (High Cube), ST (Standard), RF (Reefer)
+  containerSize?: PortProLookupField; // Can be "40'" or {_id, name, label}
+  containerType?: PortProLookupField; // Can be "HC" or {_id, name, label}
   containerOwner?: string;
   chassisNo?: string;
   sealNo?: string;

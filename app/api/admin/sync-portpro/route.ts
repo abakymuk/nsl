@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth";
-import { getPortProClient, mapPortProStatus, formatLocation, PortProLoad } from "@/lib/portpro";
+import { getPortProClient, mapPortProStatus, formatLocation, extractLookupValue, PortProLoad } from "@/lib/portpro";
 
 const supabase = createUntypedAdminClient();
 
@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
         const shipmentData = {
           // Container info
           container_number: load.containerNo,
-          container_size: load.containerSize || null,
-          container_type: load.containerType || null, // HC, ST, RF
+          container_size: extractLookupValue(load.containerSize ?? null),
+          container_type: extractLookupValue(load.containerType ?? null),
           // Status & location
           status: mapPortProStatus(load.status),
           current_location: getLoadLocation(load),

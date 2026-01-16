@@ -19,6 +19,53 @@ import {
 import { LoadActions } from "./load-actions";
 import { LoadTimeline } from "./load-timeline";
 
+// Helper to parse container size/type that might be stored as JSON string
+function parseContainerField(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "string") {
+    // Check if it's a JSON string
+    if (value.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(value);
+        return parsed.label || parsed.name || null;
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  }
+  if (typeof value === "object" && value !== null) {
+    const obj = value as { label?: string; name?: string };
+    return obj.label || obj.name || null;
+  }
+  return null;
+}
+
+// Format container size/type for display
+function formatContainerInfo(size: unknown, type: unknown): string | null {
+  const sizeStr = parseContainerField(size);
+  const typeStr = parseContainerField(type);
+
+  if (!sizeStr && !typeStr) return null;
+
+  // Map common abbreviations to full names
+  const typeLabels: Record<string, string> = {
+    "HC": "High Cube",
+    "ST": "Standard",
+    "RF": "Reefer",
+    "High Cube": "High Cube",
+    "Standard": "Standard",
+    "Reefer": "Reefer",
+  };
+
+  const formattedType = typeStr ? (typeLabels[typeStr] || typeStr) : null;
+
+  if (sizeStr && formattedType) {
+    return `${sizeStr} ${formattedType}`;
+  }
+  return sizeStr || formattedType;
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -163,7 +210,7 @@ export default async function LoadDetailPage({
                   <code className="font-mono font-medium">{load.container_number}</code>
                 </div>
               </div>
-              {(load.container_size || load.container_type) && (
+              {formatContainerInfo(load.container_size, load.container_type) && (
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2 shrink-0">
                     <Package className="h-4 w-4 text-primary" />
@@ -171,7 +218,7 @@ export default async function LoadDetailPage({
                   <div>
                     <p className="text-xs text-muted-foreground">Size / Type</p>
                     <p className="font-medium">
-                      {[load.container_size, load.container_type].filter(Boolean).join(" ")}
+                      {formatContainerInfo(load.container_size, load.container_type)}
                     </p>
                   </div>
                 </div>
