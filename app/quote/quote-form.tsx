@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Package, MapPin, FileText, Loader2, CheckCircle2, User, Building2, Mail, Phone, Import, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Package, MapPin, User, Loader2, CheckCircle2, Building2, Mail, Phone, Import, Upload } from "lucide-react";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
 import { BorderBeam } from "@/components/ui/magic/border-beam";
 import type { QuoteFormData } from "@/types";
@@ -32,10 +32,11 @@ const containerTypes = [
   { value: "45ft", label: "45ft High Cube" },
 ];
 
+// New step order: Shipment first, Contact last (reduces friction)
 const steps = [
   { id: 1, name: "Container", icon: Package },
   { id: 2, name: "Delivery", icon: MapPin },
-  { id: 3, name: "Details", icon: FileText },
+  { id: 3, name: "Contact", icon: User },
 ];
 
 // Email validation regex
@@ -66,17 +67,23 @@ export default function QuoteForm() {
     IntercomEvents.quoteStarted();
   }, []);
 
-  // Validation for step 1: container + terminal + contact info
+  // Step 1: Container number + terminal (simple, low commitment)
   const canProceedStep1 =
-    formData.containerNumber.length >= 4 &&
-    formData.terminal &&
+    formData.containerNumber.length >= 4 && formData.terminal;
+
+  // Step 2: Delivery details
+  const canProceedStep2 =
+    formData.deliveryZip.match(/^\d{5}(-\d{4})?$/) && formData.containerType;
+
+  // Step 3: Contact info (required for submit)
+  const canSubmit =
     formData.fullName.length >= 2 &&
     formData.companyName.length >= 2 &&
     emailRegex.test(formData.email);
 
-  const canProceedStep2 = formData.deliveryZip.match(/^\d{5}(-\d{4})?$/) && formData.containerType;
-
   const handleSubmit = async () => {
+    if (!canSubmit) return;
+
     setLoading(true);
     setError(null);
 
@@ -211,7 +218,7 @@ export default function QuoteForm() {
           )}
 
           <AnimatePresence mode="wait">
-            {/* Step 1: Container Details + Contact Info */}
+            {/* Step 1: Container Details (Simple, low commitment) */}
             {currentStep === 1 && (
               <motion.div
                 key="step1"
@@ -222,9 +229,9 @@ export default function QuoteForm() {
                 className="space-y-6"
               >
                 <div>
-                  <h2 className="text-xl font-semibold mb-1">Container & Contact</h2>
+                  <h2 className="text-xl font-semibold mb-1">Container Details</h2>
                   <p className="text-sm text-muted-foreground">
-                    Enter container details and how to reach you.
+                    Which container do you need moved?
                   </p>
                 </div>
 
@@ -249,9 +256,9 @@ export default function QuoteForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Terminal <span className="text-destructive">*</span>
+                    Pickup Terminal <span className="text-destructive">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {terminals.map((terminal) => (
                       <button
                         key={terminal.value}
@@ -267,91 +274,6 @@ export default function QuoteForm() {
                         {terminal.short}
                       </button>
                     ))}
-                  </div>
-                </div>
-
-                {/* Contact Info Section */}
-                <div className="pt-4 border-t border-border">
-                  <p className="text-sm font-medium mb-4 flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    Your Contact Information
-                  </p>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label htmlFor="fullName" className="text-sm font-medium">
-                        Full Name <span className="text-destructive">*</span>
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                          id="fullName"
-                          type="text"
-                          value={formData.fullName}
-                          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                          placeholder="John Smith"
-                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="companyName" className="text-sm font-medium">
-                        Company <span className="text-destructive">*</span>
-                      </label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                          id="companyName"
-                          type="text"
-                          value={formData.companyName}
-                          onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                          placeholder="Acme Logistics"
-                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium">
-                      Email <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="john@acmelogistics.com"
-                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      We&apos;ll send your quote confirmation here
-                    </p>
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-2">
-                    <label htmlFor="phone" className="block text-sm font-medium text-foreground">
-                      Phone <span className="text-muted-foreground text-xs">(optional)</span>
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone || ""}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="(310) 555-1234"
-                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      For faster communication about your quote
-                    </p>
                   </div>
                 </div>
 
@@ -388,7 +310,7 @@ export default function QuoteForm() {
                 <div>
                   <h2 className="text-xl font-semibold mb-1">Delivery Details</h2>
                   <p className="text-sm text-muted-foreground">
-                    Where should we deliver and what type of container?
+                    Where should we deliver and what type of move?
                   </p>
                 </div>
 
@@ -521,7 +443,7 @@ export default function QuoteForm() {
               </motion.div>
             )}
 
-            {/* Step 3: Additional Details */}
+            {/* Step 3: Contact Info + Final Details */}
             {currentStep === 3 && (
               <motion.div
                 key="step3"
@@ -532,38 +454,110 @@ export default function QuoteForm() {
                 className="space-y-6"
               >
                 <div>
-                  <h2 className="text-xl font-semibold mb-1">Additional Details</h2>
+                  <h2 className="text-xl font-semibold mb-1">Contact Information</h2>
                   <p className="text-sm text-muted-foreground">
-                    Optional info to help us give you a better quote.
+                    Where should we send your quote?
                   </p>
                 </div>
 
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="fullName" className="text-sm font-medium">
+                      Full Name <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        id="fullName"
+                        type="text"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        placeholder="John Smith"
+                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="companyName" className="text-sm font-medium">
+                      Company <span className="text-destructive">*</span>
+                    </label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        id="companyName"
+                        type="text"
+                        value={formData.companyName}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        placeholder="Acme Logistics"
+                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <label htmlFor="lfd" className="text-sm font-medium">
-                    Last Free Day (LFD)
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email <span className="text-destructive">*</span>
                   </label>
-                  <input
-                    id="lfd"
-                    type="date"
-                    value={formData.lfd}
-                    onChange={(e) => setFormData({ ...formData, lfd: e.target.value })}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="john@acmelogistics.com"
+                      className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    If your container has an approaching LFD, let us know.
+                    We&apos;ll send your quote here
                   </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="text-sm font-medium">
+                      Phone <span className="text-muted-foreground text-xs">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone || ""}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="(310) 555-1234"
+                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="lfd" className="text-sm font-medium">
+                      Last Free Day <span className="text-muted-foreground text-xs">(optional)</span>
+                    </label>
+                    <input
+                      id="lfd"
+                      type="date"
+                      value={formData.lfd}
+                      onChange={(e) => setFormData({ ...formData, lfd: e.target.value })}
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="notes" className="text-sm font-medium">
-                    Additional Notes
+                    Additional Notes <span className="text-muted-foreground text-xs">(optional)</span>
                   </label>
                   <textarea
                     id="notes"
-                    rows={4}
+                    rows={3}
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Any special requirements, urgent situations, or additional information..."
+                    placeholder="Any special requirements or urgent situations..."
                     className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"
                   />
                 </div>
@@ -572,18 +566,6 @@ export default function QuoteForm() {
                 <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
                   <h3 className="text-sm font-semibold text-foreground">Quote Summary</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-muted-foreground">Contact:</div>
-                    <div>{formData.fullName} ({formData.companyName})</div>
-                    <div className="text-muted-foreground">Email:</div>
-                    <div>{formData.email}</div>
-                    {formData.phone && (
-                      <>
-                        <div className="text-muted-foreground">Phone:</div>
-                        <div>{formData.phone}</div>
-                      </>
-                    )}
-                    <div className="text-muted-foreground">Move Type:</div>
-                    <div className="capitalize">{formData.moveType}</div>
                     <div className="text-muted-foreground">Container:</div>
                     <div className="font-mono">{formData.containerNumber}</div>
                     <div className="text-muted-foreground">Terminal:</div>
@@ -592,6 +574,8 @@ export default function QuoteForm() {
                     <div className="font-mono">{formData.deliveryZip}</div>
                     <div className="text-muted-foreground">Type:</div>
                     <div>{formData.containerType}</div>
+                    <div className="text-muted-foreground">Move:</div>
+                    <div className="capitalize">{formData.moveType}</div>
                     {formData.commodityType && (
                       <>
                         <div className="text-muted-foreground">Commodity:</div>
@@ -613,8 +597,11 @@ export default function QuoteForm() {
                   </button>
                   <ShimmerButton
                     onClick={handleSubmit}
-                    disabled={loading}
-                    className="flex-1 h-12 text-base"
+                    disabled={loading || !canSubmit}
+                    className={cn(
+                      "flex-1 h-12 text-base",
+                      (!canSubmit || loading) && "opacity-50 cursor-not-allowed"
+                    )}
                     shimmerColor="oklch(0.62 0.19 38)"
                     background="oklch(0.45 0.16 245)"
                   >
@@ -626,7 +613,7 @@ export default function QuoteForm() {
                         </>
                       ) : (
                         <>
-                          Submit Quote Request
+                          Get My Quote
                           <ArrowRight className="h-4 w-4" />
                         </>
                       )}
