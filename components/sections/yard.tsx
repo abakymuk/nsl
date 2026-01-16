@@ -15,29 +15,24 @@ import {
 import { PhotoGallery, type GalleryImage } from "@/components/ui/photo-gallery";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
 
-// Set to true once you have real yard photos
-const HAS_YARD_PHOTOS = false;
+// Real yard photos available
+const HAS_YARD_PHOTOS = true;
 
 const yardImages: GalleryImage[] = [
   {
-    src: "/images/yard/yard-aerial.jpg",
-    alt: "Aerial view of New Stream Logistics yard",
-    caption: "50+ container capacity secured yard",
-  },
-  {
-    src: "/images/yard/yard-containers.jpg",
-    alt: "Container storage at our LA/LB yard",
+    src: "/images/yard/wolfgang-weiser-2j91qI-t2Wg-unsplash.jpg",
+    alt: "Container yard with stacked shipping containers",
     caption: "Organized container staging area",
   },
   {
-    src: "/images/yard/yard-security.jpg",
-    alt: "24/7 security monitoring",
-    caption: "Fully fenced with 24/7 monitoring",
+    src: "/images/yard/solomen-EoS4ZFRJCJ4-unsplash.jpg",
+    alt: "Container storage at our LA/LB yard",
+    caption: "50+ container capacity secured yard",
   },
   {
-    src: "/images/yard/yard-operations.jpg",
-    alt: "Yard operations and equipment",
-    caption: "Professional equipment and operations",
+    src: "/images/yard/daphne-fecheyr-0-r7LSNq1b8-unsplash.jpg",
+    alt: "Professional yard operations",
+    caption: "Fully fenced with 24/7 monitoring",
   },
 ];
 
@@ -118,10 +113,10 @@ export function YardSection() {
           className="mb-16"
         >
           {HAS_YARD_PHOTOS ? (
-            <PhotoGallery images={yardImages} columns={4} />
+            <PhotoGallery images={yardImages} columns={3} />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className="aspect-[4/3] rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center text-muted-foreground"
