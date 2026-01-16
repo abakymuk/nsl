@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { LoadActions } from "./load-actions";
 import { LoadTimeline } from "./load-timeline";
+import { TrackingTimeline, type TrackingMove, type TrackingStop } from "./tracking-timeline";
 
 // Helper to parse container size/type that might be stored as JSON string
 function parseContainerField(value: unknown): string | null {
@@ -39,6 +40,134 @@ function parseContainerField(value: unknown): string | null {
     return obj.label || obj.name || null;
   }
   return null;
+}
+
+// Convert load events to tracking moves format
+function convertEventsToTrackingMoves(
+  events: Array<Record<string, unknown>>,
+  load: Record<string, unknown>
+): TrackingMove[] {
+  // Group events by move_number
+  const moveEvents = events.filter(e => e.event_type === "stop" || e.move_number);
+
+  if (moveEvents.length === 0) {
+    // If no detailed tracking events, create a basic tracking view from load data
+    return createBasicTrackingFromLoad(load);
+  }
+
+  // Group by move number
+  const moveGroups = new Map<number, Array<Record<string, unknown>>>();
+  moveEvents.forEach(event => {
+    const moveNum = (event.move_number as number) || 1;
+    if (!moveGroups.has(moveNum)) {
+      moveGroups.set(moveNum, []);
+    }
+    moveGroups.get(moveNum)!.push(event);
+  });
+
+  // Convert to TrackingMove format
+  const moves: TrackingMove[] = [];
+  moveGroups.forEach((groupEvents, moveNumber) => {
+    const stops: TrackingStop[] = groupEvents.map((event, idx) => ({
+      id: event.id as string,
+      stopNumber: (event.stop_number as number) || idx + 1,
+      type: (event.stop_type as TrackingStop["type"]) || "terminal",
+      locationName: (event.location_name as string) || (event.location as string) || "Unknown",
+      locationAddress: event.location_address as string | undefined,
+      startTime: event.start_time as string | undefined,
+      arrivalTime: event.arrival_time as string | undefined,
+      departureTime: event.departure_time as string | undefined,
+      durationMinutes: event.duration_minutes as number | undefined,
+      distanceMiles: event.distance_miles as number | undefined,
+      isCompleted: !!(event.departure_time || event.arrival_time),
+      isActive: !event.departure_time && !!event.arrival_time,
+    }));
+
+    const firstEvent = groupEvents[0];
+    moves.push({
+      id: `move-${moveNumber}`,
+      moveNumber,
+      driverName: (firstEvent.driver_name as string) || "Driver",
+      driverAvatar: firstEvent.driver_avatar as string | undefined,
+      driverId: firstEvent.driver_id as string | undefined,
+      status: stops.every(s => s.isCompleted)
+        ? "completed"
+        : stops.some(s => s.isActive)
+          ? "in_progress"
+          : "pending",
+      totalDistance: stops.reduce((sum, s) => sum + (s.distanceMiles || 0), 0),
+      stops,
+    });
+  });
+
+  return moves.sort((a, b) => a.moveNumber - b.moveNumber);
+}
+
+// Create basic tracking from load origin/destination when no detailed events exist
+function createBasicTrackingFromLoad(load: Record<string, unknown>): TrackingMove[] {
+  const status = load.status as string;
+  const isDelivered = ["delivered", "completed"].includes(status);
+  const isInTransit = ["in_transit", "out_for_delivery", "picked_up"].includes(status);
+  const isAtTerminal = ["at_terminal", "at_yard"].includes(status);
+
+  const stops: TrackingStop[] = [];
+
+  // Pickup stop
+  if (load.origin) {
+    const originLines = (load.origin as string).split("\n");
+    stops.push({
+      id: "pickup",
+      stopNumber: 1,
+      type: "pickup",
+      locationName: originLines[0] || "Pickup Location",
+      locationAddress: originLines.slice(1).join(", ") || undefined,
+      arrivalTime: load.pickup_time as string | undefined,
+      isCompleted: isInTransit || isDelivered,
+      isActive: isAtTerminal,
+    });
+  }
+
+  // Delivery stop
+  if (load.destination) {
+    const destLines = (load.destination as string).split("\n");
+    stops.push({
+      id: "delivery",
+      stopNumber: 2,
+      type: "deliver",
+      locationName: destLines[0] || "Delivery Location",
+      locationAddress: destLines.slice(1).join(", ") || undefined,
+      arrivalTime: isDelivered ? (load.delivery_time as string) || (load.updated_at as string) : undefined,
+      isCompleted: isDelivered,
+      isActive: status === "out_for_delivery",
+    });
+  }
+
+  // Return stop
+  if (load.return_location) {
+    const returnLines = (load.return_location as string).split("\n");
+    stops.push({
+      id: "return",
+      stopNumber: 3,
+      type: "return",
+      locationName: returnLines[0] || "Return Location",
+      locationAddress: returnLines.slice(1).join(", ") || undefined,
+      isCompleted: status === "completed",
+      isActive: false,
+    });
+  }
+
+  if (stops.length === 0) {
+    return [];
+  }
+
+  return [{
+    id: "move-1",
+    moveNumber: 1,
+    driverName: (load.assigned_driver_name as string) || (load.driver_name as string) || "Assigned Driver",
+    status: isDelivered ? "completed" : isInTransit ? "in_progress" : "pending",
+    totalDistance: load.total_miles as number | undefined,
+    stops,
+  }];
 }
 
 // Format container size/type for display
@@ -415,11 +544,21 @@ export default async function LoadDetailPage({
             </div>
           </div>
 
-          {/* Timeline */}
+          {/* Container Tracking Timeline */}
           <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <h2 className="font-semibold mb-4">Tracking History</h2>
-            <LoadTimeline events={events} />
+            <h2 className="font-semibold mb-4">Container Tracking</h2>
+            <TrackingTimeline moves={convertEventsToTrackingMoves(events, load)} />
           </div>
+
+          {/* Event Log (collapsible) */}
+          <details className="rounded-xl border bg-card shadow-sm">
+            <summary className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
+              <span className="font-semibold">Event Log ({events.length} events)</span>
+            </summary>
+            <div className="px-6 pb-6">
+              <LoadTimeline events={events} />
+            </div>
+          </details>
 
           {/* Notes */}
           {load.notes && (

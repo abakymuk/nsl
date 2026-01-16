@@ -165,6 +165,41 @@ export interface PortProLoad {
   // Timestamps
   createdAt: string;
   updatedAt?: string;
+  // Container moves/tracking (from PortPro tracking data)
+  driverOrder?: PortProDriverOrder[];
+}
+
+// PortPro Driver/Move structure
+export interface PortProDriverOrder {
+  _id: string;
+  moveNumber?: number;
+  driver?: {
+    _id?: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+    phone?: string;
+  };
+  status?: string;
+  distance?: number;
+  moves?: PortProMove[];
+}
+
+// PortPro Move/Stop structure
+export interface PortProMove {
+  _id: string;
+  type?: string; // PULLCONTAINER, DELIVERLOAD, RETURNCONTAINER, HOOKCONTAINER, DROPCONTAINER
+  status?: string;
+  address?: PortProLocation;
+  company_name?: string;
+  arrived?: string;
+  departed?: string;
+  appointmentFrom?: string;
+  appointmentTo?: string;
+  distance?: number;
+  duration?: number; // minutes
+  isCompleted?: boolean;
 }
 
 class PortProClient {
