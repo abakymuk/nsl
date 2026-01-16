@@ -114,7 +114,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 text-lg leading-8 text-muted-foreground sm:text-xl max-w-2xl mx-auto"
           >
-            Avoid demurrage with our private secured yard. Real quotes in 2 hours
+            Avoid demurrage with our private secured yard. Real quotes in 15 min
             from real dispatchers — no bots, no fake pricing.
           </motion.p>
 
