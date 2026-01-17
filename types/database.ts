@@ -22,15 +22,15 @@ export interface Database {
           email: string | null;
           phone: string | null;
           // Container details
-          container_number: string;
+          container_number: string | null;
           container_size: string | null;
-          container_type: string;
+          container_type: string | null;
           weight_lbs: number | null;
           is_hazmat: boolean;
           is_overweight: boolean;
           is_reefer: boolean;
           // Locations
-          pickup_terminal: string;
+          pickup_terminal: string | null;
           delivery_address: string | null;
           delivery_city: string | null;
           delivery_state: string | null;
@@ -47,6 +47,15 @@ export interface Database {
           quoted_by: string | null;
           quote_notes: string | null;
           quote_valid_until: string | null;
+          // Lead qualification (new fields)
+          port: string | null;
+          request_type: string | null;
+          time_sensitive: boolean;
+          lead_score: number;
+          is_urgent: boolean;
+          delivery_type: string | null;
+          appointment_required: boolean;
+          availability_date: string | null;
         };
         Insert: {
           id?: string;
@@ -58,14 +67,14 @@ export interface Database {
           contact_name?: string | null;
           email?: string | null;
           phone?: string | null;
-          container_number: string;
+          container_number?: string | null;
           container_size?: string | null;
-          container_type: string;
+          container_type?: string | null;
           weight_lbs?: number | null;
           is_hazmat?: boolean;
           is_overweight?: boolean;
           is_reefer?: boolean;
-          pickup_terminal: string;
+          pickup_terminal?: string | null;
           delivery_address?: string | null;
           delivery_city?: string | null;
           delivery_state?: string | null;
@@ -80,6 +89,15 @@ export interface Database {
           quoted_by?: string | null;
           quote_notes?: string | null;
           quote_valid_until?: string | null;
+          // Lead qualification (new fields)
+          port?: string | null;
+          request_type?: string | null;
+          time_sensitive?: boolean;
+          lead_score?: number;
+          is_urgent?: boolean;
+          delivery_type?: string | null;
+          appointment_required?: boolean;
+          availability_date?: string | null;
         };
         Update: {
           id?: string;
@@ -91,14 +109,14 @@ export interface Database {
           contact_name?: string | null;
           email?: string | null;
           phone?: string | null;
-          container_number?: string;
+          container_number?: string | null;
           container_size?: string | null;
-          container_type?: string;
+          container_type?: string | null;
           weight_lbs?: number | null;
           is_hazmat?: boolean;
           is_overweight?: boolean;
           is_reefer?: boolean;
-          pickup_terminal?: string;
+          pickup_terminal?: string | null;
           delivery_address?: string | null;
           delivery_city?: string | null;
           delivery_state?: string | null;
@@ -113,6 +131,15 @@ export interface Database {
           quoted_by?: string | null;
           quote_notes?: string | null;
           quote_valid_until?: string | null;
+          // Lead qualification (new fields)
+          port?: string | null;
+          request_type?: string | null;
+          time_sensitive?: boolean;
+          lead_score?: number;
+          is_urgent?: boolean;
+          delivery_type?: string | null;
+          appointment_required?: boolean;
+          availability_date?: string | null;
         };
       };
       contacts: {

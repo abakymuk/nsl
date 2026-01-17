@@ -106,20 +106,34 @@ export async function POST(request: NextRequest) {
       const supabase = createAdminClient();
 
       const quoteData: QuoteInsert = {
-        container_number: body.containerNumber || "TBD",
-        pickup_terminal: body.terminal || "TBD",
-        delivery_zip: body.deliveryZip,
-        container_type: body.containerType || "40ft",
-        service_type: body.moveType || "import",
-        lfd: body.lfd || null,
-        special_instructions:
-          specialInstructions.length > 0
-            ? specialInstructions.join("\n")
-            : null,
+        // Contact info
         contact_name: body.fullName,
         company_name: body.companyName,
         email: body.email || null,
         phone: body.phone,
+        // Container details
+        container_number: body.containerNumber || null,
+        container_type: body.containerType || "40ft",
+        pickup_terminal: body.terminal || null,
+        // Delivery
+        delivery_zip: body.deliveryZip,
+        delivery_type: body.deliveryType || null,
+        appointment_required: body.appointmentRequired || false,
+        // Service details
+        service_type: body.moveType || "import",
+        lfd: body.lfd || null,
+        availability_date: body.availabilityDate || null,
+        special_instructions:
+          specialInstructions.length > 0
+            ? specialInstructions.join("\n")
+            : null,
+        // Lead qualification (new fields)
+        port: body.port || "la",
+        request_type: body.requestType || "standard",
+        time_sensitive: body.timeSensitive || false,
+        lead_score: leadScore,
+        is_urgent: isUrgent,
+        // Status
         status: isUrgent ? "urgent" : "pending",
       };
 
