@@ -3,43 +3,55 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Package, MapPin, User, Loader2, CheckCircle2, Building2, Mail, Phone, Import, Upload } from "lucide-react";
-import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
-import { BorderBeam } from "@/components/ui/magic/border-beam";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Package,
+  MapPin,
+  User,
+  Loader2,
+  Building2,
+  Mail,
+  Phone,
+  Import,
+  Upload,
+  Container,
+  Anchor,
+  Truck,
+} from "lucide-react";
 import type { QuoteFormData } from "@/types";
 import { cn } from "@/lib/utils";
 import { IntercomEvents } from "@/lib/intercom";
 
 const terminals = [
-  { value: "YTI (Yusen Terminals)", short: "YTI" },
-  { value: "PCT (Pacific Container Terminal)", short: "PCT" },
-  { value: "Pier A", short: "Pier A" },
-  { value: "FMS (Fenix Marine Services)", short: "FMS" },
-  { value: "LBCT (Long Beach Container Terminal)", short: "LBCT" },
-  { value: "WBCT (West Basin Container Terminal)", short: "WBCT" },
-  { value: "TraPac", short: "TraPac" },
-  { value: "Everport Terminal Services", short: "Everport" },
-  { value: "TTI (Total Terminals International)", short: "TTI" },
-  { value: "Shippers Transport", short: "Shippers" },
-  { value: "APM Terminals", short: "APM" },
-  { value: "ITS", short: "ITS" },
+  { value: "YTI (Yusen Terminals)", short: "YTI", code: "YTI" },
+  { value: "PCT (Pacific Container Terminal)", short: "PCT", code: "PCT" },
+  { value: "Pier A", short: "Pier A", code: "PA" },
+  { value: "FMS (Fenix Marine Services)", short: "FMS", code: "FMS" },
+  { value: "LBCT (Long Beach Container Terminal)", short: "LBCT", code: "LBCT" },
+  { value: "WBCT (West Basin Container Terminal)", short: "WBCT", code: "WBCT" },
+  { value: "TraPac", short: "TraPac", code: "TRP" },
+  { value: "Everport Terminal Services", short: "Everport", code: "EVP" },
+  { value: "TTI (Total Terminals International)", short: "TTI", code: "TTI" },
+  { value: "Shippers Transport", short: "Shippers", code: "SHP" },
+  { value: "APM Terminals", short: "APM", code: "APM" },
+  { value: "ITS", short: "ITS", code: "ITS" },
 ];
 
 const containerTypes = [
-  { value: "20ft", label: "20ft Standard" },
-  { value: "40ft", label: "40ft Standard" },
-  { value: "40ft HC", label: "40ft High Cube" },
-  { value: "45ft", label: "45ft High Cube" },
+  { value: "20ft", label: "20' STD", desc: "Standard" },
+  { value: "40ft", label: "40' STD", desc: "Standard" },
+  { value: "40ft HC", label: "40' HC", desc: "High Cube" },
+  { value: "45ft", label: "45' HC", desc: "High Cube" },
 ];
 
-// New step order: Shipment first, Contact last (reduces friction)
 const steps = [
-  { id: 1, name: "Container", icon: Package },
-  { id: 2, name: "Delivery", icon: MapPin },
-  { id: 3, name: "Contact", icon: User },
+  { id: 1, name: "Container", icon: Container, number: "01" },
+  { id: 2, name: "Delivery", icon: Truck, number: "02" },
+  { id: 3, name: "Contact", icon: User, number: "03" },
 ];
 
-// Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function QuoteForm() {
@@ -62,20 +74,14 @@ export default function QuoteForm() {
     phone: "",
   });
 
-  // Track form started on mount
   useEffect(() => {
     IntercomEvents.quoteStarted();
   }, []);
 
-  // Step 1: Container number + terminal (simple, low commitment)
   const canProceedStep1 =
     formData.containerNumber.length >= 4 && formData.terminal;
-
-  // Step 2: Delivery details
   const canProceedStep2 =
     formData.deliveryZip.match(/^\d{5}(-\d{4})?$/) && formData.containerType;
-
-  // Step 3: Contact info (required for submit)
   const canSubmit =
     formData.fullName.length >= 2 &&
     formData.companyName.length >= 2 &&
@@ -83,16 +89,13 @@ export default function QuoteForm() {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-
     setLoading(true);
     setError(null);
 
     try {
       const response = await fetch("/api/quote", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
@@ -102,8 +105,6 @@ export default function QuoteForm() {
       }
 
       const result = await response.json();
-
-      // Track successful submission
       IntercomEvents.quoteSubmitted({
         container: formData.containerNumber,
         terminal: formData.terminal,
@@ -111,11 +112,9 @@ export default function QuoteForm() {
         containerType: formData.containerType,
       });
 
-      // Pass reference number and container to thank-you page
       const params = new URLSearchParams();
       if (result.referenceNumber) params.set("ref", result.referenceNumber);
       params.set("container", formData.containerNumber);
-
       router.push(`/quote/thank-you?${params.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -134,6 +133,8 @@ export default function QuoteForm() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
+  const currentStepData = steps.find((s) => s.id === currentStep);
+
   return (
     <div className="w-full">
       <div className="mx-auto max-w-2xl">
@@ -141,501 +142,709 @@ export default function QuoteForm() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 text-center"
+          className="mb-10 text-center"
         >
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-4 py-1.5 text-sm font-medium text-accent mb-4">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+            </span>
+            Real quotes in 15 min
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
             Request a Quote
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Takes 30 seconds. Real quote in 15 min.
+            From a real dispatcher, not an algorithm
           </p>
-          {/* SLA Badge */}
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-            <CheckCircle2 className="h-4 w-4" />
-            Fast response from a real dispatcher
-          </div>
         </motion.div>
 
-        {/* Progress Steps */}
+        {/* Progress Journey */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300",
-                      currentStep >= step.id
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-muted-foreground"
-                    )}
-                  >
-                    {currentStep > step.id ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <step.icon className="h-5 w-5" />
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      "mt-2 text-xs font-medium",
-                      currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
-                    )}
-                  >
-                    {step.name}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={cn(
-                      "h-0.5 w-16 sm:w-24 mx-2 transition-all duration-300",
-                      currentStep > step.id ? "bg-primary" : "bg-border"
-                    )}
-                  />
-                )}
-              </div>
+          <div className="relative flex items-center justify-between">
+            {/* Progress Line Background */}
+            <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border" />
+            {/* Progress Line Active */}
+            <motion.div
+              className="absolute left-0 top-1/2 h-0.5 -translate-y-1/2 bg-gradient-to-r from-primary to-accent"
+              initial={{ width: "0%" }}
+              animate={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+            />
+
+            {steps.map((step) => (
+              <motion.div
+                key={step.id}
+                className="relative z-10 flex flex-col items-center"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: step.id * 0.1 }}
+              >
+                <motion.button
+                  type="button"
+                  onClick={() => step.id < currentStep && setCurrentStep(step.id)}
+                  disabled={step.id > currentStep}
+                  className={cn(
+                    "relative flex h-14 w-14 items-center justify-center rounded-2xl border-2 transition-all duration-300 font-mono text-lg font-bold",
+                    currentStep === step.id
+                      ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                      : currentStep > step.id
+                      ? "border-primary bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
+                      : "border-border bg-card text-muted-foreground cursor-not-allowed"
+                  )}
+                  whileHover={step.id < currentStep ? { scale: 1.05 } : {}}
+                  whileTap={step.id < currentStep ? { scale: 0.95 } : {}}
+                >
+                  {currentStep > step.id ? (
+                    <Check className="h-6 w-6" />
+                  ) : (
+                    step.number
+                  )}
+                </motion.button>
+                <span
+                  className={cn(
+                    "mt-2 text-xs font-semibold tracking-wide uppercase",
+                    currentStep >= step.id
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {step.name}
+                </span>
+              </motion.div>
             ))}
           </div>
         </div>
 
         {/* Form Card */}
-        <div className="relative rounded-2xl border border-border bg-card p-6 sm:p-8 overflow-hidden">
-          <BorderBeam
-            size={250}
-            duration={10}
-            colorFrom="oklch(0.45 0.16 245)"
-            colorTo="oklch(0.62 0.19 38)"
-          />
+        <motion.div
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 p-1"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          {/* Gradient Border Effect */}
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 via-transparent to-accent/20 pointer-events-none" />
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
-            >
-              {error}
-            </motion.div>
-          )}
+          {/* Inner Content */}
+          <div className="relative rounded-[22px] bg-slate-950 p-6 sm:p-8">
+            {/* Noise Texture Overlay */}
+            <div
+              className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-[22px]"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+              }}
+            />
 
-          <AnimatePresence mode="wait">
-            {/* Step 1: Container Details (Simple, low commitment) */}
-            {currentStep === 1 && (
+            {/* Large Step Number Watermark */}
+            <div className="absolute -right-4 -top-8 font-mono text-[12rem] font-black text-white/[0.02] pointer-events-none select-none leading-none">
+              {currentStepData?.number}
+            </div>
+
+            {error && (
               <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400"
               >
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">Container Details</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Which container do you need moved?
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="containerNumber" className="text-sm font-medium">
-                    Container Number <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    id="containerNumber"
-                    type="text"
-                    value={formData.containerNumber}
-                    onChange={(e) =>
-                      setFormData({ ...formData, containerNumber: e.target.value.toUpperCase() })
-                    }
-                    placeholder="MSCU1234567"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground font-mono text-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    4-letter prefix + 7 digits (e.g., MSCU1234567)
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Pickup Terminal <span className="text-destructive">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {terminals.map((terminal) => (
-                      <button
-                        key={terminal.value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, terminal: terminal.value })}
-                        className={cn(
-                          "px-3 py-2 rounded-lg text-sm font-medium border transition-all",
-                          formData.terminal === terminal.value
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                        )}
-                      >
-                        {terminal.short}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <ShimmerButton
-                    onClick={nextStep}
-                    disabled={!canProceedStep1}
-                    className={cn(
-                      "w-full h-12 text-base",
-                      !canProceedStep1 && "opacity-50 cursor-not-allowed"
-                    )}
-                    shimmerColor="oklch(0.62 0.19 38)"
-                    background="oklch(0.45 0.16 245)"
-                  >
-                    <span className="flex items-center gap-2">
-                      Continue
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                  </ShimmerButton>
-                </div>
+                {error}
               </motion.div>
             )}
 
-            {/* Step 2: Delivery Details */}
-            {currentStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">Delivery Details</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Where should we deliver and what type of move?
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="deliveryZip" className="text-sm font-medium">
-                    Delivery ZIP Code <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    id="deliveryZip"
-                    type="text"
-                    value={formData.deliveryZip}
-                    onChange={(e) =>
-                      setFormData({ ...formData, deliveryZip: e.target.value })
-                    }
-                    placeholder="90210"
-                    maxLength={10}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground font-mono text-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    5-digit ZIP code or ZIP+4 format
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Container Type <span className="text-destructive">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {containerTypes.map((type) => (
-                      <button
-                        key={type.value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, containerType: type.value })}
-                        className={cn(
-                          "px-4 py-3 rounded-xl text-sm font-medium border transition-all",
-                          formData.containerType === type.value
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                        )}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
+            <AnimatePresence mode="wait">
+              {/* Step 1: Container Details */}
+              {currentStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                      <Anchor className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Container Details</h2>
+                      <p className="text-sm text-slate-400">
+                        Which container do you need moved?
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Import/Export Toggle */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Move Type <span className="text-destructive">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, moveType: "import" })}
-                      className={cn(
-                        "px-4 py-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2",
-                        formData.moveType === "import"
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                      )}
+                  {/* Container Number Input */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="containerNumber"
+                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
                     >
-                      <Import className="h-4 w-4" />
-                      Import
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, moveType: "export" })}
-                      className={cn(
-                        "px-4 py-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2",
-                        formData.moveType === "export"
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
-                      )}
-                    >
-                      <Upload className="h-4 w-4" />
-                      Export
-                    </button>
+                      Container Number <span className="text-accent">*</span>
+                    </label>
+                    <div className="relative group">
+                      <input
+                        id="containerNumber"
+                        type="text"
+                        value={formData.containerNumber}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            containerNumber: e.target.value.toUpperCase(),
+                          })
+                        }
+                        placeholder="MSCU1234567"
+                        className="w-full h-14 px-5 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white font-mono text-xl tracking-wider placeholder:text-slate-600 focus:outline-none focus:border-primary focus:bg-slate-800 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.1)] transition-all"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500 uppercase">
+                        {formData.containerNumber.length > 0
+                          ? `${formData.containerNumber.length}/11`
+                          : "ID"}
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      4-letter prefix + 7 digits (e.g., MSCU1234567)
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formData.moveType === "import"
-                      ? "Container arriving from overseas for delivery"
-                      : "Empty container return to terminal"}
-                  </p>
-                </div>
 
-                {/* Commodity Type */}
-                <div className="space-y-2">
-                  <label htmlFor="commodityType" className="text-sm font-medium">
-                    Commodity Type <span className="text-muted-foreground text-xs">(optional)</span>
-                  </label>
-                  <input
-                    id="commodityType"
-                    type="text"
-                    value={formData.commodityType || ""}
-                    onChange={(e) => setFormData({ ...formData, commodityType: e.target.value })}
-                    placeholder="e.g., Electronics, Furniture, Textiles"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Helps us provide a more accurate quote
-                  </p>
-                </div>
+                  {/* Terminal Selection */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                      Pickup Terminal <span className="text-accent">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {terminals.map((terminal) => (
+                        <motion.button
+                          key={terminal.value}
+                          type="button"
+                          onClick={() =>
+                            setFormData({ ...formData, terminal: terminal.value })
+                          }
+                          className={cn(
+                            "relative px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200 overflow-hidden",
+                            formData.terminal === terminal.value
+                              ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.2)]"
+                              : "border-slate-700/50 bg-slate-800/30 text-slate-400 hover:border-slate-600 hover:text-slate-300 hover:bg-slate-800/50"
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {formData.terminal === terminal.value && (
+                            <motion.div
+                              className="absolute inset-0 bg-primary/5"
+                              layoutId="terminal-highlight"
+                              transition={{ type: "spring", duration: 0.3 }}
+                            />
+                          )}
+                          <span className="relative">{terminal.short}</span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="pt-4 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="flex-1 h-12 rounded-full border border-border bg-card text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-2"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                  </button>
-                  <ShimmerButton
-                    onClick={nextStep}
-                    disabled={!canProceedStep2}
-                    className={cn(
-                      "flex-1 h-12 text-base",
-                      !canProceedStep2 && "opacity-50 cursor-not-allowed"
-                    )}
-                    shimmerColor="oklch(0.62 0.19 38)"
-                    background="oklch(0.45 0.16 245)"
-                  >
-                    <span className="flex items-center gap-2">
+                  {/* Continue Button */}
+                  <div className="pt-4">
+                    <motion.button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={!canProceedStep1}
+                      className={cn(
+                        "w-full h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
+                        canProceedStep1
+                          ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30"
+                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      )}
+                      whileHover={canProceedStep1 ? { scale: 1.01 } : {}}
+                      whileTap={canProceedStep1 ? { scale: 0.99 } : {}}
+                    >
                       Continue
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                  </ShimmerButton>
-                </div>
-              </motion.div>
-            )}
+                      <ArrowRight className="h-5 w-5" />
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
 
-            {/* Step 3: Contact Info + Final Details */}
-            {currentStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">Contact Information</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Where should we send your quote?
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label htmlFor="fullName" className="text-sm font-medium">
-                      Full Name <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        id="fullName"
-                        type="text"
-                        value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        placeholder="John Smith"
-                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                      />
+              {/* Step 2: Delivery Details */}
+              {currentStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10">
+                      <Truck className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Delivery Details</h2>
+                      <p className="text-sm text-slate-400">
+                        Where should we deliver?
+                      </p>
                     </div>
                   </div>
 
+                  {/* ZIP Code */}
                   <div className="space-y-2">
-                    <label htmlFor="companyName" className="text-sm font-medium">
-                      Company <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        id="companyName"
-                        type="text"
-                        value={formData.companyName}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        placeholder="Acme Logistics"
-                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email <span className="text-destructive">*</span>
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="john@acmelogistics.com"
-                      className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    We&apos;ll send your quote here
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label htmlFor="phone" className="text-sm font-medium">
-                      Phone <span className="text-muted-foreground text-xs">(optional)</span>
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone || ""}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="(310) 555-1234"
-                        className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="lfd" className="text-sm font-medium">
-                      Last Free Day <span className="text-muted-foreground text-xs">(optional)</span>
+                    <label
+                      htmlFor="deliveryZip"
+                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                    >
+                      Delivery ZIP Code <span className="text-accent">*</span>
                     </label>
                     <input
-                      id="lfd"
-                      type="date"
-                      value={formData.lfd}
-                      onChange={(e) => setFormData({ ...formData, lfd: e.target.value })}
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      id="deliveryZip"
+                      type="text"
+                      value={formData.deliveryZip}
+                      onChange={(e) =>
+                        setFormData({ ...formData, deliveryZip: e.target.value })
+                      }
+                      placeholder="90210"
+                      maxLength={10}
+                      className="w-full h-14 px-5 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white font-mono text-xl tracking-wider placeholder:text-slate-600 focus:outline-none focus:border-accent focus:bg-slate-800 focus:shadow-[0_0_0_4px_rgba(249,115,22,0.1)] transition-all"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="notes" className="text-sm font-medium">
-                    Additional Notes <span className="text-muted-foreground text-xs">(optional)</span>
-                  </label>
-                  <textarea
-                    id="notes"
-                    rows={3}
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Any special requirements or urgent situations..."
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"
-                  />
-                </div>
-
-                {/* Summary */}
-                <div className="rounded-xl bg-secondary/50 p-4 space-y-2">
-                  <h3 className="text-sm font-semibold text-foreground">Quote Summary</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-muted-foreground">Container:</div>
-                    <div className="font-mono">{formData.containerNumber}</div>
-                    <div className="text-muted-foreground">Terminal:</div>
-                    <div>{terminals.find(t => t.value === formData.terminal)?.short}</div>
-                    <div className="text-muted-foreground">Delivery ZIP:</div>
-                    <div className="font-mono">{formData.deliveryZip}</div>
-                    <div className="text-muted-foreground">Type:</div>
-                    <div>{formData.containerType}</div>
-                    <div className="text-muted-foreground">Move:</div>
-                    <div className="capitalize">{formData.moveType}</div>
-                    {formData.commodityType && (
-                      <>
-                        <div className="text-muted-foreground">Commodity:</div>
-                        <div>{formData.commodityType}</div>
-                      </>
-                    )}
+                  {/* Container Type */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                      Container Type <span className="text-accent">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {containerTypes.map((type) => (
+                        <motion.button
+                          key={type.value}
+                          type="button"
+                          onClick={() =>
+                            setFormData({ ...formData, containerType: type.value })
+                          }
+                          className={cn(
+                            "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 text-left",
+                            formData.containerType === type.value
+                              ? "border-accent bg-accent/10 shadow-[0_0_20px_rgba(249,115,22,0.15)]"
+                              : "border-slate-700/50 bg-slate-800/30 hover:border-slate-600 hover:bg-slate-800/50"
+                          )}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          <div
+                            className={cn(
+                              "text-lg font-bold",
+                              formData.containerType === type.value
+                                ? "text-accent"
+                                : "text-slate-300"
+                            )}
+                          >
+                            {type.label}
+                          </div>
+                          <div className="text-xs text-slate-500">{type.desc}</div>
+                        </motion.button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="pt-4 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    disabled={loading}
-                    className="flex-1 h-12 rounded-full border border-border bg-card text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
-                  </button>
-                  <ShimmerButton
-                    onClick={handleSubmit}
-                    disabled={loading || !canSubmit}
-                    className={cn(
-                      "flex-1 h-12 text-base",
-                      (!canSubmit || loading) && "opacity-50 cursor-not-allowed"
-                    )}
-                    shimmerColor="oklch(0.62 0.19 38)"
-                    background="oklch(0.45 0.16 245)"
-                  >
-                    <span className="flex items-center gap-2">
+                  {/* Import/Export Toggle */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                      Move Type <span className="text-accent">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <motion.button
+                        type="button"
+                        onClick={() =>
+                          setFormData({ ...formData, moveType: "import" })
+                        }
+                        className={cn(
+                          "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3",
+                          formData.moveType === "import"
+                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                            : "border-slate-700/50 bg-slate-800/30 hover:border-slate-600"
+                        )}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Import
+                          className={cn(
+                            "h-5 w-5",
+                            formData.moveType === "import"
+                              ? "text-primary"
+                              : "text-slate-500"
+                          )}
+                        />
+                        <div className="text-left">
+                          <div
+                            className={cn(
+                              "font-bold",
+                              formData.moveType === "import"
+                                ? "text-primary"
+                                : "text-slate-300"
+                            )}
+                          >
+                            Import
+                          </div>
+                          <div className="text-xs text-slate-500">Port → Delivery</div>
+                        </div>
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() =>
+                          setFormData({ ...formData, moveType: "export" })
+                        }
+                        className={cn(
+                          "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3",
+                          formData.moveType === "export"
+                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                            : "border-slate-700/50 bg-slate-800/30 hover:border-slate-600"
+                        )}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Upload
+                          className={cn(
+                            "h-5 w-5",
+                            formData.moveType === "export"
+                              ? "text-primary"
+                              : "text-slate-500"
+                          )}
+                        />
+                        <div className="text-left">
+                          <div
+                            className={cn(
+                              "font-bold",
+                              formData.moveType === "export"
+                                ? "text-primary"
+                                : "text-slate-300"
+                            )}
+                          >
+                            Export
+                          </div>
+                          <div className="text-xs text-slate-500">Empty Return</div>
+                        </div>
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Commodity Type */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="commodityType"
+                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                    >
+                      Commodity{" "}
+                      <span className="text-slate-500 text-xs normal-case">
+                        (optional)
+                      </span>
+                    </label>
+                    <input
+                      id="commodityType"
+                      type="text"
+                      value={formData.commodityType || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, commodityType: e.target.value })
+                      }
+                      placeholder="e.g., Electronics, Furniture, Textiles"
+                      className="w-full h-12 px-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                    />
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="pt-4 flex gap-3">
+                    <motion.button
+                      type="button"
+                      onClick={prevStep}
+                      className="flex-1 h-14 rounded-xl font-bold border-2 border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:border-slate-600 transition-all flex items-center justify-center gap-2"
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                      Back
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={!canProceedStep2}
+                      className={cn(
+                        "flex-[2] h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
+                        canProceedStep2
+                          ? "bg-gradient-to-r from-accent to-accent/80 text-white shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
+                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      )}
+                      whileHover={canProceedStep2 ? { scale: 1.01 } : {}}
+                      whileTap={canProceedStep2 ? { scale: 0.99 } : {}}
+                    >
+                      Continue
+                      <ArrowRight className="h-5 w-5" />
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 3: Contact Info */}
+              {currentStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
+                      <User className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">
+                        Contact Information
+                      </h2>
+                      <p className="text-sm text-slate-400">
+                        Where should we send your quote?
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Name & Company */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="fullName"
+                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      >
+                        Full Name <span className="text-accent">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          id="fullName"
+                          type="text"
+                          value={formData.fullName}
+                          onChange={(e) =>
+                            setFormData({ ...formData, fullName: e.target.value })
+                          }
+                          placeholder="John Smith"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="companyName"
+                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      >
+                        Company <span className="text-accent">*</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          id="companyName"
+                          type="text"
+                          value={formData.companyName}
+                          onChange={(e) =>
+                            setFormData({ ...formData, companyName: e.target.value })
+                          }
+                          placeholder="Acme Logistics"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="email"
+                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                    >
+                      Email <span className="text-accent">*</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        placeholder="john@acmelogistics.com"
+                        className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      We&apos;ll send your quote here
+                    </p>
+                  </div>
+
+                  {/* Phone & LFD */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="phone"
+                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      >
+                        Phone{" "}
+                        <span className="text-slate-500 text-xs normal-case">
+                          (optional)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          id="phone"
+                          type="tel"
+                          value={formData.phone || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, phone: e.target.value })
+                          }
+                          placeholder="(310) 555-1234"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="lfd"
+                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      >
+                        Last Free Day{" "}
+                        <span className="text-slate-500 text-xs normal-case">
+                          (optional)
+                        </span>
+                      </label>
+                      <input
+                        id="lfd"
+                        type="date"
+                        value={formData.lfd}
+                        onChange={(e) =>
+                          setFormData({ ...formData, lfd: e.target.value })
+                        }
+                        className="w-full h-12 px-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="notes"
+                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                    >
+                      Additional Notes{" "}
+                      <span className="text-slate-500 text-xs normal-case">
+                        (optional)
+                      </span>
+                    </label>
+                    <textarea
+                      id="notes"
+                      rows={3}
+                      value={formData.notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                      }
+                      placeholder="Any special requirements or urgent situations..."
+                      className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all resize-none"
+                    />
+                  </div>
+
+                  {/* Summary Card - Manifest Style */}
+                  <div className="rounded-xl bg-slate-800/80 border-2 border-slate-700/50 overflow-hidden">
+                    <div className="px-4 py-2 bg-slate-700/50 border-b border-slate-700/50">
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Quote Summary
+                      </h3>
+                    </div>
+                    <div className="p-4 font-mono text-sm">
+                      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+                        <span className="text-slate-500">CNTR</span>
+                        <span className="text-white font-bold">
+                          {formData.containerNumber || "—"}
+                        </span>
+                        <span className="text-slate-500">TERM</span>
+                        <span className="text-white">
+                          {terminals.find((t) => t.value === formData.terminal)
+                            ?.short || "—"}
+                        </span>
+                        <span className="text-slate-500">DEST</span>
+                        <span className="text-white">
+                          {formData.deliveryZip || "—"}
+                        </span>
+                        <span className="text-slate-500">TYPE</span>
+                        <span className="text-white">
+                          {formData.containerType || "—"}{" "}
+                          <span className="text-slate-500">
+                            ({formData.moveType.toUpperCase()})
+                          </span>
+                        </span>
+                        {formData.commodityType && (
+                          <>
+                            <span className="text-slate-500">CMDTY</span>
+                            <span className="text-white">
+                              {formData.commodityType}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Navigation & Submit */}
+                  <div className="pt-4 flex gap-3">
+                    <motion.button
+                      type="button"
+                      onClick={prevStep}
+                      disabled={loading}
+                      className="flex-1 h-14 rounded-xl font-bold border-2 border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:border-slate-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                      Back
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={loading || !canSubmit}
+                      className={cn(
+                        "flex-[2] h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
+                        canSubmit && !loading
+                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30"
+                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      )}
+                      whileHover={canSubmit && !loading ? { scale: 1.01 } : {}}
+                      whileTap={canSubmit && !loading ? { scale: 0.99 } : {}}
+                    >
                       {loading ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-5 w-5 animate-spin" />
                           Submitting...
                         </>
                       ) : (
                         <>
                           Get My Quote
-                          <ArrowRight className="h-4 w-4" />
+                          <ArrowRight className="h-5 w-5" />
                         </>
                       )}
-                    </span>
-                  </ShimmerButton>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
 
-        {/* Bottom Note */}
+        {/* Bottom Trust Badge */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4 text-center"
+          transition={{ delay: 0.4 }}
+          className="mt-8 flex items-center justify-center gap-3 text-sm text-muted-foreground"
         >
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Better an honest quote in 15 min</span>{" "}
-            than a fake instant quote in 30 seconds.
-          </p>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
+            <span className="flex h-2 w-2 rounded-full bg-green-500" />
+            <span className="font-medium">15 min avg response</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
+            <Package className="h-3.5 w-3.5" />
+            <span className="font-medium">Real dispatchers</span>
+          </div>
         </motion.div>
       </div>
     </div>
