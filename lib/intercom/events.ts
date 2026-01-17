@@ -7,10 +7,42 @@ import { trackEvent } from "@intercom/messenger-js-sdk";
  * Use these to track customer journey events
  */
 export const IntercomEvents = {
-  // Quote flow events
+  // Quote flow events - conversion funnel tracking
+  quoteView: () => {
+    try {
+      trackEvent("quote_view");
+    } catch {
+      // Intercom not loaded yet
+    }
+  },
+
   quoteStarted: () => {
     try {
       trackEvent("quote_form_started");
+    } catch {
+      // Intercom not loaded yet
+    }
+  },
+
+  quoteStep1Complete: (data: {
+    requestType: string;
+    port: string;
+    timeSensitive: boolean;
+  }) => {
+    try {
+      trackEvent("quote_step1_complete", data);
+    } catch {
+      // Intercom not loaded yet
+    }
+  },
+
+  quoteStep2Complete: (data: {
+    hasContainer: boolean;
+    hasTerminal: boolean;
+    hasLfd: boolean;
+  }) => {
+    try {
+      trackEvent("quote_step2_complete", data);
     } catch {
       // Intercom not loaded yet
     }
@@ -32,6 +64,27 @@ export const IntercomEvents = {
   }) => {
     try {
       trackEvent("quote_submitted", data);
+    } catch {
+      // Intercom not loaded yet
+    }
+  },
+
+  quoteSubmitSuccess: (data: {
+    referenceNumber: string | null;
+    requestType: string;
+    isUrgent: boolean;
+    leadScore: number;
+  }) => {
+    try {
+      trackEvent("quote_submit_success", data);
+    } catch {
+      // Intercom not loaded yet
+    }
+  },
+
+  quoteSubmitError: (error: string) => {
+    try {
+      trackEvent("quote_submit_error", { error });
     } catch {
       // Intercom not loaded yet
     }

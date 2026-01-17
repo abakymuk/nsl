@@ -13,44 +13,46 @@ import {
   Building2,
   Mail,
   Phone,
-  Import,
-  Upload,
   Container,
-  Anchor,
   Truck,
+  AlertTriangle,
+  MapPin,
+  Calendar,
+  Clock,
+  PhoneCall,
 } from "lucide-react";
 import type { QuoteFormData } from "@/types";
 import { cn } from "@/lib/utils";
 import { IntercomEvents } from "@/lib/intercom";
+import {
+  VALID_TERMINALS,
+  REQUEST_TYPES,
+  DELIVERY_TYPES,
+  PORTS,
+} from "@/lib/validations/quote";
 
 const terminals = [
-  { value: "YTI (Yusen Terminals)", short: "YTI", code: "YTI" },
-  { value: "PCT (Pacific Container Terminal)", short: "PCT", code: "PCT" },
-  { value: "Pier A", short: "Pier A", code: "PA" },
-  { value: "FMS (Fenix Marine Services)", short: "FMS", code: "FMS" },
-  { value: "LBCT (Long Beach Container Terminal)", short: "LBCT", code: "LBCT" },
-  { value: "WBCT (West Basin Container Terminal)", short: "WBCT", code: "WBCT" },
-  { value: "TraPac", short: "TraPac", code: "TRP" },
-  { value: "Everport Terminal Services", short: "Everport", code: "EVP" },
-  { value: "TTI (Total Terminals International)", short: "TTI", code: "TTI" },
-  { value: "Shippers Transport", short: "Shippers", code: "SHP" },
-  { value: "APM Terminals", short: "APM", code: "APM" },
-  { value: "ITS", short: "ITS", code: "ITS" },
-];
-
-const containerTypes = [
-  { value: "20ft", label: "20' STD", desc: "Standard" },
-  { value: "40ft", label: "40' STD", desc: "Standard" },
-  { value: "40ft HC", label: "40' HC", desc: "High Cube" },
-  { value: "45ft", label: "45' HC", desc: "High Cube" },
+  { value: "YTI (Yusen Terminals)", short: "YTI" },
+  { value: "PCT (Pacific Container Terminal)", short: "PCT" },
+  { value: "Pier A", short: "Pier A" },
+  { value: "FMS (Fenix Marine Services)", short: "FMS" },
+  { value: "LBCT (Long Beach Container Terminal)", short: "LBCT" },
+  { value: "WBCT (West Basin Container Terminal)", short: "WBCT" },
+  { value: "TraPac", short: "TraPac" },
+  { value: "Everport Terminal Services", short: "Everport" },
+  { value: "TTI (Total Terminals International)", short: "TTI" },
+  { value: "Shippers Transport", short: "Shippers" },
+  { value: "APM Terminals", short: "APM" },
+  { value: "ITS", short: "ITS" },
 ];
 
 const steps = [
-  { id: 1, name: "Container", icon: Container, number: "01" },
-  { id: 2, name: "Delivery", icon: Truck, number: "02" },
-  { id: 3, name: "Contact", icon: User, number: "03" },
+  { id: 1, name: "Request", icon: Phone, number: "01" },
+  { id: 2, name: "Container", icon: Container, number: "02" },
+  { id: 3, name: "Delivery", icon: Truck, number: "03" },
 ];
 
+const phoneRegex = /^(\+1)?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function QuoteForm() {
@@ -59,32 +61,47 @@ export default function QuoteForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<QuoteFormData>({
-    containerNumber: "",
-    terminal: "",
-    deliveryZip: "",
-    containerType: "",
-    moveType: "import",
-    commodityType: "",
-    lfd: "",
-    notes: "",
+    // Step 1: Contact & Request
     fullName: "",
     companyName: "",
-    email: "",
     phone: "",
+    email: "",
+    port: "la",
+    requestType: "standard",
+    timeSensitive: false,
+    // Step 2: Container & Pickup
+    containerNumber: "",
+    terminal: "",
+    lfd: "",
+    availabilityDate: "",
+    notes: "",
+    // Step 3: Delivery
+    deliveryZip: "",
+    deliveryType: "warehouse",
+    appointmentRequired: false,
+    // Legacy (for API compatibility)
+    containerType: "40ft",
+    moveType: "import",
   });
 
   useEffect(() => {
     IntercomEvents.quoteStarted();
   }, []);
 
+  // Step 1 validation: Name, Company, Phone required
   const canProceedStep1 =
-    formData.containerNumber.length >= 4 && formData.terminal;
-  const canProceedStep2 =
-    formData.deliveryZip.match(/^\d{5}(-\d{4})?$/) && formData.containerType;
-  const canSubmit =
     formData.fullName.length >= 2 &&
     formData.companyName.length >= 2 &&
-    emailRegex.test(formData.email);
+    formData.phone.length >= 10 &&
+    phoneRegex.test(formData.phone.replace(/\s/g, "")) &&
+    formData.port &&
+    formData.requestType;
+
+  // Step 2 validation: All optional, can always proceed
+  const canProceedStep2 = true;
+
+  // Step 3 validation: ZIP required
+  const canSubmit = formData.deliveryZip.match(/^\d{5}(-\d{4})?$/);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -105,15 +122,17 @@ export default function QuoteForm() {
 
       const result = await response.json();
       IntercomEvents.quoteSubmitted({
-        container: formData.containerNumber,
-        terminal: formData.terminal,
+        container: formData.containerNumber || "not_provided",
+        terminal: formData.terminal || "not_selected",
         zip: formData.deliveryZip,
-        containerType: formData.containerType,
+        containerType: formData.containerType || "not_selected",
       });
 
       const params = new URLSearchParams();
       if (result.referenceNumber) params.set("ref", result.referenceNumber);
-      params.set("container", formData.containerNumber);
+      if (formData.containerNumber) params.set("container", formData.containerNumber);
+      params.set("requestType", formData.requestType);
+      if (result.isUrgent) params.set("urgent", "true");
       router.push(`/quote/thank-you?${params.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -134,6 +153,11 @@ export default function QuoteForm() {
 
   const currentStepData = steps.find((s) => s.id === currentStep);
 
+  // Check if this is an urgent request type
+  const isUrgentRequest = ["urgent_lfd", "rolled", "hold_released"].includes(
+    formData.requestType
+  );
+
   return (
     <div className="w-full">
       <div className="mx-auto max-w-2xl">
@@ -151,19 +175,32 @@ export default function QuoteForm() {
             Real quotes in 15 min
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
-            Request a Quote
+            Get Help Now
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            From a real dispatcher, not an algorithm
+            Real dispatcher reviews every request. Usually respond within 15-30 minutes.
           </p>
+        </motion.div>
+
+        {/* Urgent Call CTA - Mobile */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 lg:hidden"
+        >
+          <a
+            href="tel:+13109551234"
+            className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl bg-green-500/10 border-2 border-green-500/30 text-green-700 dark:text-green-400 font-semibold hover:bg-green-500/20 transition-colors"
+          >
+            <PhoneCall className="h-5 w-5" />
+            Urgent? Call (310) 955-1234
+          </a>
         </motion.div>
 
         {/* Progress Journey */}
         <div className="mb-8">
           <div className="relative flex items-center justify-between">
-            {/* Progress Line Background */}
             <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border" />
-            {/* Progress Line Active */}
             <motion.div
               className="absolute left-0 top-1/2 h-0.5 -translate-y-1/2 bg-gradient-to-r from-primary to-accent"
               initial={{ width: "0%" }}
@@ -222,12 +259,9 @@ export default function QuoteForm() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          {/* Gradient Border Effect */}
           <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
 
-          {/* Inner Content */}
           <div className="relative rounded-[22px] bg-card p-6 sm:p-8">
-            {/* Subtle Pattern Overlay */}
             <div
               className="absolute inset-0 opacity-[0.02] pointer-events-none rounded-[22px]"
               style={{
@@ -235,7 +269,6 @@ export default function QuoteForm() {
               }}
             />
 
-            {/* Large Step Number Watermark */}
             <div className="absolute -right-4 -top-8 font-mono text-[12rem] font-black text-primary/[0.03] pointer-events-none select-none leading-none">
               {currentStepData?.number}
             </div>
@@ -251,7 +284,7 @@ export default function QuoteForm() {
             )}
 
             <AnimatePresence mode="wait">
-              {/* Step 1: Container Details */}
+              {/* Step 1: What's going on? */}
               {currentStep === 1 && (
                 <motion.div
                   key="step1"
@@ -263,83 +296,198 @@ export default function QuoteForm() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                      <Anchor className="h-5 w-5 text-primary" />
+                      <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-foreground">Container Details</h2>
+                      <h2 className="text-xl font-bold text-foreground">What&apos;s going on?</h2>
                       <p className="text-sm text-muted-foreground">
-                        Which container do you need moved?
+                        Tell us about your situation - we&apos;ll help fast
                       </p>
                     </div>
                   </div>
 
-                  {/* Container Number Input */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="containerNumber"
-                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
-                    >
-                      Container Number <span className="text-accent">*</span>
-                    </label>
-                    <div className="relative group">
-                      <input
-                        id="containerNumber"
-                        type="text"
-                        value={formData.containerNumber}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            containerNumber: e.target.value.toUpperCase(),
-                          })
-                        }
-                        placeholder="MSCU1234567"
-                        className="w-full h-14 px-5 rounded-xl bg-secondary/50 border-2 border-border text-foreground font-mono text-xl tracking-wider placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-background focus:shadow-[0_0_0_4px_rgba(59,130,246,0.1)] transition-all"
-                      />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground uppercase">
-                        {formData.containerNumber.length > 0
-                          ? `${formData.containerNumber.length}/11`
-                          : "ID"}
+                  {/* Name & Company */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="fullName"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
+                      >
+                        Your Name <span className="text-accent">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="fullName"
+                          type="text"
+                          value={formData.fullName}
+                          onChange={(e) =>
+                            setFormData({ ...formData, fullName: e.target.value })
+                          }
+                          placeholder="John Smith"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-background transition-all"
+                        />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      4-letter prefix + 7 digits (e.g., MSCU1234567)
-                    </p>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="companyName"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
+                      >
+                        Company <span className="text-accent">*</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="companyName"
+                          type="text"
+                          value={formData.companyName}
+                          onChange={(e) =>
+                            setFormData({ ...formData, companyName: e.target.value })
+                          }
+                          placeholder="Acme Logistics"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-background transition-all"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Terminal Selection */}
+                  {/* Phone (required) & Email (optional) */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="phone"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
+                      >
+                        Phone <span className="text-accent">*</span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="phone"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) =>
+                            setFormData({ ...formData, phone: e.target.value })
+                          }
+                          placeholder="(310) 555-1234"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-background transition-all"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        For urgent calls - we respond fastest by phone
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="email"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
+                      >
+                        Email{" "}
+                        <span className="text-muted-foreground text-xs normal-case">
+                          (optional)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="email"
+                          type="email"
+                          value={formData.email || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, email: e.target.value })
+                          }
+                          placeholder="john@acmelogistics.com"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-background transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Port Selection */}
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                      Pickup Terminal <span className="text-accent">*</span>
+                      Port <span className="text-accent">*</span>
                     </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {terminals.map((terminal) => (
+                    <div className="grid grid-cols-2 gap-3">
+                      {PORTS.map((port) => (
                         <motion.button
-                          key={terminal.value}
+                          key={port.value}
                           type="button"
                           onClick={() =>
-                            setFormData({ ...formData, terminal: terminal.value })
+                            setFormData({ ...formData, port: port.value as "la" | "lb" })
                           }
                           className={cn(
-                            "relative px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200 overflow-hidden",
-                            formData.terminal === terminal.value
+                            "relative px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left font-semibold",
+                            formData.port === port.value
                               ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.15)]"
-                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/30 hover:text-foreground hover:bg-secondary/50"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/30 hover:text-foreground"
                           )}
-                          whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          {formData.terminal === terminal.value && (
-                            <motion.div
-                              className="absolute inset-0 bg-primary/5"
-                              layoutId="terminal-highlight"
-                              transition={{ type: "spring", duration: 0.3 }}
-                            />
-                          )}
-                          <span className="relative">{terminal.short}</span>
+                          {port.label}
                         </motion.button>
                       ))}
                     </div>
                   </div>
+
+                  {/* Request Type */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                      What do you need? <span className="text-accent">*</span>
+                    </label>
+                    <div className="grid gap-2">
+                      {REQUEST_TYPES.map((type) => (
+                        <motion.button
+                          key={type.value}
+                          type="button"
+                          onClick={() =>
+                            setFormData({ ...formData, requestType: type.value })
+                          }
+                          className={cn(
+                            "relative px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left flex items-center gap-3",
+                            formData.requestType === type.value
+                              ? type.score >= 1
+                                ? "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                : "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-secondary/30 text-foreground hover:border-primary/30"
+                          )}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {type.score >= 1 && (
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                          )}
+                          <span className="font-semibold">{type.label}</span>
+                          {type.score >= 2 && (
+                            <span className="ml-auto text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                              Priority
+                            </span>
+                          )}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Time-sensitive checkbox */}
+                  <label className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.timeSensitive}
+                      onChange={(e) =>
+                        setFormData({ ...formData, timeSensitive: e.target.checked })
+                      }
+                      className="mt-0.5 h-5 w-5 rounded border-border text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="font-semibold text-foreground flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-amber-500" />
+                        Time-sensitive / penalties may apply
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        Check this if you&apos;re facing demurrage, per-diem, or LFD deadlines
+                      </span>
+                    </div>
+                  </label>
 
                   {/* Continue Button */}
                   <div className="pt-4">
@@ -363,7 +511,7 @@ export default function QuoteForm() {
                 </motion.div>
               )}
 
-              {/* Step 2: Delivery Details */}
+              {/* Step 2: Container & Pickup */}
               {currentStep === 2 && (
                 <motion.div
                   key="step2"
@@ -375,174 +523,156 @@ export default function QuoteForm() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10">
-                      <Truck className="h-5 w-5 text-accent" />
+                      <Container className="h-5 w-5 text-accent" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-foreground">Delivery Details</h2>
+                      <h2 className="text-xl font-bold text-foreground">Container & Pickup</h2>
                       <p className="text-sm text-muted-foreground">
-                        Where should we deliver?
+                        Share what you know - we can help without all details
                       </p>
                     </div>
                   </div>
 
-                  {/* ZIP Code */}
+                  {/* Container Number - Optional */}
                   <div className="space-y-2">
                     <label
-                      htmlFor="deliveryZip"
+                      htmlFor="containerNumber"
                       className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
-                      Delivery ZIP Code <span className="text-accent">*</span>
+                      Container Number{" "}
+                      <span className="text-muted-foreground text-xs normal-case">
+                        (optional)
+                      </span>
                     </label>
-                    <input
-                      id="deliveryZip"
-                      type="text"
-                      value={formData.deliveryZip}
-                      onChange={(e) =>
-                        setFormData({ ...formData, deliveryZip: e.target.value })
-                      }
-                      placeholder="90210"
-                      maxLength={10}
-                      className="w-full h-14 px-5 rounded-xl bg-secondary/50 border-2 border-border text-foreground font-mono text-xl tracking-wider placeholder:text-muted-foreground focus:outline-none focus:border-accent focus:bg-background focus:shadow-[0_0_0_4px_rgba(249,115,22,0.1)] transition-all"
-                    />
+                    <div className="relative group">
+                      <input
+                        id="containerNumber"
+                        type="text"
+                        value={formData.containerNumber || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            containerNumber: e.target.value.toUpperCase(),
+                          })
+                        }
+                        placeholder="MSCU1234567"
+                        className="w-full h-14 px-5 rounded-xl bg-secondary/50 border-2 border-border text-foreground font-mono text-xl tracking-wider placeholder:text-muted-foreground focus:outline-none focus:border-accent focus:bg-background transition-all"
+                      />
+                      {formData.containerNumber && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground uppercase">
+                          {formData.containerNumber.length}/11
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Don&apos;t have it yet? No problem - submit anyway and we&apos;ll follow up
+                    </p>
                   </div>
 
-                  {/* Container Type */}
+                  {/* Terminal Selection - Optional */}
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                      Container Type <span className="text-accent">*</span>
+                      Pickup Terminal{" "}
+                      <span className="text-muted-foreground text-xs normal-case">
+                        (optional)
+                      </span>
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {containerTypes.map((type) => (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {terminals.map((terminal) => (
                         <motion.button
-                          key={type.value}
+                          key={terminal.value}
                           type="button"
                           onClick={() =>
-                            setFormData({ ...formData, containerType: type.value })
+                            setFormData({
+                              ...formData,
+                              terminal: formData.terminal === terminal.value ? "" : terminal.value,
+                            })
                           }
                           className={cn(
-                            "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 text-left",
-                            formData.containerType === type.value
-                              ? "border-accent bg-accent/10 shadow-[0_0_20px_rgba(249,115,22,0.1)]"
-                              : "border-border bg-secondary/30 hover:border-accent/30 hover:bg-secondary/50"
+                            "relative px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200 overflow-hidden",
+                            formData.terminal === terminal.value
+                              ? "border-accent bg-accent/10 text-accent shadow-[0_0_20px_rgba(249,115,22,0.15)]"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-accent/30 hover:text-foreground hover:bg-secondary/50"
                           )}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          <div
-                            className={cn(
-                              "text-lg font-bold",
-                              formData.containerType === type.value
-                                ? "text-accent"
-                                : "text-foreground"
-                            )}
-                          >
-                            {type.label}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{type.desc}</div>
+                          {terminal.short}
                         </motion.button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Import/Export Toggle */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                      Move Type <span className="text-accent">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <motion.button
-                        type="button"
-                        onClick={() =>
-                          setFormData({ ...formData, moveType: "import" })
-                        }
-                        className={cn(
-                          "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3",
-                          formData.moveType === "import"
-                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
-                            : "border-border bg-secondary/30 hover:border-primary/30"
-                        )}
-                        whileTap={{ scale: 0.98 }}
+                  {/* Dates Row */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="lfd"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
                       >
-                        <Import
-                          className={cn(
-                            "h-5 w-5",
-                            formData.moveType === "import"
-                              ? "text-primary"
-                              : "text-muted-foreground"
-                          )}
+                        Last Free Day (LFD){" "}
+                        <span className="text-muted-foreground text-xs normal-case">
+                          (optional)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="lfd"
+                          type="date"
+                          value={formData.lfd || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, lfd: e.target.value })
+                          }
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent focus:bg-background transition-all"
                         />
-                        <div className="text-left">
-                          <div
-                            className={cn(
-                              "font-bold",
-                              formData.moveType === "import"
-                                ? "text-primary"
-                                : "text-foreground"
-                            )}
-                          >
-                            Import
-                          </div>
-                          <div className="text-xs text-muted-foreground">Port → Delivery</div>
-                        </div>
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        onClick={() =>
-                          setFormData({ ...formData, moveType: "export" })
-                        }
-                        className={cn(
-                          "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3",
-                          formData.moveType === "export"
-                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
-                            : "border-border bg-secondary/30 hover:border-primary/30"
-                        )}
-                        whileTap={{ scale: 0.98 }}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="availabilityDate"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
                       >
-                        <Upload
-                          className={cn(
-                            "h-5 w-5",
-                            formData.moveType === "export"
-                              ? "text-primary"
-                              : "text-muted-foreground"
-                          )}
+                        Available Date{" "}
+                        <span className="text-muted-foreground text-xs normal-case">
+                          (optional)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          id="availabilityDate"
+                          type="date"
+                          value={formData.availabilityDate || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, availabilityDate: e.target.value })
+                          }
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent focus:bg-background transition-all"
                         />
-                        <div className="text-left">
-                          <div
-                            className={cn(
-                              "font-bold",
-                              formData.moveType === "export"
-                                ? "text-primary"
-                                : "text-foreground"
-                            )}
-                          >
-                            Export
-                          </div>
-                          <div className="text-xs text-muted-foreground">Empty Return</div>
-                        </div>
-                      </motion.button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Commodity Type */}
+                  {/* Notes */}
                   <div className="space-y-2">
                     <label
-                      htmlFor="commodityType"
+                      htmlFor="notes"
                       className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
-                      Commodity{" "}
+                      Additional Details{" "}
                       <span className="text-muted-foreground text-xs normal-case">
                         (optional)
                       </span>
                     </label>
-                    <input
-                      id="commodityType"
-                      type="text"
-                      value={formData.commodityType || ""}
+                    <textarea
+                      id="notes"
+                      rows={3}
+                      value={formData.notes || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, commodityType: e.target.value })
+                        setFormData({ ...formData, notes: e.target.value })
                       }
-                      placeholder="e.g., Electronics, Furniture, Textiles"
-                      className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
+                      placeholder="Any context that would help us assist you faster..."
+                      className="w-full px-4 py-3 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent focus:bg-background transition-all resize-none"
                     />
                   </div>
 
@@ -560,15 +690,9 @@ export default function QuoteForm() {
                     <motion.button
                       type="button"
                       onClick={nextStep}
-                      disabled={!canProceedStep2}
-                      className={cn(
-                        "flex-[2] h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
-                        canProceedStep2
-                          ? "bg-gradient-to-r from-accent to-accent/80 text-white shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
-                          : "bg-muted text-muted-foreground cursor-not-allowed"
-                      )}
-                      whileHover={canProceedStep2 ? { scale: 1.01 } : {}}
-                      whileTap={canProceedStep2 ? { scale: 0.99 } : {}}
+                      className="flex-[2] h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-accent to-accent/80 text-white shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
                     >
                       Continue
                       <ArrowRight className="h-5 w-5" />
@@ -577,7 +701,7 @@ export default function QuoteForm() {
                 </motion.div>
               )}
 
-              {/* Step 3: Contact Info */}
+              {/* Step 3: Delivery */}
               {currentStep === 3 && (
                 <motion.div
                   key="step3"
@@ -589,200 +713,145 @@ export default function QuoteForm() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
-                      <User className="h-5 w-5 text-green-600" />
+                      <Truck className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-foreground">
-                        Contact Information
-                      </h2>
+                      <h2 className="text-xl font-bold text-foreground">Delivery Details</h2>
                       <p className="text-sm text-muted-foreground">
-                        Where should we send your quote?
+                        Where should we deliver?
                       </p>
                     </div>
                   </div>
 
-                  {/* Name & Company */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="fullName"
-                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
-                      >
-                        Full Name <span className="text-accent">*</span>
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                          id="fullName"
-                          type="text"
-                          value={formData.fullName}
-                          onChange={(e) =>
-                            setFormData({ ...formData, fullName: e.target.value })
-                          }
-                          placeholder="John Smith"
-                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="companyName"
-                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
-                      >
-                        Company <span className="text-accent">*</span>
-                      </label>
-                      <div className="relative">
-                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                          id="companyName"
-                          type="text"
-                          value={formData.companyName}
-                          onChange={(e) =>
-                            setFormData({ ...formData, companyName: e.target.value })
-                          }
-                          placeholder="Acme Logistics"
-                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Email */}
+                  {/* Delivery ZIP */}
                   <div className="space-y-2">
                     <label
-                      htmlFor="email"
+                      htmlFor="deliveryZip"
                       className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
-                      Email <span className="text-accent">*</span>
+                      Delivery ZIP Code <span className="text-accent">*</span>
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <input
-                        id="email"
-                        type="email"
-                        value={formData.email}
+                        id="deliveryZip"
+                        type="text"
+                        value={formData.deliveryZip}
                         onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
+                          setFormData({ ...formData, deliveryZip: e.target.value })
                         }
-                        placeholder="john@acmelogistics.com"
-                        className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      We&apos;ll send your quote here
-                    </p>
-                  </div>
-
-                  {/* Phone & LFD */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="phone"
-                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
-                      >
-                        Phone{" "}
-                        <span className="text-muted-foreground text-xs normal-case">
-                          (optional)
-                        </span>
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                          id="phone"
-                          type="tel"
-                          value={formData.phone || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, phone: e.target.value })
-                          }
-                          placeholder="(310) 555-1234"
-                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="lfd"
-                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
-                      >
-                        Last Free Day{" "}
-                        <span className="text-muted-foreground text-xs normal-case">
-                          (optional)
-                        </span>
-                      </label>
-                      <input
-                        id="lfd"
-                        type="date"
-                        value={formData.lfd}
-                        onChange={(e) =>
-                          setFormData({ ...formData, lfd: e.target.value })
-                        }
-                        className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
+                        placeholder="90210"
+                        maxLength={10}
+                        className="w-full h-14 pl-12 pr-5 rounded-xl bg-secondary/50 border-2 border-border text-foreground font-mono text-xl tracking-wider placeholder:text-muted-foreground focus:outline-none focus:border-green-500 focus:bg-background transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Notes */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="notes"
-                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
-                    >
-                      Additional Notes{" "}
+                  {/* Delivery Type */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                      Delivery Type{" "}
                       <span className="text-muted-foreground text-xs normal-case">
                         (optional)
                       </span>
                     </label>
-                    <textarea
-                      id="notes"
-                      rows={3}
-                      value={formData.notes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      placeholder="Any special requirements or urgent situations..."
-                      className="w-full px-4 py-3 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all resize-none"
-                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      {DELIVERY_TYPES.map((type) => (
+                        <motion.button
+                          key={type.value}
+                          type="button"
+                          onClick={() =>
+                            setFormData({ ...formData, deliveryType: type.value as QuoteFormData["deliveryType"] })
+                          }
+                          className={cn(
+                            "relative px-4 py-3 rounded-xl border-2 transition-all duration-200 font-semibold",
+                            formData.deliveryType === type.value
+                              ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-green-500/30 hover:text-foreground"
+                          )}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {type.label}
+                        </motion.button>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Summary Card - Manifest Style */}
+                  {/* Appointment checkbox */}
+                  <label className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.appointmentRequired}
+                      onChange={(e) =>
+                        setFormData({ ...formData, appointmentRequired: e.target.checked })
+                      }
+                      className="mt-0.5 h-5 w-5 rounded border-border text-green-500 focus:ring-green-500"
+                    />
+                    <div>
+                      <span className="font-semibold text-foreground">
+                        Appointment required at delivery
+                      </span>
+                      <span className="text-sm text-muted-foreground block">
+                        Check if the receiver requires a scheduled delivery window
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Summary Card */}
                   <div className="rounded-xl bg-secondary/80 border-2 border-border overflow-hidden">
-                    <div className="px-4 py-2 bg-secondary border-b border-border">
+                    <div className="px-4 py-2 bg-secondary border-b border-border flex items-center justify-between">
                       <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Quote Summary
+                        Request Summary
                       </h3>
+                      {(isUrgentRequest || formData.timeSensitive) && (
+                        <span className="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-semibold">
+                          Priority Request
+                        </span>
+                      )}
                     </div>
                     <div className="p-4 font-mono text-sm">
                       <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-                        <span className="text-muted-foreground">CNTR</span>
-                        <span className="text-foreground font-bold">
-                          {formData.containerNumber || "—"}
+                        <span className="text-muted-foreground">TYPE</span>
+                        <span className="text-foreground font-semibold">
+                          {REQUEST_TYPES.find((r) => r.value === formData.requestType)?.label || "—"}
                         </span>
-                        <span className="text-muted-foreground">TERM</span>
+                        <span className="text-muted-foreground">PORT</span>
                         <span className="text-foreground">
-                          {terminals.find((t) => t.value === formData.terminal)
-                            ?.short || "—"}
+                          {formData.port === "la" ? "Los Angeles" : "Long Beach"}
                         </span>
+                        {formData.containerNumber && (
+                          <>
+                            <span className="text-muted-foreground">CNTR</span>
+                            <span className="text-foreground font-bold">
+                              {formData.containerNumber}
+                            </span>
+                          </>
+                        )}
+                        {formData.terminal && (
+                          <>
+                            <span className="text-muted-foreground">TERM</span>
+                            <span className="text-foreground">
+                              {terminals.find((t) => t.value === formData.terminal)?.short || "—"}
+                            </span>
+                          </>
+                        )}
                         <span className="text-muted-foreground">DEST</span>
                         <span className="text-foreground">
                           {formData.deliveryZip || "—"}
                         </span>
-                        <span className="text-muted-foreground">TYPE</span>
+                        <span className="text-muted-foreground">CONTACT</span>
                         <span className="text-foreground">
-                          {formData.containerType || "—"}{" "}
-                          <span className="text-muted-foreground">
-                            ({formData.moveType.toUpperCase()})
-                          </span>
+                          {formData.phone}
                         </span>
-                        {formData.commodityType && (
-                          <>
-                            <span className="text-muted-foreground">CMDTY</span>
-                            <span className="text-foreground">
-                              {formData.commodityType}
-                            </span>
-                          </>
-                        )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Trust anchor */}
+                  <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center">
+                    <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                      A real dispatcher reviews every request. If urgent, we usually respond within 15-30 minutes during business hours (Mon-Fri 6am-6pm PT).
+                    </p>
                   </div>
 
                   {/* Navigation & Submit */}
@@ -817,7 +886,7 @@ export default function QuoteForm() {
                         </>
                       ) : (
                         <>
-                          Get My Quote
+                          Submit Request
                           <ArrowRight className="h-5 w-5" />
                         </>
                       )}
@@ -841,12 +910,30 @@ export default function QuoteForm() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
             </span>
-            <span className="font-bold text-green-700 dark:text-green-500">15 min avg response</span>
+            <span className="font-bold text-green-700 dark:text-green-500">15-30 min response</span>
           </div>
           <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-primary/10 border-2 border-primary/20 shadow-sm">
             <Package className="h-4 w-4 text-primary" />
             <span className="font-bold text-primary">Real dispatchers</span>
           </div>
+        </motion.div>
+
+        {/* Desktop Call CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-6 text-center hidden lg:block"
+        >
+          <p className="text-sm text-muted-foreground">
+            Need immediate help?{" "}
+            <a
+              href="tel:+13109551234"
+              className="text-green-600 dark:text-green-400 font-semibold hover:underline"
+            >
+              Call (310) 955-1234
+            </a>
+          </p>
         </motion.div>
       </div>
     </div>

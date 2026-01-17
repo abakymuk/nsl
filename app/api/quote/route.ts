@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { quoteFormSchema } from "@/lib/validations/quote";
+import {
+  quoteFormSchema,
+  calculateLeadScore,
+  isUrgentLead,
+  REQUEST_TYPES,
+} from "@/lib/validations/quote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import type { QuoteInsert } from "@/types/database";
@@ -63,25 +68,59 @@ export async function POST(request: NextRequest) {
     const body = parseResult.data;
     let referenceNumber: string | null = null;
 
+    // Calculate lead score and urgency
+    const leadScore = calculateLeadScore(body);
+    const isUrgent = isUrgentLead(leadScore, body);
+
+    // Get request type label for display
+    const requestTypeLabel =
+      REQUEST_TYPES.find((r) => r.value === body.requestType)?.label ||
+      body.requestType;
+
+    // Build special instructions from new fields
+    const specialInstructions: string[] = [];
+    if (body.requestType && body.requestType !== "standard") {
+      specialInstructions.push(`Request Type: ${requestTypeLabel}`);
+    }
+    if (body.timeSensitive) {
+      specialInstructions.push("TIME-SENSITIVE - Penalties may apply");
+    }
+    if (body.deliveryType) {
+      specialInstructions.push(`Delivery Type: ${body.deliveryType}`);
+    }
+    if (body.appointmentRequired) {
+      specialInstructions.push("Appointment required at delivery");
+    }
+    if (body.availabilityDate) {
+      specialInstructions.push(`Available Date: ${body.availabilityDate}`);
+    }
+    if (body.commodityType) {
+      specialInstructions.push(`Commodity: ${body.commodityType}`);
+    }
+    if (body.notes) {
+      specialInstructions.push(`Notes: ${body.notes}`);
+    }
+
     // Save to database if Supabase is configured
     if (isSupabaseConfigured()) {
       const supabase = createAdminClient();
 
       const quoteData: QuoteInsert = {
-        container_number: body.containerNumber,
-        pickup_terminal: body.terminal,
+        container_number: body.containerNumber || "TBD",
+        pickup_terminal: body.terminal || "TBD",
         delivery_zip: body.deliveryZip,
-        container_type: body.containerType,
-        service_type: body.moveType,
+        container_type: body.containerType || "40ft",
+        service_type: body.moveType || "import",
         lfd: body.lfd || null,
-        special_instructions: body.commodityType
-          ? `Commodity: ${body.commodityType}${body.notes ? `\n${body.notes}` : ""}`
-          : body.notes || null,
+        special_instructions:
+          specialInstructions.length > 0
+            ? specialInstructions.join("\n")
+            : null,
         contact_name: body.fullName,
         company_name: body.companyName,
-        email: body.email,
-        phone: body.phone || null,
-        status: "pending",
+        email: body.email || null,
+        phone: body.phone,
+        status: isUrgent ? "urgent" : "pending",
       };
 
       const { data: quote, error: dbError } = await supabase
@@ -94,52 +133,86 @@ export async function POST(request: NextRequest) {
         console.error("Database error:", dbError);
         // Continue with email even if DB fails
       } else if (quote) {
-        referenceNumber = (quote as { reference_number: string }).reference_number || null;
+        referenceNumber =
+          (quote as { reference_number: string }).reference_number || null;
       }
     }
 
-    // Send email via Resend
-    const emailTo = process.env.EMAIL_TO || "vlad@newstreamlogistics.com";
-    const emailFrom = process.env.EMAIL_FROM || "quotes@newstreamlogistics.com";
+    // Build email body with lead scoring info
+    const urgencyBadge = isUrgent ? "*** URGENT - PRIORITY RESPONSE NEEDED ***\n\n" : "";
+    const leadScoreInfo = `Lead Score: ${leadScore} ${isUrgent ? "(URGENT)" : "(Standard)"}`;
 
     const emailBody = `
-New Quote Request${referenceNumber ? ` - ${referenceNumber}` : ""}
+${urgencyBadge}New Quote Request${referenceNumber ? ` - ${referenceNumber}` : ""}
+${leadScoreInfo}
+
+REQUEST DETAILS
+---------------
+Type: ${requestTypeLabel}
+Port: ${body.port === "la" ? "Los Angeles" : "Long Beach"}
+${body.timeSensitive ? "*** TIME-SENSITIVE - Penalties may apply ***" : ""}
 
 CONTACT INFORMATION
 -------------------
 Name: ${body.fullName}
 Company: ${body.companyName}
-Email: ${body.email}
-${body.phone ? `Phone: ${body.phone}` : ""}
+Phone: ${body.phone}
+${body.email ? `Email: ${body.email}` : "Email: Not provided"}
 
-SHIPMENT DETAILS
-----------------
-Move Type: ${body.moveType.toUpperCase()}
-Container Number: ${body.containerNumber}
-Terminal: ${body.terminal}
-Delivery ZIP: ${body.deliveryZip}
-Container Type: ${body.containerType}
-${body.commodityType ? `Commodity: ${body.commodityType}` : ""}
+CONTAINER & PICKUP
+------------------
+Container Number: ${body.containerNumber || "Not provided yet"}
+Terminal: ${body.terminal || "Not selected"}
 ${body.lfd ? `Last Free Day (LFD): ${body.lfd}` : ""}
-${body.notes ? `\nNotes: ${body.notes}` : ""}
+${body.availabilityDate ? `Available Date: ${body.availabilityDate}` : ""}
+
+DELIVERY
+--------
+ZIP Code: ${body.deliveryZip}
+Delivery Type: ${body.deliveryType || "Not specified"}
+${body.appointmentRequired ? "Appointment required: Yes" : ""}
+
+${body.notes ? `ADDITIONAL NOTES\n----------------\n${body.notes}` : ""}
 
 ---
 Submitted at: ${new Date().toISOString()}
     `.trim();
 
+    // Build email subject with urgency indicator
+    const urgencyPrefix = isUrgent ? "[URGENT] " : "";
+    const containerInfo = body.containerNumber || "No Container";
+    const emailSubject = `${urgencyPrefix}Quote Request - ${containerInfo}${referenceNumber ? ` (${referenceNumber})` : ""} - ${body.companyName}`;
+
+    // Send email via Resend
+    const emailTo = process.env.EMAIL_TO || "vlad@newstreamlogistics.com";
+    const emailFrom = process.env.EMAIL_FROM || "quotes@newstreamlogistics.com";
+
     const resend = getResend();
     await resend.emails.send({
       from: emailFrom,
       to: emailTo,
-      replyTo: body.email,
-      subject: `New Quote Request - Container ${body.containerNumber}${referenceNumber ? ` (${referenceNumber})` : ""} - ${body.companyName}`,
+      replyTo: body.email || undefined,
+      subject: emailSubject,
       text: emailBody,
     });
+
+    // TODO: Add Slack webhook for urgent leads
+    // if (isUrgent && process.env.SLACK_WEBHOOK_URL) {
+    //   await sendSlackAlert("urgent_quote", {
+    //     company: body.companyName,
+    //     phone: body.phone,
+    //     requestType: requestTypeLabel,
+    //     leadScore,
+    //     referenceNumber,
+    //   });
+    // }
 
     return NextResponse.json({
       success: true,
       message: "Quote request submitted successfully",
       referenceNumber,
+      leadScore,
+      isUrgent,
     });
   } catch (error) {
     console.error("Error processing quote request:", error);

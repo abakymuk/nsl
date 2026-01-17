@@ -2,22 +2,45 @@
 export type { QuoteFormInput, QuoteFormOutput } from "@/lib/validations/quote";
 export type { ContactFormInput, ContactFormOutput } from "@/lib/validations/contact";
 
-// Legacy type aliases for backwards compatibility
+// Request types for the quote form
+export type RequestType =
+  | "standard"
+  | "urgent_lfd"
+  | "rolled"
+  | "hold_released"
+  | "customs_check"
+  | "not_sure";
+
+export type DeliveryType = "business" | "warehouse" | "residential" | "other";
+export type PortType = "la" | "lb";
+
+// New QuoteFormData with conversion-optimized flow
 export interface QuoteFormData {
-  containerNumber: string;
-  terminal: string;
-  deliveryZip: string;
-  containerType: string;
-  lfd?: string;
-  notes?: string;
-  // New fields
-  moveType: "import" | "export";
-  commodityType?: string;
-  // Contact info for early capture
+  // Step 1: Contact & Request (all required except email)
   fullName: string;
   companyName: string;
-  email: string;
-  phone?: string;
+  phone: string; // Now required
+  email?: string; // Now optional
+  port: PortType;
+  requestType: RequestType;
+  timeSensitive?: boolean;
+
+  // Step 2: Container & Pickup (all optional)
+  containerNumber?: string; // Now optional
+  terminal?: string;
+  lfd?: string;
+  availabilityDate?: string;
+  notes?: string;
+
+  // Step 3: Delivery (ZIP required)
+  deliveryZip: string;
+  deliveryType?: DeliveryType;
+  appointmentRequired?: boolean;
+
+  // Legacy fields (kept for compatibility)
+  containerType?: string;
+  moveType?: "import" | "export";
+  commodityType?: string;
 }
 
 export interface ContactFormData {
