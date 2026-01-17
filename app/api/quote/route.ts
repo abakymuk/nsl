@@ -210,16 +210,87 @@ Submitted at: ${new Date().toISOString()}
       text: emailBody,
     });
 
-    // TODO: Add Slack webhook for urgent leads
-    // if (isUrgent && process.env.SLACK_WEBHOOK_URL) {
-    //   await sendSlackAlert("urgent_quote", {
-    //     company: body.companyName,
-    //     phone: body.phone,
-    //     requestType: requestTypeLabel,
-    //     leadScore,
-    //     referenceNumber,
-    //   });
-    // }
+    // Send Slack notification for all quotes
+    if (process.env.SLACK_WEBHOOK_URL) {
+      try {
+        const slackBlocks = [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: isUrgent ? "🚨 URGENT Quote Request" : "📋 New Quote Request",
+              emoji: true,
+            },
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Reference:*\n${referenceNumber || "Pending"}` },
+              { type: "mrkdwn", text: `*Lead Score:*\n${leadScore} ${isUrgent ? "🔥" : ""}` },
+              { type: "mrkdwn", text: `*Company:*\n${body.companyName}` },
+              { type: "mrkdwn", text: `*Contact:*\n${body.fullName}` },
+              { type: "mrkdwn", text: `*Phone:*\n<tel:${body.phone}|${body.phone}>` },
+              { type: "mrkdwn", text: `*Request Type:*\n${requestTypeLabel}` },
+            ],
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Port:*\n${body.port === "la" ? "Los Angeles" : "Long Beach"}` },
+              { type: "mrkdwn", text: `*Container:*\n${body.containerNumber || "TBD"}` },
+              { type: "mrkdwn", text: `*Terminal:*\n${body.terminal || "TBD"}` },
+              { type: "mrkdwn", text: `*Delivery ZIP:*\n${body.deliveryZip}` },
+            ],
+          },
+        ];
+
+        // Add LFD warning if present and soon
+        if (body.lfd) {
+          slackBlocks.push({
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `⏰ *Last Free Day:* ${body.lfd}`,
+            },
+          } as never);
+        }
+
+        // Add notes if present
+        if (body.notes) {
+          slackBlocks.push({
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Notes:* ${body.notes}`,
+            },
+          } as never);
+        }
+
+        // Add call button for urgent
+        if (isUrgent) {
+          slackBlocks.push({
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: `📞 Call ${body.phone}`, emoji: true },
+                url: `tel:${body.phone}`,
+                style: "danger",
+              },
+            ],
+          } as never);
+        }
+
+        await fetch(process.env.SLACK_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks: slackBlocks }),
+        });
+      } catch (slackError) {
+        console.error("Slack notification failed:", slackError);
+        // Don't fail the request if Slack fails
+      }
+    }
 
     return NextResponse.json({
       success: true,
