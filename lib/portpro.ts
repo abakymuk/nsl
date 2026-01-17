@@ -367,17 +367,37 @@ export function getPortProClient(): PortProClient {
 }
 
 /**
- * Verify webhook signature
+ * Verify webhook signature using HMAC-SHA1
+ * PortPro sends signature as: sha1=<hex_digest>
  */
 export function verifyWebhookSignature(
   signature: string | null,
-  expectedSecret: string
+  body: string,
+  secret: string
 ): boolean {
-  if (!signature) return false;
+  if (!signature || !secret) return false;
 
-  // PortPro sends signature as: sha1=<token>
-  const providedToken = signature.replace("sha1=", "");
-  return providedToken === expectedSecret;
+  // Parse signature format: sha1=<hex_digest>
+  const [algo, providedHash] = signature.split("=");
+  if (algo !== "sha1" || !providedHash) return false;
+
+  // Compute expected HMAC-SHA1
+  const crypto = require("crypto");
+  const expectedHash = crypto
+    .createHmac("sha1", secret)
+    .update(body, "utf8")
+    .digest("hex");
+
+  // Timing-safe comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(providedHash, "hex"),
+      Buffer.from(expectedHash, "hex")
+    );
+  } catch {
+    // Buffer length mismatch or invalid hex
+    return false;
+  }
 }
 
 /**

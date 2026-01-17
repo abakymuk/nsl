@@ -6,6 +6,12 @@ import {
   WebhookPayload,
   WebhookEventType,
 } from "@/lib/portpro";
+import { pushToDeadLetterQueue } from "@/lib/webhook-dlq";
+import {
+  generateIdempotencyKey,
+  isDuplicateEvent,
+  markEventProcessed,
+} from "@/lib/webhook-dedup";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,11 +28,11 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const payload: WebhookPayload = JSON.parse(body);
 
-    // Verify webhook signature
+    // Verify webhook signature (HMAC-SHA1)
     const signature = request.headers.get("X-Hub-Signature");
     const webhookSecret = process.env.PORTPRO_WEBHOOK_SECRET;
 
-    if (webhookSecret && !verifyWebhookSignature(signature, webhookSecret)) {
+    if (webhookSecret && !verifyWebhookSignature(signature, body, webhookSecret)) {
       console.error("Invalid webhook signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
@@ -34,8 +40,15 @@ export async function POST(request: NextRequest) {
     // Get event type (PortPro uses both event_type and eventType)
     const eventType = (payload.event_type || payload.eventType) as WebhookEventType;
     const referenceNumber = payload.reference_number || payload.data?.reference_number;
+    const timestamp = payload.data?.updatedAt || payload.data?.createdAt;
 
     console.log(`PortPro webhook received: ${eventType}`, { referenceNumber });
+
+    // Check for duplicate events (idempotency)
+    const idempotencyKey = generateIdempotencyKey(eventType, referenceNumber, timestamp);
+    if (await isDuplicateEvent(idempotencyKey)) {
+      return NextResponse.json({ success: true, duplicate: true, event: eventType });
+    }
 
     // Log webhook event to database for debugging/auditing
     await supabase.from("portpro_webhook_logs").insert({
@@ -44,47 +57,68 @@ export async function POST(request: NextRequest) {
       payload: payload,
     });
 
-    // Process based on event type
-    switch (eventType) {
-      case "load#created":
-        await handleLoadCreated(payload);
-        break;
+    // Process based on event type (wrapped in try-catch for DLQ)
+    try {
+      switch (eventType) {
+        case "load#created":
+          await handleLoadCreated(payload);
+          break;
 
-      case "load#status_updated":
-        await handleLoadStatusUpdated(payload);
-        break;
+        case "load#status_updated":
+          await handleLoadStatusUpdated(payload);
+          break;
 
-      case "load#info_updated":
-      case "load#dates_updated":
-        await handleLoadInfoUpdated(payload);
-        break;
+        case "load#info_updated":
+        case "load#dates_updated":
+          await handleLoadInfoUpdated(payload);
+          break;
 
-      case "load#equipment_updated":
-        await handleEquipmentUpdated(payload);
-        break;
+        case "load#equipment_updated":
+          await handleEquipmentUpdated(payload);
+          break;
 
-      case "document#pod_added":
-        await handleDocumentAdded(payload, "POD");
-        break;
+        case "document#pod_added":
+          await handleDocumentAdded(payload, "POD");
+          break;
 
-      case "document#delivery_order_added":
-        await handleDocumentAdded(payload, "DO");
-        break;
+        case "document#delivery_order_added":
+          await handleDocumentAdded(payload, "DO");
+          break;
 
-      case "tender#status_changed":
-        await handleTenderStatusChanged(payload);
-        break;
+        case "tender#status_changed":
+          await handleTenderStatusChanged(payload);
+          break;
 
-      case "customer#created":
-        await handleCustomerCreated(payload);
-        break;
+        case "customer#created":
+          await handleCustomerCreated(payload);
+          break;
 
-      default:
-        console.log(`Unhandled event type: ${eventType}`);
+        default:
+          console.log(`Unhandled event type: ${eventType}`);
+      }
+
+      // Mark event as processed for deduplication
+      await markEventProcessed(idempotencyKey);
+
+      // Return 200 immediately as required by PortPro
+      return NextResponse.json({ success: true, event: eventType });
+    } catch (processingError) {
+      // Push to dead letter queue for retry
+      const errorMessage = processingError instanceof Error
+        ? processingError.message
+        : "Unknown processing error";
+
+      console.error(`Webhook processing failed: ${eventType}`, errorMessage);
+
+      await pushToDeadLetterQueue(eventType, body, errorMessage);
+
+      // Still return 200 to PortPro (we handle retries via DLQ)
+      return NextResponse.json({
+        success: false,
+        queued: true,
+        error: "Processing failed, queued for retry",
+      });
     }
-
-    // Return 200 immediately as required by PortPro
-    return NextResponse.json({ success: true, event: eventType });
   } catch (error) {
     console.error("Error processing PortPro webhook:", error);
     // Still return 200 to prevent retries for parsing errors
