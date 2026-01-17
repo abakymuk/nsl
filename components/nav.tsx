@@ -23,7 +23,6 @@ import {
   Shield,
   Mail,
   Home,
-  MapPin,
   FileText,
   LogIn,
   LayoutDashboard,
@@ -43,7 +42,6 @@ const navItems = [
 const dockItems = [
   { title: "Home", icon: <Home className="h-full w-full" />, href: "/" },
   { title: "Quote", icon: <FileText className="h-full w-full" />, href: "/quote" },
-  { title: "Track", icon: <MapPin className="h-full w-full" />, href: "/track" },
   { title: "Contact", icon: <Mail className="h-full w-full" />, href: "/contact" },
 ];
 
@@ -115,13 +113,6 @@ export function Nav() {
         }
         ctaButton={
           <div className="flex items-center gap-3">
-            <Link
-              href="/track"
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Track
-            </Link>
-
             {/* Auth buttons */}
             {!loading && !user && (
               <Link
