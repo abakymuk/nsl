@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Check,
   Package,
-  MapPin,
   User,
   Loader2,
   Building2,
@@ -218,26 +217,26 @@ export default function QuoteForm() {
 
         {/* Form Card */}
         <motion.div
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 p-1"
+          className="relative overflow-hidden rounded-3xl border-2 border-border bg-card shadow-xl shadow-primary/5 p-1"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
           {/* Gradient Border Effect */}
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 via-transparent to-accent/20 pointer-events-none" />
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
 
           {/* Inner Content */}
-          <div className="relative rounded-[22px] bg-slate-950 p-6 sm:p-8">
-            {/* Noise Texture Overlay */}
+          <div className="relative rounded-[22px] bg-card p-6 sm:p-8">
+            {/* Subtle Pattern Overlay */}
             <div
-              className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-[22px]"
+              className="absolute inset-0 opacity-[0.02] pointer-events-none rounded-[22px]"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
               }}
             />
 
             {/* Large Step Number Watermark */}
-            <div className="absolute -right-4 -top-8 font-mono text-[12rem] font-black text-white/[0.02] pointer-events-none select-none leading-none">
+            <div className="absolute -right-4 -top-8 font-mono text-[12rem] font-black text-primary/[0.03] pointer-events-none select-none leading-none">
               {currentStepData?.number}
             </div>
 
@@ -245,7 +244,7 @@ export default function QuoteForm() {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400"
+                className="mb-6 rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive"
               >
                 {error}
               </motion.div>
@@ -267,8 +266,8 @@ export default function QuoteForm() {
                       <Anchor className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">Container Details</h2>
-                      <p className="text-sm text-slate-400">
+                      <h2 className="text-xl font-bold text-foreground">Container Details</h2>
+                      <p className="text-sm text-muted-foreground">
                         Which container do you need moved?
                       </p>
                     </div>
@@ -278,7 +277,7 @@ export default function QuoteForm() {
                   <div className="space-y-2">
                     <label
                       htmlFor="containerNumber"
-                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
                       Container Number <span className="text-accent">*</span>
                     </label>
@@ -294,22 +293,22 @@ export default function QuoteForm() {
                           })
                         }
                         placeholder="MSCU1234567"
-                        className="w-full h-14 px-5 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white font-mono text-xl tracking-wider placeholder:text-slate-600 focus:outline-none focus:border-primary focus:bg-slate-800 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.1)] transition-all"
+                        className="w-full h-14 px-5 rounded-xl bg-secondary/50 border-2 border-border text-foreground font-mono text-xl tracking-wider placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-background focus:shadow-[0_0_0_4px_rgba(59,130,246,0.1)] transition-all"
                       />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500 uppercase">
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground uppercase">
                         {formData.containerNumber.length > 0
                           ? `${formData.containerNumber.length}/11`
                           : "ID"}
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       4-letter prefix + 7 digits (e.g., MSCU1234567)
                     </p>
                   </div>
 
                   {/* Terminal Selection */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
                       Pickup Terminal <span className="text-accent">*</span>
                     </label>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -323,8 +322,8 @@ export default function QuoteForm() {
                           className={cn(
                             "relative px-3 py-3 rounded-xl text-sm font-bold border-2 transition-all duration-200 overflow-hidden",
                             formData.terminal === terminal.value
-                              ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.2)]"
-                              : "border-slate-700/50 bg-slate-800/30 text-slate-400 hover:border-slate-600 hover:text-slate-300 hover:bg-slate-800/50"
+                              ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                              : "border-border bg-secondary/30 text-muted-foreground hover:border-primary/30 hover:text-foreground hover:bg-secondary/50"
                           )}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -352,7 +351,7 @@ export default function QuoteForm() {
                         "w-full h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
                         canProceedStep1
                           ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30"
-                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
                       )}
                       whileHover={canProceedStep1 ? { scale: 1.01 } : {}}
                       whileTap={canProceedStep1 ? { scale: 0.99 } : {}}
@@ -379,8 +378,8 @@ export default function QuoteForm() {
                       <Truck className="h-5 w-5 text-accent" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">Delivery Details</h2>
-                      <p className="text-sm text-slate-400">
+                      <h2 className="text-xl font-bold text-foreground">Delivery Details</h2>
+                      <p className="text-sm text-muted-foreground">
                         Where should we deliver?
                       </p>
                     </div>
@@ -390,7 +389,7 @@ export default function QuoteForm() {
                   <div className="space-y-2">
                     <label
                       htmlFor="deliveryZip"
-                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
                       Delivery ZIP Code <span className="text-accent">*</span>
                     </label>
@@ -403,13 +402,13 @@ export default function QuoteForm() {
                       }
                       placeholder="90210"
                       maxLength={10}
-                      className="w-full h-14 px-5 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white font-mono text-xl tracking-wider placeholder:text-slate-600 focus:outline-none focus:border-accent focus:bg-slate-800 focus:shadow-[0_0_0_4px_rgba(249,115,22,0.1)] transition-all"
+                      className="w-full h-14 px-5 rounded-xl bg-secondary/50 border-2 border-border text-foreground font-mono text-xl tracking-wider placeholder:text-muted-foreground focus:outline-none focus:border-accent focus:bg-background focus:shadow-[0_0_0_4px_rgba(249,115,22,0.1)] transition-all"
                     />
                   </div>
 
                   {/* Container Type */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
                       Container Type <span className="text-accent">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -423,8 +422,8 @@ export default function QuoteForm() {
                           className={cn(
                             "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 text-left",
                             formData.containerType === type.value
-                              ? "border-accent bg-accent/10 shadow-[0_0_20px_rgba(249,115,22,0.15)]"
-                              : "border-slate-700/50 bg-slate-800/30 hover:border-slate-600 hover:bg-slate-800/50"
+                              ? "border-accent bg-accent/10 shadow-[0_0_20px_rgba(249,115,22,0.1)]"
+                              : "border-border bg-secondary/30 hover:border-accent/30 hover:bg-secondary/50"
                           )}
                           whileHover={{ scale: 1.01 }}
                           whileTap={{ scale: 0.99 }}
@@ -434,12 +433,12 @@ export default function QuoteForm() {
                               "text-lg font-bold",
                               formData.containerType === type.value
                                 ? "text-accent"
-                                : "text-slate-300"
+                                : "text-foreground"
                             )}
                           >
                             {type.label}
                           </div>
-                          <div className="text-xs text-slate-500">{type.desc}</div>
+                          <div className="text-xs text-muted-foreground">{type.desc}</div>
                         </motion.button>
                       ))}
                     </div>
@@ -447,7 +446,7 @@ export default function QuoteForm() {
 
                   {/* Import/Export Toggle */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                    <label className="text-sm font-semibold text-foreground uppercase tracking-wide">
                       Move Type <span className="text-accent">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -459,8 +458,8 @@ export default function QuoteForm() {
                         className={cn(
                           "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3",
                           formData.moveType === "import"
-                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
-                            : "border-slate-700/50 bg-slate-800/30 hover:border-slate-600"
+                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                            : "border-border bg-secondary/30 hover:border-primary/30"
                         )}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -469,7 +468,7 @@ export default function QuoteForm() {
                             "h-5 w-5",
                             formData.moveType === "import"
                               ? "text-primary"
-                              : "text-slate-500"
+                              : "text-muted-foreground"
                           )}
                         />
                         <div className="text-left">
@@ -478,12 +477,12 @@ export default function QuoteForm() {
                               "font-bold",
                               formData.moveType === "import"
                                 ? "text-primary"
-                                : "text-slate-300"
+                                : "text-foreground"
                             )}
                           >
                             Import
                           </div>
-                          <div className="text-xs text-slate-500">Port → Delivery</div>
+                          <div className="text-xs text-muted-foreground">Port → Delivery</div>
                         </div>
                       </motion.button>
                       <motion.button
@@ -494,8 +493,8 @@ export default function QuoteForm() {
                         className={cn(
                           "relative px-4 py-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3",
                           formData.moveType === "export"
-                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
-                            : "border-slate-700/50 bg-slate-800/30 hover:border-slate-600"
+                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                            : "border-border bg-secondary/30 hover:border-primary/30"
                         )}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -504,7 +503,7 @@ export default function QuoteForm() {
                             "h-5 w-5",
                             formData.moveType === "export"
                               ? "text-primary"
-                              : "text-slate-500"
+                              : "text-muted-foreground"
                           )}
                         />
                         <div className="text-left">
@@ -513,12 +512,12 @@ export default function QuoteForm() {
                               "font-bold",
                               formData.moveType === "export"
                                 ? "text-primary"
-                                : "text-slate-300"
+                                : "text-foreground"
                             )}
                           >
                             Export
                           </div>
-                          <div className="text-xs text-slate-500">Empty Return</div>
+                          <div className="text-xs text-muted-foreground">Empty Return</div>
                         </div>
                       </motion.button>
                     </div>
@@ -528,10 +527,10 @@ export default function QuoteForm() {
                   <div className="space-y-2">
                     <label
                       htmlFor="commodityType"
-                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
                       Commodity{" "}
-                      <span className="text-slate-500 text-xs normal-case">
+                      <span className="text-muted-foreground text-xs normal-case">
                         (optional)
                       </span>
                     </label>
@@ -543,7 +542,7 @@ export default function QuoteForm() {
                         setFormData({ ...formData, commodityType: e.target.value })
                       }
                       placeholder="e.g., Electronics, Furniture, Textiles"
-                      className="w-full h-12 px-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                      className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
                     />
                   </div>
 
@@ -552,7 +551,7 @@ export default function QuoteForm() {
                     <motion.button
                       type="button"
                       onClick={prevStep}
-                      className="flex-1 h-14 rounded-xl font-bold border-2 border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:border-slate-600 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 h-14 rounded-xl font-bold border-2 border-border bg-secondary/50 text-foreground hover:bg-secondary hover:border-border transition-all flex items-center justify-center gap-2"
                       whileTap={{ scale: 0.98 }}
                     >
                       <ArrowLeft className="h-5 w-5" />
@@ -566,7 +565,7 @@ export default function QuoteForm() {
                         "flex-[2] h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
                         canProceedStep2
                           ? "bg-gradient-to-r from-accent to-accent/80 text-white shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
-                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
                       )}
                       whileHover={canProceedStep2 ? { scale: 1.01 } : {}}
                       whileTap={canProceedStep2 ? { scale: 0.99 } : {}}
@@ -590,13 +589,13 @@ export default function QuoteForm() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
-                      <User className="h-5 w-5 text-green-500" />
+                      <User className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">
+                      <h2 className="text-xl font-bold text-foreground">
                         Contact Information
                       </h2>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-muted-foreground">
                         Where should we send your quote?
                       </p>
                     </div>
@@ -607,12 +606,12 @@ export default function QuoteForm() {
                     <div className="space-y-2">
                       <label
                         htmlFor="fullName"
-                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
                       >
                         Full Name <span className="text-accent">*</span>
                       </label>
                       <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                           id="fullName"
                           type="text"
@@ -621,19 +620,19 @@ export default function QuoteForm() {
                             setFormData({ ...formData, fullName: e.target.value })
                           }
                           placeholder="John Smith"
-                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label
                         htmlFor="companyName"
-                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
                       >
                         Company <span className="text-accent">*</span>
                       </label>
                       <div className="relative">
-                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                           id="companyName"
                           type="text"
@@ -642,7 +641,7 @@ export default function QuoteForm() {
                             setFormData({ ...formData, companyName: e.target.value })
                           }
                           placeholder="Acme Logistics"
-                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
                         />
                       </div>
                     </div>
@@ -652,12 +651,12 @@ export default function QuoteForm() {
                   <div className="space-y-2">
                     <label
                       htmlFor="email"
-                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
                       Email <span className="text-accent">*</span>
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
                         id="email"
                         type="email"
@@ -666,10 +665,10 @@ export default function QuoteForm() {
                           setFormData({ ...formData, email: e.target.value })
                         }
                         placeholder="john@acmelogistics.com"
-                        className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                        className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
                       />
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       We&apos;ll send your quote here
                     </p>
                   </div>
@@ -679,15 +678,15 @@ export default function QuoteForm() {
                     <div className="space-y-2">
                       <label
                         htmlFor="phone"
-                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
                       >
                         Phone{" "}
-                        <span className="text-slate-500 text-xs normal-case">
+                        <span className="text-muted-foreground text-xs normal-case">
                           (optional)
                         </span>
                       </label>
                       <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                           id="phone"
                           type="tel"
@@ -696,17 +695,17 @@ export default function QuoteForm() {
                             setFormData({ ...formData, phone: e.target.value })
                           }
                           placeholder="(310) 555-1234"
-                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all"
+                          className="w-full h-12 pl-11 pr-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label
                         htmlFor="lfd"
-                        className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                        className="text-sm font-semibold text-foreground uppercase tracking-wide"
                       >
                         Last Free Day{" "}
-                        <span className="text-slate-500 text-xs normal-case">
+                        <span className="text-muted-foreground text-xs normal-case">
                           (optional)
                         </span>
                       </label>
@@ -717,7 +716,7 @@ export default function QuoteForm() {
                         onChange={(e) =>
                           setFormData({ ...formData, lfd: e.target.value })
                         }
-                        className="w-full h-12 px-4 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all [color-scheme:dark]"
+                        className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all"
                       />
                     </div>
                   </div>
@@ -726,10 +725,10 @@ export default function QuoteForm() {
                   <div className="space-y-2">
                     <label
                       htmlFor="notes"
-                      className="text-sm font-semibold text-slate-300 uppercase tracking-wide"
+                      className="text-sm font-semibold text-foreground uppercase tracking-wide"
                     >
                       Additional Notes{" "}
-                      <span className="text-slate-500 text-xs normal-case">
+                      <span className="text-muted-foreground text-xs normal-case">
                         (optional)
                       </span>
                     </label>
@@ -741,43 +740,43 @@ export default function QuoteForm() {
                         setFormData({ ...formData, notes: e.target.value })
                       }
                       placeholder="Any special requirements or urgent situations..."
-                      className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border-2 border-slate-700/50 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:bg-slate-800 transition-all resize-none"
+                      className="w-full px-4 py-3 rounded-xl bg-secondary/50 border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-background transition-all resize-none"
                     />
                   </div>
 
                   {/* Summary Card - Manifest Style */}
-                  <div className="rounded-xl bg-slate-800/80 border-2 border-slate-700/50 overflow-hidden">
-                    <div className="px-4 py-2 bg-slate-700/50 border-b border-slate-700/50">
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="rounded-xl bg-secondary/80 border-2 border-border overflow-hidden">
+                    <div className="px-4 py-2 bg-secondary border-b border-border">
+                      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                         Quote Summary
                       </h3>
                     </div>
                     <div className="p-4 font-mono text-sm">
                       <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-                        <span className="text-slate-500">CNTR</span>
-                        <span className="text-white font-bold">
+                        <span className="text-muted-foreground">CNTR</span>
+                        <span className="text-foreground font-bold">
                           {formData.containerNumber || "—"}
                         </span>
-                        <span className="text-slate-500">TERM</span>
-                        <span className="text-white">
+                        <span className="text-muted-foreground">TERM</span>
+                        <span className="text-foreground">
                           {terminals.find((t) => t.value === formData.terminal)
                             ?.short || "—"}
                         </span>
-                        <span className="text-slate-500">DEST</span>
-                        <span className="text-white">
+                        <span className="text-muted-foreground">DEST</span>
+                        <span className="text-foreground">
                           {formData.deliveryZip || "—"}
                         </span>
-                        <span className="text-slate-500">TYPE</span>
-                        <span className="text-white">
+                        <span className="text-muted-foreground">TYPE</span>
+                        <span className="text-foreground">
                           {formData.containerType || "—"}{" "}
-                          <span className="text-slate-500">
+                          <span className="text-muted-foreground">
                             ({formData.moveType.toUpperCase()})
                           </span>
                         </span>
                         {formData.commodityType && (
                           <>
-                            <span className="text-slate-500">CMDTY</span>
-                            <span className="text-white">
+                            <span className="text-muted-foreground">CMDTY</span>
+                            <span className="text-foreground">
                               {formData.commodityType}
                             </span>
                           </>
@@ -792,7 +791,7 @@ export default function QuoteForm() {
                       type="button"
                       onClick={prevStep}
                       disabled={loading}
-                      className="flex-1 h-14 rounded-xl font-bold border-2 border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:border-slate-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="flex-1 h-14 rounded-xl font-bold border-2 border-border bg-secondary/50 text-foreground hover:bg-secondary hover:border-border transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       whileTap={{ scale: 0.98 }}
                     >
                       <ArrowLeft className="h-5 w-5" />
@@ -806,7 +805,7 @@ export default function QuoteForm() {
                         "flex-[2] h-14 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3",
                         canSubmit && !loading
                           ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30"
-                          : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
                       )}
                       whileHover={canSubmit && !loading ? { scale: 1.01 } : {}}
                       whileTap={canSubmit && !loading ? { scale: 0.99 } : {}}
@@ -830,20 +829,23 @@ export default function QuoteForm() {
           </div>
         </motion.div>
 
-        {/* Bottom Trust Badge */}
+        {/* Bottom Trust Badges */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-8 flex items-center justify-center gap-3 text-sm text-muted-foreground"
+          className="mt-8 flex flex-wrap items-center justify-center gap-4"
         >
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
-            <span className="flex h-2 w-2 rounded-full bg-green-500" />
-            <span className="font-medium">15 min avg response</span>
+          <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-green-500/10 border-2 border-green-500/20 shadow-sm">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+            </span>
+            <span className="font-bold text-green-700 dark:text-green-500">15 min avg response</span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
-            <Package className="h-3.5 w-3.5" />
-            <span className="font-medium">Real dispatchers</span>
+          <div className="flex items-center gap-2 px-5 py-3 rounded-full bg-primary/10 border-2 border-primary/20 shadow-sm">
+            <Package className="h-4 w-4 text-primary" />
+            <span className="font-bold text-primary">Real dispatchers</span>
           </div>
         </motion.div>
       </div>
