@@ -13,14 +13,14 @@ async function setupSchedule() {
   try {
     // Create schedule for every 5 minutes
     const schedule = await client.schedules.create({
-      destination: "https://www.newstream-logistics.com/api/qstash/portpro-poll",
+      destination: "https://www.newstreamlogistics.com/api/qstash/portpro-poll",
       cron: "*/5 * * * *",
     });
 
     console.log("✅ QStash schedule created successfully!");
     console.log("Schedule ID:", schedule.scheduleId);
     console.log("Cron: Every 5 minutes");
-    console.log("Destination: https://www.newstream-logistics.com/api/qstash/portpro-poll");
+    console.log("Destination: https://www.newstreamlogistics.com/api/qstash/portpro-poll");
   } catch (error) {
     console.error("❌ Failed to create schedule:", error);
   }

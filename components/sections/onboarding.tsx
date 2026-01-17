@@ -113,7 +113,7 @@ export function OnboardingSection() {
           viewport={{ once: true }}
           className="mx-auto max-w-xl"
         >
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center flex flex-col items-center">
             <p className="text-sm text-muted-foreground mb-4">
               <span className="font-semibold text-foreground">
                 No contract required.

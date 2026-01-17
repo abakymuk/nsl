@@ -45,7 +45,7 @@ async function verifyQStash(request: NextRequest, body: string): Promise<boolean
     }
 
     // Verify with URL (required by QStash)
-    const url = request.url || "https://www.newstream-logistics.com/api/qstash/portpro-poll";
+    const url = request.url || "https://www.newstreamlogistics.com/api/qstash/portpro-poll";
 
     await receiver.verify({
       signature,
