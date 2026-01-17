@@ -13,7 +13,7 @@ async function getLoads(status?: string, search?: string) {
   // Only select columns needed for the list view
   let query = supabase
     .from("loads")
-    .select("id, tracking_number, container_number, origin, destination, status, eta, created_at")
+    .select("id, tracking_number, container_number, origin, destination, status, eta, created_at, billing_total, load_margin")
     .order("created_at", { ascending: false });
 
   if (status && status !== "all") {
@@ -123,6 +123,12 @@ export default async function AdminLoadsPage({
                   ETA
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Billing Total
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Load Margin
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -130,7 +136,7 @@ export default async function AdminLoadsPage({
             <tbody className="divide-y">
               {loads.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <Truck className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <p className="mt-4 text-sm text-muted-foreground">
                       No loads found
@@ -187,6 +193,20 @@ export default async function AdminLoadsPage({
                       <p className="text-sm text-muted-foreground">
                         {shipment.eta
                           ? new Date(shipment.eta).toLocaleDateString()
+                          : "—"}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="text-sm font-medium">
+                        {shipment.billing_total != null
+                          ? `$${Number(shipment.billing_total).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : "—"}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className={`text-sm font-medium ${shipment.load_margin != null && shipment.load_margin > 0 ? "text-success" : shipment.load_margin != null && shipment.load_margin < 0 ? "text-destructive" : ""}`}>
+                        {shipment.load_margin != null
+                          ? `$${Number(shipment.load_margin).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           : "—"}
                       </p>
                     </td>

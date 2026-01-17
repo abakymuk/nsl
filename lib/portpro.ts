@@ -162,6 +162,9 @@ export interface PortProLoad {
   returnDate?: string;
   // Distance
   totalMiles?: number;
+  // Billing (from PortPro billing data)
+  billingTotal?: number;
+  loadMargin?: number;
   // Timestamps
   createdAt: string;
   updatedAt?: string;
@@ -462,5 +465,8 @@ export function convertLoadToShipment(load: PortProLoad) {
     chassis_number: load.chassisNo || null,
     // Distance
     total_miles: load.totalMiles || null,
+    // Billing
+    billing_total: load.billingTotal || null,
+    load_margin: load.loadMargin || null,
   };
 }

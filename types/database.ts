@@ -178,6 +178,9 @@ export interface Database {
           seal_number: string | null;
           chassis_number: string | null;
           weight: number | null;
+          // Billing fields
+          billing_total: number | null;
+          load_margin: number | null;
         };
         Insert: {
           id?: string;
@@ -205,6 +208,8 @@ export interface Database {
           seal_number?: string | null;
           chassis_number?: string | null;
           weight?: number | null;
+          billing_total?: number | null;
+          load_margin?: number | null;
         };
         Update: {
           id?: string;
@@ -232,6 +237,8 @@ export interface Database {
           seal_number?: string | null;
           chassis_number?: string | null;
           weight?: number | null;
+          billing_total?: number | null;
+          load_margin?: number | null;
         };
       };
       load_events: {
