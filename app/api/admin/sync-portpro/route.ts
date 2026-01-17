@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
           // Distance
           total_miles: load.totalMiles || null,
           // Billing
-          billing_total: load.billingTotal || null,
-          load_margin: load.loadMargin || null,
+          billing_total: load.totalAmount || null,
+          load_margin: calculateMargin(load),
           // PortPro reference
           portpro_reference: load.reference_number,
           portpro_load_id: load._id,
@@ -545,4 +545,35 @@ function createStopEventFromDriverOrder(
     portpro_stop_id: order._id,
     created_at: arrived || new Date().toISOString(),
   };
+}
+
+// Calculate load margin from PortPro data
+// Margin = Revenue (totalAmount) - Costs (expense + vendorPay + driverPay)
+function calculateMargin(load: PortProLoad): number | null {
+  if (load.totalAmount == null) return null;
+
+  let totalCosts = 0;
+
+  // Sum expenses
+  if (load.expense?.length) {
+    totalCosts += load.expense.reduce((sum, e) => sum + (e.finalAmount || e.amount || 0), 0);
+  }
+
+  // Sum vendor pay
+  if (load.vendorPay?.length) {
+    totalCosts += load.vendorPay.reduce((sum, vp) => {
+      if (vp.totalAmount != null) return sum + vp.totalAmount;
+      if (vp.pricing?.length) {
+        return sum + vp.pricing.reduce((s, p) => s + (p.finalAmount || p.amount || 0), 0);
+      }
+      return sum;
+    }, 0);
+  }
+
+  // Sum driver pay
+  if (load.driverPay?.length) {
+    totalCosts += load.driverPay.reduce((sum, dp) => sum + (dp.totalAmount || dp.amount || 0), 0);
+  }
+
+  return load.totalAmount - totalCosts;
 }

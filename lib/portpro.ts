@@ -163,8 +163,13 @@ export interface PortProLoad {
   // Distance
   totalMiles?: number;
   // Billing (from PortPro billing data)
-  billingTotal?: number;
-  loadMargin?: number;
+  totalAmount?: number;      // Total revenue/billing amount
+  paidAmount?: number;       // Amount already paid
+  remainAmount?: number;     // Outstanding balance
+  // Cost arrays for margin calculation
+  expense?: Array<{ finalAmount?: number; amount?: number }>;
+  vendorPay?: Array<{ totalAmount?: number; pricing?: Array<{ finalAmount?: number; amount?: number }> }>;
+  driverPay?: Array<{ totalAmount?: number; amount?: number }>;
   // Timestamps
   createdAt: string;
   updatedAt?: string;
@@ -466,7 +471,40 @@ export function convertLoadToShipment(load: PortProLoad) {
     // Distance
     total_miles: load.totalMiles || null,
     // Billing
-    billing_total: load.billingTotal || null,
-    load_margin: load.loadMargin || null,
+    billing_total: load.totalAmount || null,
+    load_margin: calculateLoadMargin(load),
   };
+}
+
+/**
+ * Calculate load margin from PortPro data
+ * Margin = Revenue (totalAmount) - Costs (expense + vendorPay + driverPay)
+ */
+function calculateLoadMargin(load: PortProLoad): number | null {
+  if (load.totalAmount == null) return null;
+
+  let totalCosts = 0;
+
+  // Sum expenses
+  if (load.expense?.length) {
+    totalCosts += load.expense.reduce((sum, e) => sum + (e.finalAmount || e.amount || 0), 0);
+  }
+
+  // Sum vendor pay
+  if (load.vendorPay?.length) {
+    totalCosts += load.vendorPay.reduce((sum, vp) => {
+      if (vp.totalAmount != null) return sum + vp.totalAmount;
+      if (vp.pricing?.length) {
+        return sum + vp.pricing.reduce((s, p) => s + (p.finalAmount || p.amount || 0), 0);
+      }
+      return sum;
+    }, 0);
+  }
+
+  // Sum driver pay
+  if (load.driverPay?.length) {
+    totalCosts += load.driverPay.reduce((sum, dp) => sum + (dp.totalAmount || dp.amount || 0), 0);
+  }
+
+  return load.totalAmount - totalCosts;
 }
