@@ -128,6 +128,9 @@ export async function POST(request: NextRequest) {
           chassis_number: load.chassisNo || null,
           // Distance
           total_miles: load.totalMiles || null,
+          // Billing
+          billing_total: load.billingTotal || null,
+          load_margin: load.loadMargin || null,
           // PortPro reference
           portpro_reference: load.reference_number,
           portpro_load_id: load._id,
