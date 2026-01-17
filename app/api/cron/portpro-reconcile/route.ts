@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
     // Get PortPro client
     const portpro = getPortProClient();
 
-    // Fetch all loads in batches
-    const batchSize = 100;
+    // Fetch all loads in batches (PortPro may have its own limit per request)
+    const batchSize = 50; // PortPro default limit
     let skip = 0;
     let hasMore = true;
     const allLoads: PortProLoad[] = [];
@@ -62,11 +62,16 @@ export async function GET(request: NextRequest) {
     while (hasMore) {
       const loads = await portpro.getLoads({ skip, limit: batchSize });
       allLoads.push(...loads);
-      hasMore = loads.length === batchSize;
-      skip += batchSize;
+
+      // Continue until we get 0 results (handles any API limit)
+      hasMore = loads.length > 0;
+      skip += loads.length;
 
       // Add small delay to avoid rate limiting
       if (hasMore) await new Promise((r) => setTimeout(r, 500));
+
+      // Safety limit to prevent infinite loops
+      if (skip > 10000) break;
     }
 
     console.log(`Reconciliation: Fetched ${allLoads.length} loads from PortPro`);

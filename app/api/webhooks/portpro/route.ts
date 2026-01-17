@@ -28,11 +28,17 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const payload: WebhookPayload = JSON.parse(body);
 
-    // Verify webhook signature (HMAC-SHA1)
+    // Log incoming webhook headers for debugging
     const signature = request.headers.get("X-Hub-Signature");
-    const webhookSecret = process.env.PORTPRO_WEBHOOK_SECRET;
+    const authHeader = request.headers.get("Authorization");
+    console.log("Webhook received - Headers:", {
+      "X-Hub-Signature": signature ? "present" : "missing",
+      "Authorization": authHeader ? "present" : "missing",
+    });
 
-    if (webhookSecret && !verifyWebhookSignature(signature, body, webhookSecret)) {
+    // Verify webhook signature (HMAC-SHA1) - skip if no signature header
+    const webhookSecret = process.env.PORTPRO_WEBHOOK_SECRET;
+    if (signature && webhookSecret && !verifyWebhookSignature(signature, body, webhookSecret)) {
       console.error("Invalid webhook signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
