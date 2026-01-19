@@ -21,6 +21,7 @@ import {
   Clock,
   XCircle,
   LogOut,
+  Shield,
 } from "lucide-react";
 
 interface InvitationData {
@@ -32,6 +33,9 @@ interface InvitationData {
   organizationId: string;
   organizationName: string;
   expiresAt: string;
+  // Platform admin invitation fields
+  platformRole?: string;
+  isPlatformInvite?: boolean;
 }
 
 export default function AcceptInvitePage({
@@ -240,13 +244,20 @@ export default function AcceptInvitePage({
   // Valid pending invitation
   const emailMatches =
     userEmail?.toLowerCase() === invitation?.email.toLowerCase();
+  const isPlatformInvite = invitation?.isPlatformInvite;
 
   return (
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Building2 className="h-6 w-6 text-primary" />
+          <div className={`mx-auto mb-4 h-12 w-12 rounded-full flex items-center justify-center ${
+            isPlatformInvite ? "bg-amber-100" : "bg-primary/10"
+          }`}>
+            {isPlatformInvite ? (
+              <Shield className="h-6 w-6 text-amber-600" />
+            ) : (
+              <Building2 className="h-6 w-6 text-primary" />
+            )}
           </div>
           <CardTitle className="text-2xl font-bold">
             You&apos;re invited!
@@ -255,8 +266,11 @@ export default function AcceptInvitePage({
             {invitation?.inviterName
               ? `${invitation.inviterName} has invited you`
               : "You've been invited"}{" "}
-            to join <strong>{invitation?.organizationName}</strong> as a{" "}
-            {invitation?.role}.
+            {isPlatformInvite ? (
+              <>to become a <strong>Platform Administrator</strong> on New Stream Logistics.</>
+            ) : (
+              <>to join <strong>{invitation?.organizationName}</strong> as a {invitation?.role}.</>
+            )}
           </CardDescription>
         </CardHeader>
 
@@ -269,26 +283,33 @@ export default function AcceptInvitePage({
           )}
 
           <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">
-                Organization
-              </span>
-              <span className="text-sm font-medium">
-                {invitation?.organizationName}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Your Role</span>
-              <span className="text-sm font-medium capitalize">
-                {invitation?.role}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">
-                Invited Email
-              </span>
-              <span className="text-sm font-medium">{invitation?.email}</span>
-            </div>
+            {isPlatformInvite ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Access Level</span>
+                  <span className="text-sm font-medium text-amber-600">Platform Administrator</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Invited Email</span>
+                  <span className="text-sm font-medium">{invitation?.email}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Organization</span>
+                  <span className="text-sm font-medium">{invitation?.organizationName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Your Role</span>
+                  <span className="text-sm font-medium capitalize">{invitation?.role}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Invited Email</span>
+                  <span className="text-sm font-medium">{invitation?.email}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {isLoggedIn && !emailMatches && (

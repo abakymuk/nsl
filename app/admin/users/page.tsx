@@ -20,6 +20,10 @@ import {
   XCircle,
   Shield,
   ShieldOff,
+  Mail,
+  UserPlus,
+  Clock,
+  Trash2,
 } from "lucide-react";
 
 interface UserProfile {
@@ -35,17 +39,38 @@ interface UserProfile {
   org_role?: "admin" | "member" | null;
 }
 
+interface Invitation {
+  id: string;
+  email: string;
+  platform_role: string;
+  status: "pending" | "accepted" | "revoked" | "expired";
+  created_at: string;
+  expires_at: string;
+  inviter_name: string | null;
+}
+
 export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Invite form state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+
   useEffect(() => {
-    loadUsers();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([loadUsers(), loadInvitations()]);
+    setLoading(false);
+  };
 
   const loadUsers = async () => {
     try {
@@ -58,8 +83,18 @@ export default function UsersPage() {
       setUsers(data.users || []);
     } catch {
       setError("Failed to load users");
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const loadInvitations = async () => {
+    try {
+      const res = await fetch("/api/admin/invitations");
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(data.invitations || []);
+      }
+    } catch {
+      // Silently fail - invitations are optional feature
     }
   };
 
@@ -95,11 +130,69 @@ export default function UsersPage() {
     }
   };
 
+  const sendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+
+    setInviting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/admin/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to send invitation");
+        return;
+      }
+
+      setSuccess(`Invitation sent to ${inviteEmail}`);
+      setInviteEmail("");
+      await loadInvitations();
+    } catch {
+      setError("Failed to send invitation");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const revokeInvitation = async (invitationId: string) => {
+    setProcessingId(invitationId);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/admin/invitations?id=${invitationId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to revoke invitation");
+        return;
+      }
+
+      setSuccess("Invitation revoked");
+      await loadInvitations();
+    } catch {
+      setError("Failed to revoke invitation");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const filteredUsers = users.filter(
     (user) =>
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const pendingInvitations = invitations.filter((inv) => inv.status === "pending");
 
   if (loading) {
     return (
@@ -144,6 +237,106 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Invite New Admin */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            Invite Platform Admin
+          </CardTitle>
+          <CardDescription>
+            Send an invitation to grant someone super admin access
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={sendInvite} className="flex gap-3">
+            <div className="relative flex-1">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="Enter email address..."
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="pl-10"
+                disabled={inviting}
+              />
+            </div>
+            <Button type="submit" disabled={inviting || !inviteEmail.trim()}>
+              {inviting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Send Invite
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Pending Invitations */}
+      {pendingInvitations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Pending Invitations ({pendingInvitations.length})
+            </CardTitle>
+            <CardDescription>
+              Invitations awaiting acceptance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingInvitations.map((invitation) => (
+                <div
+                  key={invitation.id}
+                  className="flex items-center justify-between p-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-amber-100">
+                      <Mail className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{invitation.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Invited{" "}
+                        {new Date(invitation.created_at).toLocaleDateString()}
+                        {invitation.inviter_name && ` by ${invitation.inviter_name}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">
+                      Pending
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => revokeInvitation(invitation.id)}
+                      disabled={processingId === invitation.id}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      {processingId === invitation.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Revoke
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All Users */}
       <Card>
         <CardHeader>
           <CardTitle>All Users ({users.length})</CardTitle>

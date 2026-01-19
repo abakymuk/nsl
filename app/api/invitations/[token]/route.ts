@@ -21,6 +21,7 @@ export async function GET(
         expires_at,
         inviter_name,
         organization_id,
+        platform_role,
         organizations (
           id,
           name
@@ -48,6 +49,9 @@ export async function GET(
     const orgData = invitation.organizations;
     const org = Array.isArray(orgData) ? orgData[0] : orgData;
 
+    // Check if this is a platform admin invitation
+    const isPlatformInvite = !!invitation.platform_role;
+
     return NextResponse.json({
       invitation: {
         id: invitation.id,
@@ -58,6 +62,9 @@ export async function GET(
         organizationId: org?.id,
         organizationName: org?.name,
         expiresAt: invitation.expires_at,
+        // Platform admin invitation fields
+        platformRole: invitation.platform_role,
+        isPlatformInvite,
       },
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
-import { addUserToOrganization, getUserOrgMembership } from "@/lib/auth";
+import { addUserToOrganization, getUserOrgMembership, grantSuperAdmin } from "@/lib/auth";
 import type { OrgRole } from "@/types/database";
 
 const supabase = createUntypedAdminClient();
@@ -58,6 +58,35 @@ export async function POST(
       );
     }
 
+    // Check if this is a platform admin invitation
+    const isPlatformInvite = !!invitation.platform_role;
+
+    if (isPlatformInvite) {
+      // Handle platform admin invitation
+      if (invitation.platform_role === "super_admin") {
+        const success = await grantSuperAdmin(user.id);
+        if (!success) {
+          return NextResponse.json({ error: "Failed to grant admin access" }, { status: 500 });
+        }
+      }
+
+      // Mark invitation as accepted
+      await supabase
+        .from("invitations")
+        .update({
+          status: "accepted",
+          accepted_at: new Date().toISOString(),
+        })
+        .eq("id", invitation.id);
+
+      return NextResponse.json({
+        success: true,
+        redirect: "/admin",
+        isPlatformAdmin: true,
+      });
+    }
+
+    // Handle organization invitation
     // Check if user already in an org
     const existingMembership = await getUserOrgMembership(user.id);
     if (existingMembership) {
