@@ -100,8 +100,8 @@ export default function QuoteForm() {
   // Step 2 validation: All optional, can always proceed
   const canProceedStep2 = true;
 
-  // Step 3 validation: ZIP required
-  const canSubmit = formData.deliveryZip.match(/^\d{5}(-\d{4})?$/);
+  // Step 3 validation: ZIP required (trim whitespace before checking)
+  const canSubmit = formData.deliveryZip.trim().replace(/\s+/g, '').match(/^\d{5}(-\d{4})?$/);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;

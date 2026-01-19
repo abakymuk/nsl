@@ -162,11 +162,13 @@ export const quoteFormSchema = z.object({
     .transform((val) => val?.trim() || undefined),
 
   // Step 3: Delivery Details
-  deliveryZip: z
-    .string()
-    .min(1, "Delivery ZIP code is required")
-    .max(10, "ZIP code too long")
-    .refine((val) => zipCodeRegex.test(val), "Invalid ZIP code format"),
+  deliveryZip: z.preprocess(
+    (val) => (typeof val === 'string' ? val.trim().replace(/\s+/g, '') : val),
+    z.string()
+      .min(1, "Delivery ZIP code is required")
+      .max(10, "ZIP code too long")
+      .refine((val) => zipCodeRegex.test(val), "Invalid ZIP code format (e.g., 90210 or 90210-1234)")
+  ),
 
   deliveryType: z
     .string()
