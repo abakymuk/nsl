@@ -202,7 +202,8 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-semibold">Location</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Los Angeles / Long Beach, CA
+                    18501 South Main Street<br />
+                    Gardena, CA 90248
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Serving LA/LB port terminals and surrounding areas

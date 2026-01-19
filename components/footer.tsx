@@ -65,9 +65,9 @@ export function Footer() {
                 <Mail className="h-4 w-4 text-primary" />
                 info@newstreamlogistics.com
               </Link>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4 text-primary" />
-                Los Angeles / Long Beach, CA
+              <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                <span>18501 South Main Street<br />Gardena, CA 90248</span>
               </div>
             </div>
           </div>

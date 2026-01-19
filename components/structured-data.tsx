@@ -11,14 +11,16 @@ export function LocalBusinessSchema() {
     email: "info@newstreamlogistics.com",
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Los Angeles",
+      streetAddress: "18501 South Main Street",
+      addressLocality: "Gardena",
       addressRegion: "CA",
+      postalCode: "90248",
       addressCountry: "US",
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: 33.7701,
-      longitude: -118.1937,
+      latitude: 33.8753,
+      longitude: -118.3089,
     },
     areaServed: [
       {
