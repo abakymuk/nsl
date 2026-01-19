@@ -151,8 +151,8 @@ export async function POST(request: NextRequest) {
           time_sensitive: body.timeSensitive || false,
           lead_score: leadScore,
           is_urgent: isUrgent,
-          // Status
-          status: isUrgent ? "urgent" : "pending",
+          // Status (use 'pending' for all new quotes, is_urgent field tracks urgency)
+          status: "pending",
         };
 
         console.log("[QUOTE API] Inserting quote data:", JSON.stringify(quoteData, null, 2));
