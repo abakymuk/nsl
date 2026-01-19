@@ -39,13 +39,10 @@ function getResend() {
 }
 
 export async function POST(request: NextRequest) {
-  console.log("[QUOTE API] Request received");
-
   try {
     // Check rate limit
     const rateLimit = await checkRateLimit(request, "quote");
     if (!rateLimit.success) {
-      console.log("[QUOTE API] Rate limited");
       return rateLimitResponse(rateLimit.reset);
     }
 
@@ -105,23 +102,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to database if Supabase is configured
-    const supabaseConfigured = isSupabaseConfigured();
-    const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const hasSupabaseConfig = supabaseConfigured && hasServiceKey;
-
-    console.log("[QUOTE API] DB config check:", {
-      supabaseConfigured,
-      hasServiceKey,
-      hasSupabaseConfig,
-      supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      anonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    });
+    const hasSupabaseConfig = isSupabaseConfigured() && process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (hasSupabaseConfig) {
       try {
-        console.log("[QUOTE API] Creating admin client...");
         const supabase = createAdminClient();
-        console.log("[QUOTE API] Admin client created");
 
         const quoteData: QuoteInsert = {
           // Contact info
@@ -155,35 +140,21 @@ export async function POST(request: NextRequest) {
           status: "pending",
         };
 
-        console.log("[QUOTE API] Inserting quote data:", JSON.stringify(quoteData, null, 2));
-
         const { data: quote, error: dbError } = await supabase
           .from("quotes")
           .insert(quoteData as never)
           .select("reference_number")
           .single();
 
-        console.log("[QUOTE API] Insert result:", { quote, dbError });
-
         if (dbError) {
-          console.error("[QUOTE API] Database error inserting quote:", {
-            code: dbError.code,
-            message: dbError.message,
-            details: dbError.details,
-            hint: dbError.hint,
-          });
-          // Continue with email even if DB fails
+          console.error("Database error inserting quote:", dbError.message);
         } else if (quote) {
           referenceNumber =
             (quote as { reference_number: string }).reference_number || null;
-          console.log("[QUOTE API] Quote saved to database:", referenceNumber);
         }
       } catch (dbException) {
-        console.error("[QUOTE API] Exception during database insert:", dbException);
-        // Continue with email even if DB fails
+        console.error("Exception during database insert:", dbException);
       }
-    } else {
-      console.warn("[QUOTE API] Database save skipped - missing SUPABASE_SERVICE_ROLE_KEY or Supabase not configured");
     }
 
     // Build email body with lead scoring info
@@ -326,7 +297,6 @@ Submitted at: ${new Date().toISOString()}
       }
     }
 
-    console.log("[QUOTE API] Success - returning response with ref:", referenceNumber);
     return NextResponse.json({
       success: true,
       message: "Quote request submitted successfully",
@@ -335,7 +305,7 @@ Submitted at: ${new Date().toISOString()}
       isUrgent,
     });
   } catch (error) {
-    console.error("[QUOTE API] Error processing quote request:", error);
+    console.error("Error processing quote request:", error);
 
     // Don't expose internal error details to client
     return NextResponse.json(
