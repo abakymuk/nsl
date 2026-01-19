@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle } from "lucide-react";
-import { show, onUnreadCountChange } from "@intercom/messenger-js-sdk";
+import { show, showNewMessage, onUnreadCountChange } from "@intercom/messenger-js-sdk";
 import { cn } from "@/lib/utils";
 
 interface ChatLauncherProps {
@@ -58,15 +58,20 @@ export function ChatLauncher({ className }: ChatLauncherProps) {
     }
   }, [isReady]);
 
-  // Handle click
+  // Handle click - open new message composer
   const handleClick = useCallback(() => {
     try {
-      show();
+      // If there are unread messages, show inbox; otherwise start new conversation
+      if (unreadCount > 0) {
+        show();
+      } else {
+        showNewMessage("Hi! I have a question about drayage services.");
+      }
     } catch {
       // Fallback: open contact page if Intercom fails
       window.location.href = "/contact";
     }
-  }, []);
+  }, [unreadCount]);
 
   // Hide on admin pages or before mounting (prevents hydration mismatch)
   if (!mounted || pathname?.startsWith("/admin")) {
