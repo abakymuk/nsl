@@ -102,54 +102,69 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to database if Supabase is configured
-    if (isSupabaseConfigured()) {
-      const supabase = createAdminClient();
+    const hasSupabaseConfig = isSupabaseConfigured() && process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-      const quoteData: QuoteInsert = {
-        // Contact info
-        contact_name: body.fullName,
-        company_name: body.companyName,
-        email: body.email || null,
-        phone: body.phone,
-        // Container details
-        container_number: body.containerNumber || null,
-        container_type: body.containerType || "40ft",
-        pickup_terminal: body.terminal || null,
-        // Delivery
-        delivery_zip: body.deliveryZip,
-        delivery_type: body.deliveryType || null,
-        appointment_required: body.appointmentRequired || false,
-        // Service details
-        service_type: body.moveType || "import",
-        lfd: body.lfd || null,
-        availability_date: body.availabilityDate || null,
-        special_instructions:
-          specialInstructions.length > 0
-            ? specialInstructions.join("\n")
-            : null,
-        // Lead qualification (new fields)
-        port: body.port || "la",
-        request_type: body.requestType || "standard",
-        time_sensitive: body.timeSensitive || false,
-        lead_score: leadScore,
-        is_urgent: isUrgent,
-        // Status
-        status: isUrgent ? "urgent" : "pending",
-      };
+    if (hasSupabaseConfig) {
+      try {
+        const supabase = createAdminClient();
 
-      const { data: quote, error: dbError } = await supabase
-        .from("quotes")
-        .insert(quoteData as never)
-        .select("reference_number")
-        .single();
+        const quoteData: QuoteInsert = {
+          // Contact info
+          contact_name: body.fullName,
+          company_name: body.companyName,
+          email: body.email || null,
+          phone: body.phone,
+          // Container details
+          container_number: body.containerNumber || null,
+          container_type: body.containerType || "40ft",
+          pickup_terminal: body.terminal || null,
+          // Delivery
+          delivery_zip: body.deliveryZip,
+          delivery_type: body.deliveryType || null,
+          appointment_required: body.appointmentRequired || false,
+          // Service details
+          service_type: body.moveType || "import",
+          lfd: body.lfd || null,
+          availability_date: body.availabilityDate || null,
+          special_instructions:
+            specialInstructions.length > 0
+              ? specialInstructions.join("\n")
+              : null,
+          // Lead qualification (new fields)
+          port: body.port || "la",
+          request_type: body.requestType || "standard",
+          time_sensitive: body.timeSensitive || false,
+          lead_score: leadScore,
+          is_urgent: isUrgent,
+          // Status
+          status: isUrgent ? "urgent" : "pending",
+        };
 
-      if (dbError) {
-        console.error("Database error:", dbError);
+        const { data: quote, error: dbError } = await supabase
+          .from("quotes")
+          .insert(quoteData as never)
+          .select("reference_number")
+          .single();
+
+        if (dbError) {
+          console.error("Database error inserting quote:", {
+            code: dbError.code,
+            message: dbError.message,
+            details: dbError.details,
+            hint: dbError.hint,
+          });
+          // Continue with email even if DB fails
+        } else if (quote) {
+          referenceNumber =
+            (quote as { reference_number: string }).reference_number || null;
+          console.log("Quote saved to database:", referenceNumber);
+        }
+      } catch (dbException) {
+        console.error("Exception during database insert:", dbException);
         // Continue with email even if DB fails
-      } else if (quote) {
-        referenceNumber =
-          (quote as { reference_number: string }).reference_number || null;
       }
+    } else {
+      console.warn("Database save skipped - missing SUPABASE_SERVICE_ROLE_KEY or Supabase not configured");
     }
 
     // Build email body with lead scoring info

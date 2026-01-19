@@ -399,7 +399,7 @@ export interface Database {
       invitations: {
         Row: {
           id: string;
-          organization_id: string;
+          organization_id: string | null; // Nullable for platform admin invites
           email: string;
           role: "admin" | "member";
           token: string;
@@ -409,10 +409,11 @@ export interface Database {
           expires_at: string;
           created_at: string;
           accepted_at: string | null;
+          platform_role: "super_admin" | "user" | null; // For platform admin invites
         };
         Insert: {
           id?: string;
-          organization_id: string;
+          organization_id?: string | null; // Optional for platform admin invites
           email: string;
           role?: "admin" | "member";
           token?: string;
@@ -422,10 +423,11 @@ export interface Database {
           expires_at?: string;
           created_at?: string;
           accepted_at?: string | null;
+          platform_role?: "super_admin" | "user" | null;
         };
         Update: {
           id?: string;
-          organization_id?: string;
+          organization_id?: string | null;
           email?: string;
           role?: "admin" | "member";
           token?: string;
@@ -435,6 +437,7 @@ export interface Database {
           expires_at?: string;
           created_at?: string;
           accepted_at?: string | null;
+          platform_role?: "super_admin" | "user" | null;
         };
       };
     };
