@@ -62,7 +62,7 @@ export function PhoneBanner() {
           <div className="bg-primary text-primary-foreground shadow-lg">
             <div className="flex items-center justify-between px-4 py-3">
               <a
-                href="tel:+13109999999"
+                href="tel:+18885330302"
                 className="flex items-center gap-3 flex-1"
                 onClick={() => {
                   // Track click event for analytics
@@ -79,7 +79,7 @@ export function PhoneBanner() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Call for Quick Quote</p>
-                  <p className="text-lg font-bold">(310) 999-9999</p>
+                  <p className="text-lg font-bold">(888) 533-0302</p>
                 </div>
               </a>
               <button

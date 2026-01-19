@@ -51,11 +51,11 @@ export function CTASection() {
               {/* Contact Info */}
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
                 <Link
-                  href="tel:+13105551234"
+                  href="tel:+18885330302"
                   className="flex items-center gap-2 hover:text-foreground transition-colors"
                 >
                   <Phone className="h-4 w-4" />
-                  (310) 555-1234
+                  (888) 533-0302
                 </Link>
                 <span className="hidden sm:block text-border">|</span>
                 <Link

@@ -190,11 +190,11 @@ export function ThankYouClient() {
             {/* Urgent Call CTA */}
             {isPriorityRequest && (
               <a
-                href="tel:+13109551234"
+                href="tel:+18885330302"
                 className="flex items-center justify-center gap-3 w-full py-4 px-4 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors"
               >
                 <Phone className="h-5 w-5" />
-                Can&apos;t Wait? Call (310) 955-1234
+                Can&apos;t Wait? Call (888) 533-0302
               </a>
             )}
 
@@ -239,11 +239,11 @@ export function ThankYouClient() {
                   Need faster help? Give us a call.
                 </p>
                 <a
-                  href="tel:+13109551234"
+                  href="tel:+18885330302"
                   className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border-2 border-green-500/30 text-green-700 dark:text-green-400 font-semibold hover:bg-green-500/10 transition-colors"
                 >
                   <Phone className="h-4 w-4" />
-                  (310) 955-1234
+                  (888) 533-0302
                 </a>
               </div>
             )}

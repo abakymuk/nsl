@@ -52,11 +52,11 @@ export function Footer() {
             {/* Contact Info */}
             <div className="mt-6 space-y-3">
               <Link
-                href="tel:+13105551234"
+                href="tel:+18885330302"
                 className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Phone className="h-4 w-4 text-primary" />
-                (310) 555-1234
+                (888) 533-0302
               </Link>
               <Link
                 href="mailto:info@newstreamlogistics.com"

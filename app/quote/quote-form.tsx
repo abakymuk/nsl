@@ -189,11 +189,11 @@ export default function QuoteForm() {
           className="mb-6 lg:hidden"
         >
           <a
-            href="tel:+13109551234"
+            href="tel:+18885330302"
             className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl bg-green-500/10 border-2 border-green-500/30 text-green-700 dark:text-green-400 font-semibold hover:bg-green-500/20 transition-colors"
           >
             <PhoneCall className="h-5 w-5" />
-            Urgent? Call (310) 955-1234
+            Urgent? Call (888) 533-0302
           </a>
         </motion.div>
 
@@ -928,10 +928,10 @@ export default function QuoteForm() {
           <p className="text-sm text-muted-foreground">
             Need immediate help?{" "}
             <a
-              href="tel:+13109551234"
+              href="tel:+18885330302"
               className="text-green-600 dark:text-green-400 font-semibold hover:underline"
             >
-              Call (310) 955-1234
+              Call (888) 533-0302
             </a>
           </p>
         </motion.div>

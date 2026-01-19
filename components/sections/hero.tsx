@@ -102,11 +102,11 @@ export function HeroSection() {
             className="mb-8"
           >
             <Link
-              href="tel:+13105551234"
+              href="tel:+18885330302"
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-2 text-sm font-medium text-white/80 hover:text-white hover:border-white/40 hover:bg-white/15 transition-all"
             >
               <Phone className="h-4 w-4 text-primary" />
-              <span>Call (310) 555-1234</span>
+              <span>Call (888) 533-0302</span>
               <span className="text-white/40">·</span>
               <span>Mon-Fri 6AM-6PM PST</span>
             </Link>

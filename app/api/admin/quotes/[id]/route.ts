@@ -123,7 +123,7 @@ QUOTED PRICE: $${price.toLocaleString()}
 Valid Until: ${validUntil}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-To accept this quote, please reply to this email or call us at (310) 555-1234.
+To accept this quote, please reply to this email or call us at (888) 533-0302.
 
 You can also track your quote status anytime at:
 ${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/track?number=${currentQuote.container_number}
@@ -132,7 +132,7 @@ Thank you for choosing New Stream Logistics!
 
 Best regards,
 New Stream Logistics Team
-(310) 555-1234
+(888) 533-0302
 quotes@newstreamlogistics.com
           `.trim(),
         });

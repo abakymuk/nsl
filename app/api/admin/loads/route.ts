@@ -167,7 +167,7 @@ Thank you for choosing New Stream Logistics!
 
 Best regards,
 New Stream Logistics Team
-(310) 555-1234
+(888) 533-0302
           `.trim(),
         });
       } catch (emailError) {

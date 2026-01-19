@@ -44,11 +44,11 @@ export default function NotFound() {
           <p className="text-sm text-muted-foreground">
             Need immediate help?{" "}
             <Link
-              href="tel:+13105551234"
+              href="tel:+18885330302"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
             >
               <Phone className="h-3 w-3" />
-              (310) 555-1234
+              (888) 533-0302
             </Link>
           </p>
         </div>

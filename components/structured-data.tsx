@@ -7,7 +7,7 @@ export function LocalBusinessSchema() {
     description:
       "Reliable LA/LB Drayage — Without Guesswork. Clear pricing. Real tracking. Straightforward communication.",
     url: "https://newstreamlogistics.com",
-    telephone: "+1-310-555-1234",
+    telephone: "+1-888-533-0302",
     email: "info@newstreamlogistics.com",
     address: {
       "@type": "PostalAddress",
