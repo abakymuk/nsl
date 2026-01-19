@@ -108,7 +108,7 @@ export function HeroSection() {
               <Phone className="h-4 w-4 text-primary" />
               <span>Call (888) 533-0302</span>
               <span className="text-white/40">·</span>
-              <span>Mon-Fri 6AM-6PM PST</span>
+              <span>Mon-Fri 7AM-5PM PST</span>
             </Link>
           </motion.div>
 

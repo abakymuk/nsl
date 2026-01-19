@@ -850,7 +850,7 @@ export default function QuoteForm() {
                   {/* Trust anchor */}
                   <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center">
                     <p className="text-sm text-green-700 dark:text-green-400 font-medium">
-                      A real dispatcher reviews every request. If urgent, we usually respond within 15-30 minutes during business hours (Mon-Fri 6am-6pm PT).
+                      A real dispatcher reviews every request. If urgent, we usually respond within 15-30 minutes during business hours (Mon-Fri 7am-5pm PT).
                     </p>
                   </div>
 

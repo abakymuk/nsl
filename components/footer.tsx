@@ -150,9 +150,8 @@ export function Footer() {
             <div className="mt-6 rounded-xl bg-primary/5 border border-primary/10 p-4">
               <p className="text-xs font-medium text-foreground mb-2">Business Hours</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p>Mon - Fri: 6:00 AM - 6:00 PM PST</p>
-                <p>Saturday: 8:00 AM - 2:00 PM PST</p>
-                <p>Sunday: Closed</p>
+                <p>Mon - Fri: 7:00 AM - 5:00 PM PST</p>
+                <p>Sat - Sun: Closed</p>
               </div>
             </div>
           </div>

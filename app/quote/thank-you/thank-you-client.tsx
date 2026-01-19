@@ -182,8 +182,8 @@ export function ThankYouClient() {
                 }`}
               >
                 {isPriorityRequest
-                  ? "During business hours (Mon-Fri 6am-6pm PT). For after-hours emergencies, call us directly."
-                  : "During business hours (Mon-Fri 6am-6pm PT)."}
+                  ? "During business hours (Mon-Fri 7am-5pm PT). For after-hours emergencies, call us directly."
+                  : "During business hours (Mon-Fri 7am-5pm PT)."}
               </p>
             </div>
 
