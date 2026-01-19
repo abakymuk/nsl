@@ -10,7 +10,6 @@ import {
   Container,
   CalendarClock,
   Truck,
-  ImageIcon,
 } from "lucide-react";
 import { PhotoGallery, type GalleryImage } from "@/components/ui/photo-gallery";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
@@ -110,29 +109,18 @@ export function YardSection() {
         </motion.div>
 
         {/* Photo Gallery or Placeholder */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          viewport={{ once: true }}
-          className="mb-16"
-        >
-          {HAS_YARD_PHOTOS ? (
+        {/* Photo gallery hidden until real photos ready */}
+        {HAS_YARD_PHOTOS && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="mb-16"
+          >
             <PhotoGallery images={yardImages} columns={4} />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="aspect-[4/3] rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center text-muted-foreground"
-                >
-                  <ImageIcon className="h-8 w-8 mb-2" />
-                  <span className="text-xs">Photo {i}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Specs Grid */}
         <motion.div

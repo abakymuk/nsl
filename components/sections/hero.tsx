@@ -169,13 +169,7 @@ export function HeroSection() {
               </Link>
             </ShimmerButton>
 
-            <Link
-              href="#yard"
-              className="h-12 px-8 inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-sm text-base font-medium text-white hover:bg-white/20 hover:border-white/40 transition-colors"
-            >
-              <Warehouse className="h-4 w-4 mr-2" />
-              See Our Yard
-            </Link>
+{/* Yard button hidden until photos ready */}
           </motion.div>
 
           {/* Stats */}
