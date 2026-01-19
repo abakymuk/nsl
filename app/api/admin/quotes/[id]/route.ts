@@ -133,7 +133,7 @@ Thank you for choosing New Stream Logistics!
 Best regards,
 New Stream Logistics Team
 (888) 533-0302
-quotes@newstreamlogistics.com
+info@newstreamlogistics.com
           `.trim(),
         });
         console.log(`Quote email sent to ${currentQuote.email}`);

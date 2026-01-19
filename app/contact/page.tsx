@@ -167,14 +167,6 @@ export default function ContactPage() {
                       info@newstreamlogistics.com
                     </a>
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    <a
-                      href="mailto:quotes@newstreamlogistics.com"
-                      className="text-primary hover:underline"
-                    >
-                      quotes@newstreamlogistics.com
-                    </a>
-                  </p>
                 </div>
               </div>
 

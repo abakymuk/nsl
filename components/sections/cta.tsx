@@ -59,11 +59,11 @@ export function CTASection() {
                 </Link>
                 <span className="hidden sm:block text-border">|</span>
                 <Link
-                  href="mailto:quotes@newstreamlogistics.com"
+                  href="mailto:info@newstreamlogistics.com"
                   className="flex items-center gap-2 hover:text-foreground transition-colors"
                 >
                   <Mail className="h-4 w-4" />
-                  quotes@newstreamlogistics.com
+                  info@newstreamlogistics.com
                 </Link>
               </div>
             </div>
