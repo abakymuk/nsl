@@ -216,7 +216,8 @@ Submitted at: ${new Date().toISOString()}
     });
 
     // Send Slack notification for all quotes
-    if (process.env.SLACK_WEBHOOK_URL) {
+    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (slackWebhookUrl) {
       try {
         const slackBlocks = [
           {
@@ -234,22 +235,27 @@ Submitted at: ${new Date().toISOString()}
               { type: "mrkdwn", text: `*Lead Score:*\n${leadScore} ${isUrgent ? "🔥" : ""}` },
               { type: "mrkdwn", text: `*Company:*\n${body.companyName}` },
               { type: "mrkdwn", text: `*Contact:*\n${body.fullName}` },
-              { type: "mrkdwn", text: `*Phone:*\n<tel:${body.phone}|${body.phone}>` },
-              { type: "mrkdwn", text: `*Request Type:*\n${requestTypeLabel}` },
             ],
           },
           {
             type: "section",
             fields: [
+              { type: "mrkdwn", text: `*Phone:*\n${body.phone}` },
+              { type: "mrkdwn", text: `*Request Type:*\n${requestTypeLabel}` },
               { type: "mrkdwn", text: `*Port:*\n${body.port === "la" ? "Los Angeles" : "Long Beach"}` },
               { type: "mrkdwn", text: `*Container:*\n${body.containerNumber || "TBD"}` },
+            ],
+          },
+          {
+            type: "section",
+            fields: [
               { type: "mrkdwn", text: `*Terminal:*\n${body.terminal || "TBD"}` },
               { type: "mrkdwn", text: `*Delivery ZIP:*\n${body.deliveryZip}` },
             ],
           },
         ];
 
-        // Add LFD warning if present and soon
+        // Add LFD warning if present
         if (body.lfd) {
           slackBlocks.push({
             type: "section",
@@ -271,30 +277,21 @@ Submitted at: ${new Date().toISOString()}
           } as never);
         }
 
-        // Add call button for urgent
-        if (isUrgent) {
-          slackBlocks.push({
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: { type: "plain_text", text: `📞 Call ${body.phone}`, emoji: true },
-                url: `tel:${body.phone}`,
-                style: "danger",
-              },
-            ],
-          } as never);
-        }
-
-        await fetch(process.env.SLACK_WEBHOOK_URL, {
+        const slackResponse = await fetch(slackWebhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ blocks: slackBlocks }),
         });
+
+        if (!slackResponse.ok) {
+          const errorText = await slackResponse.text();
+          console.error("Slack webhook error:", slackResponse.status, errorText);
+        }
       } catch (slackError) {
         console.error("Slack notification failed:", slackError);
-        // Don't fail the request if Slack fails
       }
+    } else {
+      console.log("Slack webhook URL not configured, skipping notification");
     }
 
     return NextResponse.json({
