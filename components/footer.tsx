@@ -108,10 +108,10 @@ export function Footer() {
             {/* Credentials */}
             <div className="mt-6 space-y-2">
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">USDOT</span> #1234567
+                <span className="font-medium text-foreground">USDOT</span> #4403165
               </p>
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">MC</span> #123456
+                <span className="font-medium text-foreground">MC</span> #1728721
               </p>
               <p className="text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">SCAC</span> NSLG

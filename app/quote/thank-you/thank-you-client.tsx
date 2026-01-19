@@ -277,7 +277,7 @@ export function ThankYouClient() {
             <p className="text-xs text-center text-muted-foreground pt-4 border-t">
               New Stream Logistics - LA/LB Port Drayage Specialists
               <br />
-              USDOT #4237088 | MC #1629596
+              USDOT #4403165 | MC #1728721
             </p>
           </CardContent>
         </Card>

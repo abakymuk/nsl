@@ -9,14 +9,14 @@ const credentials = [
   {
     icon: Shield,
     title: "USDOT",
-    value: "#1234567",
+    value: "#4403165",
     description: "Licensed & Registered",
     verifyUrl: "https://safer.fmcsa.dot.gov/",
   },
   {
     icon: FileCheck,
     title: "MC Number",
-    value: "MC-123456",
+    value: "MC-1728721",
     description: "Motor Carrier Authority",
     verifyUrl: "https://safer.fmcsa.dot.gov/",
   },
