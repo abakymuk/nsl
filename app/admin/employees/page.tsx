@@ -37,7 +37,7 @@ import {
   BarChart3,
   RefreshCw,
 } from "lucide-react";
-import { EMPLOYEE_MODULES, type EmployeeModule } from "@/lib/auth";
+import { EMPLOYEE_MODULES, type EmployeeModule } from "@/lib/auth-types";
 
 interface Employee {
   id: string;

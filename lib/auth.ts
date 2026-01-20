@@ -7,41 +7,22 @@ import type {
   OrgRole,
 } from "@/types/database";
 
-// =====================================================
-// Employee Module Permissions
-// =====================================================
+// Import and re-export types that can be used in client components
+import {
+  EMPLOYEE_MODULES,
+  ALL_ADMIN_MODULES,
+  type EmployeeModule,
+  type AdminModule,
+  type Employee,
+} from "@/lib/auth-types";
 
-// Modules that can be assigned to employees
-export const EMPLOYEE_MODULES = [
-  "dashboard",
-  "quotes",
-  "loads",
-  "customers",
-  "analytics",
-  "sync",
-] as const;
-
-// All admin modules (includes super admin only)
-export const ALL_ADMIN_MODULES = [
-  ...EMPLOYEE_MODULES,
-  "users",
-  "organizations",
-  "settings",
-  "employees",
-] as const;
-
-export type EmployeeModule = (typeof EMPLOYEE_MODULES)[number];
-export type AdminModule = (typeof ALL_ADMIN_MODULES)[number];
-
-export interface Employee {
-  id: string;
-  user_id: string;
-  permissions: EmployeeModule[];
-  is_active: boolean;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export {
+  EMPLOYEE_MODULES,
+  ALL_ADMIN_MODULES,
+  type EmployeeModule,
+  type AdminModule,
+  type Employee,
+};
 
 // Use untyped client for auth operations since the new tables
 // (profiles, organizations, organization_members) may not be in the
