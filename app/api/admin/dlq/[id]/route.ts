@@ -4,14 +4,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth";
+import { hasModuleAccess } from "@/lib/auth";
 import { removeFromDeadLetterQueue } from "@/lib/webhook-dlq";
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isSuperAdmin())) {
+  if (!(await hasModuleAccess("sync"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

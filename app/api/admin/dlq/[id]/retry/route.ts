@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { isSuperAdmin } from "@/lib/auth";
+import { hasModuleAccess } from "@/lib/auth";
 import { getDeadLetterItems, updateRetryAttempt } from "@/lib/webhook-dlq";
 import { mapPortProStatus, WebhookPayload } from "@/lib/portpro";
 
@@ -18,7 +18,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isSuperAdmin())) {
+  if (!(await hasModuleAccess("sync"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

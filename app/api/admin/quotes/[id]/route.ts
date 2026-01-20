@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
-import { isSuperAdmin } from "@/lib/auth";
+import { hasModuleAccess } from "@/lib/auth";
 import { Resend } from "resend";
 
 const supabase = createUntypedAdminClient();
@@ -21,7 +21,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await isSuperAdmin())) {
+    if (!(await hasModuleAccess("quotes"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -190,7 +190,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await isSuperAdmin())) {
+    if (!(await hasModuleAccess("quotes"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -7,6 +7,42 @@ import type {
   OrgRole,
 } from "@/types/database";
 
+// =====================================================
+// Employee Module Permissions
+// =====================================================
+
+// Modules that can be assigned to employees
+export const EMPLOYEE_MODULES = [
+  "dashboard",
+  "quotes",
+  "loads",
+  "customers",
+  "analytics",
+  "sync",
+] as const;
+
+// All admin modules (includes super admin only)
+export const ALL_ADMIN_MODULES = [
+  ...EMPLOYEE_MODULES,
+  "users",
+  "organizations",
+  "settings",
+  "employees",
+] as const;
+
+export type EmployeeModule = (typeof EMPLOYEE_MODULES)[number];
+export type AdminModule = (typeof ALL_ADMIN_MODULES)[number];
+
+export interface Employee {
+  id: string;
+  user_id: string;
+  permissions: EmployeeModule[];
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Use untyped client for auth operations since the new tables
 // (profiles, organizations, organization_members) may not be in the
 // auto-generated types yet
@@ -489,6 +525,142 @@ export async function addUserToOrganization(params: {
 }
 
 // =====================================================
+// Employee Functions
+// =====================================================
+
+/**
+ * Get employee record by user ID
+ */
+export async function getEmployee(userId: string): Promise<Employee | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as Employee;
+}
+
+/**
+ * Check if a user is an employee (has limited admin access)
+ * If no userId provided, checks the current authenticated user
+ */
+export async function isEmployee(userId?: string): Promise<boolean> {
+  let uid = userId;
+
+  if (!uid) {
+    const user = await getUser();
+    if (!user) return false;
+    uid = user.id;
+  }
+
+  const employee = await getEmployee(uid);
+  return !!employee;
+}
+
+/**
+ * Check if user has access to a specific admin module
+ * Super admins have access to everything
+ * Employees have access based on their permissions array
+ */
+export async function hasModuleAccess(
+  module: AdminModule,
+  userId?: string
+): Promise<boolean> {
+  let uid = userId;
+
+  if (!uid) {
+    const user = await getUser();
+    if (!user) return false;
+    uid = user.id;
+  }
+
+  // Super admins have access to everything
+  if (await isSuperAdmin(uid)) {
+    return true;
+  }
+
+  // Super admin only modules
+  const superAdminOnlyModules: AdminModule[] = [
+    "users",
+    "organizations",
+    "settings",
+    "employees",
+  ];
+  if (superAdminOnlyModules.includes(module)) {
+    return false;
+  }
+
+  // Check employee permissions
+  const employee = await getEmployee(uid);
+  if (!employee) {
+    return false;
+  }
+
+  return employee.permissions.includes(module as EmployeeModule);
+}
+
+/**
+ * Get all modules a user has access to
+ * Super admins get all modules, employees get their assigned permissions
+ */
+export async function getEmployeePermissions(
+  userId?: string
+): Promise<AdminModule[]> {
+  let uid = userId;
+
+  if (!uid) {
+    const user = await getUser();
+    if (!user) return [];
+    uid = user.id;
+  }
+
+  // Super admins have access to all modules
+  if (await isSuperAdmin(uid)) {
+    return [...ALL_ADMIN_MODULES];
+  }
+
+  // Check employee permissions
+  const employee = await getEmployee(uid);
+  if (!employee) {
+    return [];
+  }
+
+  // Employees always have dashboard access plus their assigned modules
+  const permissions = new Set<AdminModule>(employee.permissions);
+  permissions.add("dashboard"); // Always include dashboard
+
+  return Array.from(permissions);
+}
+
+/**
+ * Check if user has any admin access (super admin or employee)
+ */
+export async function hasAnyAdminAccess(userId?: string): Promise<boolean> {
+  let uid = userId;
+
+  if (!uid) {
+    const user = await getUser();
+    if (!user) return false;
+    uid = user.id;
+  }
+
+  // Check super admin first
+  if (await isSuperAdmin(uid)) {
+    return true;
+  }
+
+  // Check employee
+  return isEmployee(uid);
+}
+
+// =====================================================
 // Routing Helpers
 // =====================================================
 
@@ -504,6 +676,12 @@ export async function getPostLoginRedirect(userId: string): Promise<string> {
 
   // Super admins go to admin panel
   if (permissions.isSuperAdmin) {
+    return "/admin";
+  }
+
+  // Employees go to admin panel
+  const employee = await getEmployee(userId);
+  if (employee) {
     return "/admin";
   }
 

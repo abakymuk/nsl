@@ -4,7 +4,6 @@ import { StatsCard } from "@/components/dashboard/stats-card";
 import {
   FileText,
   Truck,
-  DollarSign,
   Clock,
   CheckCircle2,
 } from "lucide-react";
@@ -295,34 +294,6 @@ export default function AdminDashboard() {
           <Suspense fallback={<ListSkeleton />}>
             <ActiveShipmentsSection />
           </Suspense>
-        </div>
-      </div>
-
-      {/* Quick Actions - renders immediately (no data fetching) */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <h2 className="font-semibold mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/admin/quotes?status=pending"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-warning bg-warning/10 text-warning hover:bg-warning/20 transition-colors text-sm font-medium"
-          >
-            <Clock className="h-4 w-4" />
-            Review Pending Quotes
-          </Link>
-          <Link
-            href="/admin/loads/new"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
-          >
-            <Truck className="h-4 w-4" />
-            Create New Load
-          </Link>
-          <Link
-            href="/admin/analytics"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-sm font-medium"
-          >
-            <DollarSign className="h-4 w-4" />
-            View Analytics
-          </Link>
         </div>
       </div>
     </div>

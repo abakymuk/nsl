@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth";
+import { hasModuleAccess } from "@/lib/auth";
 import {
   getDeadLetterItems,
   getDeadLetterStats,
@@ -13,7 +13,7 @@ import {
 
 // GET - List all DLQ items
 export async function GET() {
-  if (!(await isSuperAdmin())) {
+  if (!(await hasModuleAccess("sync"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -35,7 +35,7 @@ export async function GET() {
 
 // DELETE - Remove all items from DLQ (clear)
 export async function DELETE(request: NextRequest) {
-  if (!(await isSuperAdmin())) {
+  if (!(await hasModuleAccess("sync"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

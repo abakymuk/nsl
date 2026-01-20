@@ -4,12 +4,12 @@
  */
 
 import { NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth";
+import { hasModuleAccess } from "@/lib/auth";
 import { getSyncMetrics } from "@/lib/sync-monitoring";
 
 export async function GET() {
   // Check admin authorization
-  if (!(await isSuperAdmin())) {
+  if (!(await hasModuleAccess("sync"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

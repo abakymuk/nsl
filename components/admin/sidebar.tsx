@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,14 +20,19 @@ import {
   X,
   Building2,
   UserCog,
+  UserPlus,
+  type LucideIcon,
 } from "lucide-react";
+import type { AdminModule } from "@/lib/auth";
 
-// Sidebar context for sharing collapsed state
+// Sidebar context for sharing collapsed state and permissions
 interface SidebarContextType {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  permissions: AdminModule[];
+  isSuperAdmin: boolean;
 }
 
 const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -40,65 +45,100 @@ export function useSidebar() {
   return context;
 }
 
-interface SidebarProviderProps {
+export interface SidebarProviderProps {
   children: React.ReactNode;
   user: {
     email: string;
     name?: string;
   };
+  permissions?: AdminModule[];
+  isSuperAdmin?: boolean;
 }
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  module: AdminModule;
+}
+
+// Map nav items to their corresponding modules
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/admin",
     icon: LayoutDashboard,
+    module: "dashboard",
   },
   {
     title: "Quotes",
     href: "/admin/quotes",
     icon: FileText,
+    module: "quotes",
   },
   {
     title: "Loads",
     href: "/admin/loads",
     icon: Truck,
+    module: "loads",
   },
   {
     title: "Customers",
     href: "/admin/customers",
     icon: Users,
+    module: "customers",
   },
   {
     title: "Analytics",
     href: "/admin/analytics",
     icon: BarChart3,
+    module: "analytics",
   },
   {
     title: "PortPro Sync",
     href: "/admin/sync",
     icon: RefreshCw,
+    module: "sync",
+  },
+  {
+    title: "Employees",
+    href: "/admin/employees",
+    icon: UserPlus,
+    module: "employees",
   },
   {
     title: "Users",
     href: "/admin/users",
     icon: UserCog,
+    module: "users",
   },
   {
     title: "Organizations",
     href: "/admin/organizations",
     icon: Building2,
+    module: "organizations",
   },
   {
     title: "Settings",
     href: "/admin/settings",
     icon: Settings,
+    module: "settings",
   },
 ];
 
-export function SidebarProvider({ children, user }: SidebarProviderProps) {
+export function SidebarProvider({
+  children,
+  user,
+  permissions = [],
+  isSuperAdmin = false,
+}: SidebarProviderProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Filter nav items based on permissions
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter((item) => permissions.includes(item.module));
+  }, [permissions]);
 
   // Load collapsed state from localStorage
   useEffect(() => {
@@ -120,10 +160,19 @@ export function SidebarProvider({ children, user }: SidebarProviderProps) {
   }, [pathname]);
 
   return (
-    <SidebarContext.Provider value={{ collapsed, setCollapsed, mobileOpen, setMobileOpen }}>
+    <SidebarContext.Provider
+      value={{
+        collapsed,
+        setCollapsed,
+        mobileOpen,
+        setMobileOpen,
+        permissions,
+        isSuperAdmin,
+      }}
+    >
       <div className="min-h-screen bg-muted/30">
         {/* Desktop Sidebar */}
-        <DesktopSidebar user={user} />
+        <DesktopSidebar user={user} navItems={filteredNavItems} />
 
         {/* Mobile Sidebar Overlay */}
         {mobileOpen && (
@@ -134,7 +183,7 @@ export function SidebarProvider({ children, user }: SidebarProviderProps) {
         )}
 
         {/* Mobile Sidebar */}
-        <MobileSidebar user={user} />
+        <MobileSidebar user={user} navItems={filteredNavItems} />
 
         {/* Main Content */}
         <div
@@ -147,16 +196,20 @@ export function SidebarProvider({ children, user }: SidebarProviderProps) {
           <MobileHeader user={user} />
 
           {/* Page Content */}
-          <main className="py-6 px-4 sm:px-6 lg:px-8">
-            {children}
-          </main>
+          <main className="py-6 px-4 sm:px-6 lg:px-8">{children}</main>
         </div>
       </div>
     </SidebarContext.Provider>
   );
 }
 
-function DesktopSidebar({ user }: { user: { email: string; name?: string } }) {
+function DesktopSidebar({
+  user,
+  navItems,
+}: {
+  user: { email: string; name?: string };
+  navItems: NavItem[];
+}) {
   const pathname = usePathname();
   const { collapsed, setCollapsed } = useSidebar();
 
@@ -301,7 +354,13 @@ function DesktopSidebar({ user }: { user: { email: string; name?: string } }) {
   );
 }
 
-function MobileSidebar({ user }: { user: { email: string; name?: string } }) {
+function MobileSidebar({
+  user,
+  navItems,
+}: {
+  user: { email: string; name?: string };
+  navItems: NavItem[];
+}) {
   const pathname = usePathname();
   const { mobileOpen, setMobileOpen } = useSidebar();
 

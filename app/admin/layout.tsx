@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
-import { isSuperAdmin } from "@/lib/auth";
+import {
+  isSuperAdmin,
+  getEmployeePermissions,
+  type AdminModule,
+} from "@/lib/auth";
 import { SidebarProvider } from "@/components/admin/sidebar";
 
 export default async function AdminLayout({
@@ -14,9 +18,11 @@ export default async function AdminLayout({
     redirect("/sign-in");
   }
 
-  const admin = await isSuperAdmin(user.id);
+  const isAdmin = await isSuperAdmin(user.id);
+  const permissions = await getEmployeePermissions(user.id);
 
-  if (!admin) {
+  // Must be super admin OR have at least one permission (employee)
+  if (!isAdmin && permissions.length === 0) {
     redirect("/dashboard");
   }
 
@@ -26,5 +32,13 @@ export default async function AdminLayout({
     name: user.user_metadata?.full_name || user.user_metadata?.name || undefined,
   };
 
-  return <SidebarProvider user={userData}>{children}</SidebarProvider>;
+  return (
+    <SidebarProvider
+      user={userData}
+      permissions={permissions}
+      isSuperAdmin={isAdmin}
+    >
+      {children}
+    </SidebarProvider>
+  );
 }
