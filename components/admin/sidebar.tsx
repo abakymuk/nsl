@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
     title: "Dashboard",
     href: "/admin",
     icon: LayoutDashboard,
-    module: "dashboard",
+    module: "admin",
   },
   {
     title: "Quotes",

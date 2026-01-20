@@ -613,9 +613,9 @@ export async function getEmployeePermissions(
     return [];
   }
 
-  // Employees always have dashboard access plus their assigned modules
+  // Employees always have admin dashboard access plus their assigned modules
   const permissions = new Set<AdminModule>(employee.permissions);
-  permissions.add("dashboard"); // Always include dashboard
+  permissions.add("admin"); // Always include admin dashboard
 
   return Array.from(permissions);
 }

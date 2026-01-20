@@ -198,6 +198,27 @@ export default function TeamPage() {
     }
   };
 
+  const handleChangeRole = async (memberId: string, newRole: "admin" | "member") => {
+    try {
+      const res = await fetch("/api/organization/members", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, role: newRole }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to update role");
+        return;
+      }
+
+      await loadMembers();
+      setSuccess("Role updated successfully");
+    } catch {
+      setError("Failed to update role");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -362,15 +383,30 @@ export default function TeamPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            member.role === "admin"
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted text-muted-foreground"
-                          }`}
+                        <Select
+                          value={member.role}
+                          onValueChange={(value: "admin" | "member") =>
+                            handleChangeRole(member.id, value)
+                          }
                         >
-                          {member.role}
-                        </span>
+                          <SelectTrigger className="w-[110px] h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="member">
+                              <div className="flex items-center gap-2">
+                                <User className="h-3 w-3" />
+                                Member
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="admin">
+                              <div className="flex items-center gap-2">
+                                <Crown className="h-3 w-3" />
+                                Admin
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         {members.length > 1 && (
                           <Button
                             variant="ghost"

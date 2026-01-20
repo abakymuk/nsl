@@ -3,7 +3,7 @@
  */
 
 export const EMPLOYEE_MODULES = [
-  "dashboard",
+  "admin",
   "quotes",
   "loads",
   "customers",

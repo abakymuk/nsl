@@ -57,7 +57,7 @@ export default function SignInPage() {
     try {
       const res = await fetch("/api/auth/permissions");
       const data = await res.json();
-      const destination = data.isSuperAdmin ? "/admin" : "/dashboard";
+      const destination = (data.isSuperAdmin || data.isPlatformEmployee) ? "/admin" : "/dashboard";
       router.push(destination);
       router.refresh();
     } catch {

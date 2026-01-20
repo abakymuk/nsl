@@ -60,8 +60,8 @@ interface UserProfile {
 
 // Module display info
 const MODULE_INFO: Record<EmployeeModule, { label: string; icon: typeof LayoutDashboard; description: string }> = {
-  dashboard: {
-    label: "Dashboard",
+  admin: {
+    label: "Admin Dashboard",
     icon: LayoutDashboard,
     description: "View admin dashboard stats",
   },
@@ -160,7 +160,7 @@ export default function EmployeesPage() {
   const openCreateDialog = () => {
     setEditingEmployee(null);
     setSelectedUserId("");
-    setSelectedPermissions(["dashboard"]); // Default to dashboard
+    setSelectedPermissions(["admin"]); // Default to admin dashboard
     setDialogOpen(true);
   };
 
@@ -174,8 +174,8 @@ export default function EmployeesPage() {
   const togglePermission = (module: EmployeeModule) => {
     setSelectedPermissions((prev) => {
       if (prev.includes(module)) {
-        // Don't allow removing dashboard
-        if (module === "dashboard") return prev;
+        // Don't allow removing admin dashboard
+        if (module === "admin") return prev;
         return prev.filter((p) => p !== module);
       } else {
         return [...prev, module];
@@ -391,7 +391,7 @@ export default function EmployeesPage() {
                     const info = MODULE_INFO[module];
                     const Icon = info.icon;
                     const isChecked = selectedPermissions.includes(module);
-                    const isDisabled = module === "dashboard"; // Dashboard always required
+                    const isDisabled = module === "admin"; // Admin dashboard always required
 
                     return (
                       <label
