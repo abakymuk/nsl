@@ -33,6 +33,29 @@ export default function ContactThankYouPage() {
               </ul>
             </div>
 
+            {/* Stats */}
+            <div className="flex items-center justify-center gap-4 text-center text-sm py-4 border-t border-b">
+              <div>
+                <p className="text-xl font-bold text-foreground">50+</p>
+                <p className="text-muted-foreground">Yard Capacity</p>
+              </div>
+              <div className="h-8 w-px bg-border" />
+              <div>
+                <p className="text-xl font-bold text-foreground">98%</p>
+                <p className="text-muted-foreground">On-Time Rate</p>
+              </div>
+              <div className="h-8 w-px bg-border" />
+              <div>
+                <p className="text-xl font-bold text-foreground">12+</p>
+                <p className="text-muted-foreground">Terminals</p>
+              </div>
+              <div className="h-8 w-px bg-border" />
+              <div>
+                <p className="text-xl font-bold text-foreground">15</p>
+                <p className="text-muted-foreground">Min Quotes</p>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-4 pt-4 sm:flex-row">
               <Button asChild className="flex-1">
                 <Link href="/quote">Request a Quote</Link>
