@@ -28,8 +28,8 @@ export default function ContactThankYouPage() {
               <h3 className="font-semibold">What happens next?</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• We&apos;ll review your message</li>
-                <li>• A team member will respond within 1–2 business days</li>
-                <li>• For urgent matters, please call us directly</li>
+                <li>• A team member will respond ASAP</li>
+                <li>• For urgent matters, call us at <a href="tel:+18885330302" className="text-primary hover:underline">(888) 533-0302</a></li>
               </ul>
             </div>
 
