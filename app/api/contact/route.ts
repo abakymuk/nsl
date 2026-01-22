@@ -2,9 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { contactFormSchema } from "@/lib/validations/contact";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { sanitizeObject } from "@/lib/sanitize";
 import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import type { ContactInsert } from "@/types/database";
+
+// Simple server-safe sanitization (no jsdom dependency)
+function sanitizeString(input: string): string {
+  return input
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/[<>]/g, "") // Remove any remaining angle brackets
+    .trim();
+}
+
+function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
+  const result = { ...obj };
+  for (const key in result) {
+    const value = result[key];
+    if (typeof value === "string") {
+      (result as Record<string, unknown>)[key] = sanitizeString(value);
+    }
+  }
+  return result;
+}
 
 function getResend(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
