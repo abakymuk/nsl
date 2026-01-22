@@ -116,8 +116,14 @@ export default function QuoteForm() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit quote request");
+        let errorMessage = "Failed to submit quote request";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // Response body is empty or not JSON
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
