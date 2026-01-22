@@ -37,7 +37,7 @@ const credentials = [
   {
     icon: Building2,
     title: "LA/LB Ports",
-    value: "10+",
+    value: "12+",
     description: "Terminals Served",
     verifyUrl: null,
   },
