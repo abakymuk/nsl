@@ -137,7 +137,7 @@ export function HeroSection() {
             <span className="hidden sm:inline text-white/50">•</span>
             <span>24/7 security</span>
             <span className="hidden sm:inline text-white/50">•</span>
-            <span>All 10 terminals</span>
+            <span>12+ terminals</span>
           </motion.div>
 
           {/* Subheadline */}

@@ -17,7 +17,7 @@ const trustItems = [
   {
     icon: Ship,
     label: "All Terminals",
-    value: "10 LA/LB terminals",
+    value: "12+ LA/LB terminals",
   },
   {
     icon: MapPin,
