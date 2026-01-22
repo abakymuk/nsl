@@ -51,7 +51,7 @@ export const testimonials: Testimonial[] = [
   },
   {
     quote: "Instant updates at every stage, complete transparency on charges, no hidden costs. New Stream truly stands out as a reliable logistics partner.",
-    author: "Goksu",
+    author: "Göksu Songur",
     title: "Operations Manager",
     company: "LEX Logistics Inc",
     rating: 5,

@@ -43,7 +43,7 @@ const testimonials = [
   },
   {
     quote: "Instant updates at every stage, complete transparency on charges, no hidden costs. A reliable logistics partner.",
-    author: "Goksu",
+    author: "Göksu Songur",
     title: "Operations Manager",
     company: "LEX Logistics Inc",
   },
