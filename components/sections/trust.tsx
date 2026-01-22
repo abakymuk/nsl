@@ -23,7 +23,7 @@ const credentials = [
   {
     icon: Anchor,
     title: "SCAC Code",
-    value: "NSLG",
+    value: "NFLS",
     description: "Intermodal Certified",
     verifyUrl: null,
   },

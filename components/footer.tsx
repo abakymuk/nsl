@@ -114,7 +114,7 @@ export function Footer() {
                 <span className="font-medium text-foreground">MC</span> #1728721
               </p>
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">SCAC</span> NSLG
+                <span className="font-medium text-foreground">SCAC</span> NFLS
               </p>
             </div>
           </div>
