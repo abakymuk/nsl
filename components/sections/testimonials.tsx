@@ -41,6 +41,12 @@ const testimonials = [
     title: "Operations Lead",
     company: "Transpacific Cargo",
   },
+  {
+    quote: "Instant updates at every stage, complete transparency on charges, no hidden costs. A reliable logistics partner.",
+    author: "Goksu",
+    title: "Operations Manager",
+    company: "LEX Logistics Inc",
+  },
 ];
 
 const firstRow = testimonials.slice(0, testimonials.length / 2);
