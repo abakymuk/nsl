@@ -49,6 +49,13 @@ export const testimonials: Testimonial[] = [
     company: "Transpacific Cargo",
     rating: 5,
   },
+  {
+    quote: "Instant updates at every stage, complete transparency on charges, no hidden costs. New Stream truly stands out as a reliable logistics partner.",
+    author: "Goksu",
+    title: "Operations Manager",
+    company: "LEX Logistics Inc",
+    rating: 5,
+  },
 ];
 
 // Featured testimonial for quote page
