@@ -27,7 +27,7 @@ const terminals = [
 const stats = [
   { value: 50, label: "Yard Capacity", suffix: "+" },
   { value: 98, label: "On-Time Rate", suffix: "%" },
-  { value: 12, label: "Terminals", suffix: "" },
+  { value: 12, label: "Terminals", suffix: "+" },
   { value: 15, label: "Min Quotes", suffix: "" },
 ];
 
