@@ -33,6 +33,65 @@ function getResend(): Resend | null {
   return new Resend(apiKey);
 }
 
+// Send notification to Slack
+async function sendSlackNotification(body: {
+  name: string;
+  email: string;
+  phone?: string | null;
+  company?: string | null;
+  subject?: string | null;
+  message: string;
+}) {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn("SLACK_WEBHOOK_URL is not configured - Slack notification skipped");
+    return;
+  }
+
+  const slackMessage = {
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "📩 New Contact Form Submission",
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Name:*\n${body.name}` },
+          { type: "mrkdwn", text: `*Email:*\n${body.email}` },
+          ...(body.phone ? [{ type: "mrkdwn", text: `*Phone:*\n${body.phone}` }] : []),
+          ...(body.company ? [{ type: "mrkdwn", text: `*Company:*\n${body.company}` }] : []),
+        ],
+      },
+      ...(body.subject
+        ? [{ type: "section", text: { type: "mrkdwn", text: `*Subject:*\n${body.subject}` } }]
+        : []),
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `*Message:*\n${body.message}` },
+      },
+      {
+        type: "context",
+        elements: [{ type: "mrkdwn", text: `Submitted at ${new Date().toLocaleString()}` }],
+      },
+    ],
+  };
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(slackMessage),
+    });
+  } catch (error) {
+    console.error("Failed to send Slack notification:", error);
+  }
+}
+
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204 });
@@ -121,6 +180,9 @@ Submitted at: ${new Date().toISOString()}
         replyTo: body.email,
       });
     }
+
+    // Send Slack notification
+    await sendSlackNotification(body);
 
     return NextResponse.json({
       success: true,
