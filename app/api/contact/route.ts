@@ -14,6 +14,11 @@ function getResend() {
   return new Resend(apiKey);
 }
 
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check rate limit (stricter for contact form)
