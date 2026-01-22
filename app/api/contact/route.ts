@@ -6,10 +6,11 @@ import { sanitizeObject } from "@/lib/sanitize";
 import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import type { ContactInsert } from "@/types/database";
 
-function getResend() {
+function getResend(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured");
+    console.warn("RESEND_API_KEY is not configured - emails will not be sent");
+    return null;
   }
   return new Resend(apiKey);
 }
@@ -91,15 +92,17 @@ Submitted at: ${new Date().toISOString()}
     `.trim();
 
     const resend = getResend();
-    await resend.emails.send({
-      from: emailFrom,
-      to: emailTo,
-      subject: body.subject
-        ? `Contact: ${body.subject}`
-        : `New Contact Form Submission from ${body.name}`,
-      text: emailBody,
-      replyTo: body.email,
-    });
+    if (resend) {
+      await resend.emails.send({
+        from: emailFrom,
+        to: emailTo,
+        subject: body.subject
+          ? `Contact: ${body.subject}`
+          : `New Contact Form Submission from ${body.name}`,
+        text: emailBody,
+        replyTo: body.email,
+      });
+    }
 
     return NextResponse.json({
       success: true,
