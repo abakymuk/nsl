@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUntypedAdminClient } from "@/lib/supabase/server";
+import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 import { Resend } from "resend";
+import { getOrCreateAcceptToken, buildAcceptUrl } from "@/lib/quotes/tokens";
+import { QuoteStatus, PricingBreakdown } from "@/types/database";
 
-const supabase = createUntypedAdminClient();
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Valid status transitions
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ["quoted", "rejected", "cancelled"],
-  quoted: ["accepted", "rejected", "cancelled"],
-  accepted: ["completed", "cancelled"],
+const VALID_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
+  pending: ["in_review", "quoted", "cancelled"],
+  in_review: ["quoted", "cancelled"],
+  quoted: ["accepted", "rejected", "expired", "cancelled"],
+  accepted: ["cancelled"],
   rejected: [],
-  completed: [],
+  expired: [],
   cancelled: [],
 };
 
@@ -27,7 +29,22 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, quoted_price, quote_notes, quote_valid_until } = body;
+    const {
+      status,
+      quoted_price,
+      pricing_breakdown,
+      expires_at,
+      quote_notes,
+    } = body as {
+      status?: QuoteStatus;
+      quoted_price?: number;
+      pricing_breakdown?: PricingBreakdown;
+      expires_at?: string;
+      quote_notes?: string;
+    };
+
+    const supabase = createUntypedAdminClient();
+    const currentUser = await getUser();
 
     // Fetch current quote for validation and email
     const { data: currentQuote, error: fetchError } = await supabase
@@ -40,12 +57,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
     }
 
+    const currentStatus = (currentQuote.lifecycle_status || currentQuote.status) as QuoteStatus;
+
     // Validate status transition
-    if (status && status !== currentQuote.status) {
-      const allowedTransitions = VALID_TRANSITIONS[currentQuote.status] || [];
+    if (status && status !== currentStatus) {
+      const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
       if (!allowedTransitions.includes(status)) {
         return NextResponse.json(
-          { error: `Cannot transition from ${currentQuote.status} to ${status}` },
+          { error: `Cannot transition from ${currentStatus} to ${status}` },
           { status: 400 }
         );
       }
@@ -59,25 +78,31 @@ export async function PATCH(
       }
     }
 
+    const now = new Date().toISOString();
     const updateData: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     };
 
     if (status) {
       updateData.status = status;
+      updateData.lifecycle_status = status;
     }
 
     if (quoted_price !== undefined) {
       updateData.quoted_price = quoted_price;
-      updateData.quoted_at = new Date().toISOString();
+      updateData.quoted_at = now;
+    }
+
+    if (pricing_breakdown !== undefined) {
+      updateData.pricing_breakdown = pricing_breakdown;
+    }
+
+    if (expires_at !== undefined) {
+      updateData.expires_at = expires_at;
     }
 
     if (quote_notes !== undefined) {
       updateData.quote_notes = quote_notes;
-    }
-
-    if (quote_valid_until !== undefined) {
-      updateData.quote_valid_until = quote_valid_until;
     }
 
     const { data, error } = await supabase
@@ -95,19 +120,57 @@ export async function PATCH(
       );
     }
 
-    // Send email notification when quote price is sent
+    // Create audit log entry
+    if (status && status !== currentStatus) {
+      await supabase.from("quote_audit_log").insert({
+        quote_id: id,
+        action: status === "quoted" ? "quoted" : `status_changed_to_${status}`,
+        old_status: currentStatus,
+        new_status: status,
+        actor_id: currentUser?.id || null,
+        actor_type: "admin",
+        metadata: {
+          quoted_price: quoted_price || null,
+          pricing_breakdown: pricing_breakdown || null,
+        },
+      });
+    }
+
+    let acceptUrl: string | null = null;
+
+    // Send email notification when quote is sent
     if (status === "quoted" && currentQuote.email) {
+      // Generate accept token and URL
+      const acceptToken = await getOrCreateAcceptToken(id);
+      if (acceptToken) {
+        acceptUrl = buildAcceptUrl(acceptToken);
+      }
+
       const price = quoted_price || currentQuote.quoted_price;
-      const validUntil = quote_valid_until
-        ? new Date(quote_valid_until).toLocaleDateString()
+      const validUntil = expires_at
+        ? new Date(expires_at).toLocaleDateString()
         : "7 days from now";
 
+      // Build pricing breakdown for email
+      let pricingDetails = "";
+      if (pricing_breakdown?.items) {
+        pricingDetails = pricing_breakdown.items
+          .map((item: PricingBreakdown["items"][0]) => `${item.description}: $${item.amount.toFixed(2)}`)
+          .join("\n");
+        if (pricing_breakdown.fees?.length) {
+          pricingDetails +=
+            "\n" +
+            pricing_breakdown.fees
+              .map((fee: NonNullable<PricingBreakdown["fees"]>[0]) => `${fee.description}: $${fee.amount.toFixed(2)}`)
+              .join("\n");
+        }
+        pricingDetails += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTOTAL: $${pricing_breakdown.total.toFixed(2)}`;
+      } else {
+        pricingDetails = `QUOTED PRICE: $${price?.toLocaleString()}`;
+      }
+
       try {
-        await resend.emails.send({
-          from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
-          to: currentQuote.email,
-          subject: `Quote Ready - ${currentQuote.reference_number} - New Stream Logistics`,
-          text: `
+        const emailText = `
 Hello ${currentQuote.contact_name || "Valued Customer"},
 
 Great news! Your quote request has been processed.
@@ -115,18 +178,19 @@ Great news! Your quote request has been processed.
 QUOTE DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Reference: ${currentQuote.reference_number}
-Container: ${currentQuote.container_number}
-Terminal: ${currentQuote.pickup_terminal}
-Delivery: ${currentQuote.delivery_zip}
+Container: ${currentQuote.container_number || "N/A"}
+Terminal: ${currentQuote.pickup_terminal || currentQuote.pickup_location || "N/A"}
+Delivery: ${currentQuote.delivery_zip || currentQuote.delivery_location || "N/A"}
 
-QUOTED PRICE: $${price.toLocaleString()}
+${pricingDetails}
+
 Valid Until: ${validUntil}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-To accept this quote, please reply to this email or call us at (888) 533-0302.
-
+${acceptUrl ? `ACCEPT OR DECLINE THIS QUOTE:\n${acceptUrl}\n\nOr you can ` : "To accept this quote, "}reply to this email or call us at (888) 533-0302.
+${quote_notes ? `\nNOTES:\n${quote_notes}\n` : ""}
 You can also track your quote status anytime at:
-${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/track?number=${currentQuote.container_number}
+${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/quote/status/${currentQuote.status_token || ""}
 
 Thank you for choosing New Stream Logistics!
 
@@ -134,7 +198,13 @@ Best regards,
 New Stream Logistics Team
 (888) 533-0302
 info@newstreamlogistics.com
-          `.trim(),
+        `.trim();
+
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
+          to: currentQuote.email,
+          subject: `Quote Ready - ${currentQuote.reference_number} - New Stream Logistics`,
+          text: emailText,
         });
         console.log(`Quote email sent to ${currentQuote.email}`);
       } catch (emailError) {
@@ -143,7 +213,7 @@ info@newstreamlogistics.com
       }
     }
 
-    // Send email notification when quote is accepted
+    // Send email notification when quote is accepted (manual)
     if (status === "accepted" && currentQuote.email) {
       try {
         await resend.emails.send({
@@ -156,13 +226,13 @@ Hello ${currentQuote.contact_name || "Valued Customer"},
 Your quote has been marked as accepted!
 
 Reference: ${currentQuote.reference_number}
-Container: ${currentQuote.container_number}
+Container: ${currentQuote.container_number || "N/A"}
 Price: $${currentQuote.quoted_price?.toLocaleString() || "N/A"}
 
 Our team will now begin processing your load. You'll receive tracking information shortly.
 
 Track your load status at:
-${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/track?number=${currentQuote.container_number}
+${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/track?number=${currentQuote.container_number || currentQuote.reference_number}
 
 Thank you for your business!
 
@@ -175,7 +245,11 @@ New Stream Logistics Team
       }
     }
 
-    return NextResponse.json({ success: true, quote: data });
+    return NextResponse.json({
+      success: true,
+      quote: data,
+      acceptUrl,
+    });
   } catch (error) {
     console.error("Error in PATCH /api/admin/quotes/[id]:", error);
     return NextResponse.json(
@@ -195,10 +269,20 @@ export async function GET(
     }
 
     const { id } = await params;
+    const supabase = createUntypedAdminClient();
 
     const { data, error } = await supabase
       .from("quotes")
-      .select("*")
+      .select(
+        `
+        *,
+        assignee:profiles!quotes_assignee_id_fkey (
+          id,
+          full_name,
+          email
+        )
+      `
+      )
       .eq("id", id)
       .single();
 

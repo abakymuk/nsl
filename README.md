@@ -1,116 +1,119 @@
-# New Stream Logistics - Trust-First Drayage Website V1
+# New Stream Logistics
 
-Trust-First Drayage Website (Foundational Version) built with Next.js 16, React 19, Tailwind CSS 4, and shadcn UI.
-
-## Overview
-
-This is a V1 website for New Stream Logistics, a drayage company serving LA/LB ports. The site focuses on building trust through clear communication, transparency, and straightforward processes—no flashy promises, just solid operations.
-
-## Features
-
-- **Hero Section** with clear value proposition and CTAs
-- **Quote Request Form** - Simple form that sends emails via Resend API
-- **Container Tracking** - Placeholder tracking page (V1)
-- **Services Page** - Detailed information about Import Drayage, Pre-Pull, Local Delivery, and Problem Containers
-- **Process Page** - Transparent explanation of how we work
-- **Compliance Page** - Insurance, UIIA, ports, and safety information
-- **About Page** - Company mission and values
-- **Contact Page** - Contact form and company information
+LA/LB port drayage website with customer portal, admin dashboard, and PortPro TMS integration.
 
 ## Tech Stack
 
-- **Framework**: Next.js 16.1.1 (App Router)
-- **React**: 19.2.3
-- **Styling**: Tailwind CSS 4
-- **UI Components**: shadcn/ui
+- **Framework**: Next.js 16 (App Router)
+- **React**: 19
+- **Database**: Supabase (PostgreSQL + Auth)
+- **Styling**: Tailwind CSS 4, shadcn/ui, Aceternity UI, Magic UI
+- **Animations**: framer-motion
 - **Email**: Resend
-- **Language**: TypeScript
+- **Forms**: react-hook-form + Zod
+- **External API**: PortPro TMS
 - **Package Manager**: pnpm
+
+## Features
+
+### Public Website
+- Hero with stats and trust indicators
+- Quote request form (15 min response)
+- Container tracking
+- Services, Process, Compliance pages
+- Contact form with Slack notifications
+
+### Customer Portal (`/dashboard`)
+- View quotes and loads
+- Track shipments in real-time
+- Organization/team management
+
+### Admin Panel (`/admin`)
+- Manage quotes and loads
+- Customer management
+- PortPro TMS sync
+- Analytics dashboard
+- Employee RBAC system
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 20+ 
-- pnpm (recommended) or npm/yarn
-
-### Installation
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/abakymuk/nsl.git
-cd nsl
-```
-
-2. Install dependencies:
-```bash
+# Install
 pnpm install
+
+# Development
+pnpm dev
+
+# Build
+pnpm build
 ```
 
-3. Set up environment variables:
-
-Create a `.env.local` file in the root directory:
+## Environment Variables
 
 ```env
-RESEND_API_KEY=re_your_api_key_here
-EMAIL_TO=dispatcher@newstreamlogistics.com
-EMAIL_FROM=quotes@newstreamlogistics.com
-NEXT_PUBLIC_SITE_URL=https://yourdomain.com
-```
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-Get your Resend API key from [https://resend.com/api-keys](https://resend.com/api-keys)
+# Email
+RESEND_API_KEY=
+EMAIL_TO=info@newstreamlogistics.com
+EMAIL_FROM=noreply@newstreamlogistics.com
 
-4. Run the development server:
+# PortPro TMS
+PORTPRO_API_URL=https://api1.app.portpro.io/v1
+PORTPRO_ACCESS_TOKEN=
+PORTPRO_REFRESH_TOKEN=
 
-```bash
-pnpm dev
-```
+# Slack
+SLACK_WEBHOOK_URL=
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-### Build for Production
-
-```bash
-pnpm build
-pnpm start
+# Optional
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 ## Project Structure
 
 ```
 app/
-├── layout.tsx          # Root layout with navigation and footer
-├── page.tsx            # Home page
-├── quote/              # Quote request page and form
-├── track/              # Container tracking page (V1 placeholder)
-├── services/           # Services listing page
-├── process/            # Our process explanation
-├── compliance/         # Compliance and insurance information
-├── about/              # About us page
-├── contact/            # Contact form and information
-└── api/                # API routes
-    ├── quote/          # Quote form submission handler
-    └── contact/        # Contact form submission handler
+├── (auth)/           # Auth callbacks
+├── admin/            # Admin dashboard
+├── dashboard/        # Customer portal
+├── api/              # API routes
+├── quote/            # Quote form
+├── track/            # Container tracking
+├── services/         # Services page
+├── process/          # Process page
+├── compliance/       # Compliance info
+├── contact/          # Contact form
+└── about/            # About page
 
 components/
-├── ui/                 # shadcn UI components
-├── nav.tsx             # Navigation component
-└── footer.tsx          # Footer component
+├── ui/               # shadcn components
+├── admin/            # Admin components
+├── dashboard/        # Dashboard components
+├── sections/         # Landing page sections
+├── nav.tsx           # Navigation
+└── footer.tsx        # Footer
 
 lib/
-└── utils.ts            # Utility functions
-
-types/
-└── index.ts            # TypeScript type definitions
+├── supabase/         # Supabase clients
+├── portpro.ts        # PortPro API
+├── auth.ts           # Auth helpers
+├── validations/      # Zod schemas
+└── data/             # Static data
 ```
 
-## Key Principles (V1)
+## Company Info
 
-- **Trust-First**: Build confidence through transparency and honesty
-- **No False Promises**: Better an honest quote in 15 min than a fake instant quote
-- **Process Over Promises**: Show systems, not chaos
-- **Minimal but Effective**: Focus on what matters, remove distractions
+- **USDOT**: 4403165
+- **MC**: 1728721
+- **SCAC**: NFLS
+- **Phone**: (888) 533-0302
+- **Location**: 18501 South Main Street, Gardena, CA 90248
 
 ## License
 
-Private project - All rights reserved
+Private - All rights reserved

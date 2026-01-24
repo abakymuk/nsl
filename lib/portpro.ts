@@ -3,6 +3,8 @@
  * Handles authentication, API calls, and webhook processing
  */
 
+import { captureError } from "@/lib/sentry";
+
 const PORTPRO_API_URL = process.env.PORTPRO_API_URL || "https://api1.app.portpro.io/v1";
 
 interface PortProConfig {
@@ -299,7 +301,7 @@ class PortProClient {
       );
       return response.data || null;
     } catch (error) {
-      console.error("Error fetching load:", error);
+      captureError(error, { tags: { source: "portpro", operation: "get-load-by-reference" }, extra: { referenceNumber } });
       return null;
     }
   }
@@ -312,7 +314,7 @@ class PortProClient {
       const response = await this.request<{ data: PortProLoad }>(`/loads/${id}`);
       return response.data || null;
     } catch (error) {
-      console.error("Error fetching load:", error);
+      captureError(error, { tags: { source: "portpro", operation: "get-load-by-id" }, extra: { loadId: id } });
       return null;
     }
   }

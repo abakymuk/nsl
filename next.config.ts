@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -7,4 +8,17 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry organization and project slugs
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Suppress logs during build (except in CI)
+  silent: !process.env.CI,
+
+  // Source maps configuration
+  sourcemaps: {
+    // Delete source maps after upload (don't expose in production)
+    deleteSourcemapsAfterUpload: true,
+  },
+});

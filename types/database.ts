@@ -6,6 +6,38 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+// Quote lifecycle types
+export type QuoteStatus =
+  | "pending"
+  | "in_review"
+  | "quoted"
+  | "accepted"
+  | "rejected"
+  | "expired"
+  | "cancelled";
+
+export type QuoteTokenType = "status" | "accept";
+
+export type QuoteActorType = "system" | "admin" | "customer";
+
+// Pricing breakdown structure
+export interface PricingLineItem {
+  description: string;
+  amount: number;
+  type?: "base" | "service" | "accessorial" | "fuel" | "other";
+  quantity?: number;
+  unit_price?: number;
+  notes?: string;
+}
+
+export interface PricingBreakdown {
+  items: PricingLineItem[];
+  subtotal: number;
+  fees?: { description: string; amount: number }[];
+  taxes?: { description: string; rate: number; amount: number }[];
+  total: number;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -41,13 +73,13 @@ export interface Database {
           latest_delivery: string | null;
           lfd: string | null;
           special_instructions: string | null;
-          // Quote response
+          // Quote response (legacy fields)
           quoted_price: number | null;
           quoted_at: string | null;
           quoted_by: string | null;
           quote_notes: string | null;
           quote_valid_until: string | null;
-          // Lead qualification (new fields)
+          // Lead qualification
           port: string | null;
           request_type: string | null;
           time_sensitive: boolean;
@@ -56,6 +88,22 @@ export interface Database {
           delivery_type: string | null;
           appointment_required: boolean;
           availability_date: string | null;
+          // Lifecycle (new)
+          lifecycle_status: QuoteStatus;
+          expires_at: string | null;
+          validity_days: number;
+          accepted_at: string | null;
+          accepted_signature: string | null;
+          accepted_ip: string | null;
+          rejected_at: string | null;
+          rejection_reason: string | null;
+          pricing_breakdown: PricingBreakdown | null;
+          total_price: number | null;
+          assignee_id: string | null;
+          assigned_at: string | null;
+          first_response_at: string | null;
+          response_time_hours: number | null;
+          expiry_warning_sent_at: string | null;
         };
         Insert: {
           id?: string;
@@ -89,7 +137,7 @@ export interface Database {
           quoted_by?: string | null;
           quote_notes?: string | null;
           quote_valid_until?: string | null;
-          // Lead qualification (new fields)
+          // Lead qualification
           port?: string | null;
           request_type?: string | null;
           time_sensitive?: boolean;
@@ -98,6 +146,22 @@ export interface Database {
           delivery_type?: string | null;
           appointment_required?: boolean;
           availability_date?: string | null;
+          // Lifecycle (new)
+          lifecycle_status?: QuoteStatus;
+          expires_at?: string | null;
+          validity_days?: number;
+          accepted_at?: string | null;
+          accepted_signature?: string | null;
+          accepted_ip?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
+          pricing_breakdown?: PricingBreakdown | null;
+          total_price?: number | null;
+          assignee_id?: string | null;
+          assigned_at?: string | null;
+          first_response_at?: string | null;
+          response_time_hours?: number | null;
+          expiry_warning_sent_at?: string | null;
         };
         Update: {
           id?: string;
@@ -131,7 +195,7 @@ export interface Database {
           quoted_by?: string | null;
           quote_notes?: string | null;
           quote_valid_until?: string | null;
-          // Lead qualification (new fields)
+          // Lead qualification
           port?: string | null;
           request_type?: string | null;
           time_sensitive?: boolean;
@@ -140,6 +204,89 @@ export interface Database {
           delivery_type?: string | null;
           appointment_required?: boolean;
           availability_date?: string | null;
+          // Lifecycle (new)
+          lifecycle_status?: QuoteStatus;
+          expires_at?: string | null;
+          validity_days?: number;
+          accepted_at?: string | null;
+          accepted_signature?: string | null;
+          accepted_ip?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
+          pricing_breakdown?: PricingBreakdown | null;
+          total_price?: number | null;
+          assignee_id?: string | null;
+          assigned_at?: string | null;
+          first_response_at?: string | null;
+          response_time_hours?: number | null;
+          expiry_warning_sent_at?: string | null;
+        };
+      };
+      quote_tokens: {
+        Row: {
+          id: string;
+          quote_id: string;
+          token: string;
+          type: QuoteTokenType;
+          expires_at: string;
+          used_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quote_id: string;
+          token: string;
+          type: QuoteTokenType;
+          expires_at: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          quote_id?: string;
+          token?: string;
+          type?: QuoteTokenType;
+          expires_at?: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+      };
+      quote_audit_log: {
+        Row: {
+          id: string;
+          quote_id: string;
+          action: string;
+          old_status: QuoteStatus | null;
+          new_status: QuoteStatus | null;
+          actor_id: string | null;
+          actor_type: QuoteActorType;
+          metadata: Json | null;
+          ip_address: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quote_id: string;
+          action: string;
+          old_status?: QuoteStatus | null;
+          new_status?: QuoteStatus | null;
+          actor_id?: string | null;
+          actor_type?: QuoteActorType;
+          metadata?: Json | null;
+          ip_address?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          quote_id?: string;
+          action?: string;
+          old_status?: QuoteStatus | null;
+          new_status?: QuoteStatus | null;
+          actor_id?: string | null;
+          actor_type?: QuoteActorType;
+          metadata?: Json | null;
+          ip_address?: string | null;
+          created_at?: string;
         };
       };
       contacts: {
@@ -457,6 +604,12 @@ export interface Database {
 export type Quote = Database["public"]["Tables"]["quotes"]["Row"];
 export type QuoteInsert = Database["public"]["Tables"]["quotes"]["Insert"];
 export type QuoteUpdate = Database["public"]["Tables"]["quotes"]["Update"];
+
+export type QuoteToken = Database["public"]["Tables"]["quote_tokens"]["Row"];
+export type QuoteTokenInsert = Database["public"]["Tables"]["quote_tokens"]["Insert"];
+
+export type QuoteAuditLog = Database["public"]["Tables"]["quote_audit_log"]["Row"];
+export type QuoteAuditLogInsert = Database["public"]["Tables"]["quote_audit_log"]["Insert"];
 
 export type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 export type ContactInsert = Database["public"]["Tables"]["contacts"]["Insert"];

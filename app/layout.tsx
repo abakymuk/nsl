@@ -7,6 +7,7 @@ import { LocalBusinessSchema, ServiceSchema } from "@/components/structured-data
 import { PhoneBanner } from "@/components/phone-banner";
 import { IntercomProvider } from "@/lib/intercom";
 import { ChatLauncher } from "@/components/intercom/chat-launcher";
+import { SentryUserContext } from "@/components/sentry-user-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -83,6 +84,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}>
         <IntercomProvider>
+          <SentryUserContext />
           <div className="flex min-h-screen flex-col">
             <Nav />
             <main className="flex-1">{children}</main>
