@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Verify quote is in correct state
     const currentStatus = quote.lifecycle_status || quote.status;
     if (currentStatus !== "quoted") {
-      let message = "Quote is no longer available";
+      const message = "Quote is no longer available";
       if (currentStatus === "accepted") {
         // Return success for idempotency
         return NextResponse.json({

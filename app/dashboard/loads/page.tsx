@@ -132,6 +132,7 @@ export default async function ShipmentsPage({
         </div>
       ) : (
         <div className="grid gap-4">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {loads.map((shipment: any) => (
             <Link
               key={shipment.id}

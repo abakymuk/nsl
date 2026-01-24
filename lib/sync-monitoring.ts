@@ -308,6 +308,7 @@ export async function getSyncMetrics(): Promise<{
     },
     lastReconciliation: {
       time: lastSync?.started_at || null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       discrepancies: (lastSync?.metadata as any)?.discrepancies || 0,
       status: lastSync?.status || null,
     },

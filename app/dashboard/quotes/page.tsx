@@ -143,6 +143,7 @@ export default async function QuotesPage({
                 </tr>
               </thead>
               <tbody className="divide-y">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {quotes.map((quote: any) => (
                   <tr
                     key={quote.id}

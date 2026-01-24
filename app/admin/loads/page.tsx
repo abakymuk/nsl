@@ -151,7 +151,7 @@ export default async function AdminLoadsPage({
                   </td>
                 </tr>
               ) : (
-                loads.map((shipment: any) => (
+                loads.map((shipment) => (
                   <tr key={shipment.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4">
                       <code className="font-mono font-medium text-sm">

@@ -69,7 +69,9 @@ export type WebhookEventType =
 export interface WebhookPayload {
   event_type?: string;
   eventType?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   changedValues?: Record<string, any>;
   reference_number?: string;
   response?: {
@@ -338,6 +340,7 @@ class PortProClient {
     occurred_to?: string;
     skip?: number;
     limit?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }): Promise<any[]> {
     const searchParams = new URLSearchParams();
     if (params?.type) searchParams.set("type", params.type);
@@ -349,6 +352,7 @@ class PortProClient {
     const query = searchParams.toString();
     const endpoint = `/webhook${query ? `?${query}` : ""}`;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await this.request<{ data: any[] }>(endpoint);
     return response.data || [];
   }
@@ -384,6 +388,7 @@ export function verifyWebhookSignature(
   if (algo !== "sha1" || !providedHash) return false;
 
   // Compute expected HMAC-SHA1
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const crypto = require("crypto");
   const expectedHash = crypto
     .createHmac("sha1", secret)

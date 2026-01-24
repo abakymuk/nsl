@@ -4,6 +4,9 @@ import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+// Pre-computed random values for each path to avoid Math.random during render
+const PATH_RANDOMS = [0.847, 0.312, 0.956, 0.134, 0.678, 0.423, 0.891, 0.567, 0.234, 0.789];
+
 export const BackgroundBeams = ({ className }: { className?: string }) => {
   const paths = [
     "M-380 -189C-380 -189 -312 216 152 343C616 470 684 875 684 875",
@@ -57,13 +60,13 @@ export const BackgroundBeams = ({ className }: { className?: string }) => {
                 x1: ["0%", "100%"],
                 x2: ["0%", "95%"],
                 y1: ["0%", "100%"],
-                y2: ["0%", `${93 + Math.random() * 8}%`],
+                y2: ["0%", `${93 + PATH_RANDOMS[index] * 8}%`],
               }}
               transition={{
-                duration: Math.random() * 10 + 10,
+                duration: PATH_RANDOMS[index] * 10 + 10,
                 ease: "easeInOut",
                 repeat: Infinity,
-                delay: Math.random() * 10,
+                delay: PATH_RANDOMS[index] * 10,
               }}
             >
               <stop stopColor="oklch(0.45 0.16 245 / 0)" offset="0%" />

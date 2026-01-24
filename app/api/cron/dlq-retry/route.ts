@@ -3,6 +3,7 @@
  * Runs every 15 minutes to retry failed webhooks
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {

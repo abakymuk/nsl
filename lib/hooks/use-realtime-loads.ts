@@ -47,7 +47,7 @@ export function useRealtimeLoads(options: UseRealtimeLoadsOptions = {}) {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const handleLoadChange = useCallback(
-    (payload: any) => {
+    (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
       const eventType = payload.eventType;
       const newRecord = payload.new as Partial<Load> & { id: string };
       const oldRecord = payload.old as Partial<Load>;
@@ -67,7 +67,7 @@ export function useRealtimeLoads(options: UseRealtimeLoadsOptions = {}) {
   );
 
   const handleEventInsert = useCallback(
-    (payload: any) => {
+    (payload: { new: Record<string, unknown> }) => {
       const newEvent = payload.new as LoadEvent;
 
       console.log(`Realtime: Event inserted for load ${newEvent.load_id}`);
@@ -98,7 +98,7 @@ export function useRealtimeLoads(options: UseRealtimeLoadsOptions = {}) {
     // Subscribe to loads table changes
     const loadsFilter = loadId ? `id=eq.${loadId}` : undefined;
     channel.on(
-      "postgres_changes" as any,
+      "postgres_changes",
       {
         event: "*",
         schema: "public",
@@ -111,7 +111,7 @@ export function useRealtimeLoads(options: UseRealtimeLoadsOptions = {}) {
     // Subscribe to load_events table for new events
     const eventsFilter = loadId ? `load_id=eq.${loadId}` : undefined;
     channel.on(
-      "postgres_changes" as any,
+      "postgres_changes",
       {
         event: "INSERT",
         schema: "public",
@@ -174,7 +174,7 @@ export function useRealtimeLoads(options: UseRealtimeLoadsOptions = {}) {
  * Hook for subscribing to sync status updates (admin dashboard)
  */
 export function useRealtimeSyncStatus(
-  onStatusUpdate?: (status: any) => void
+  onStatusUpdate?: (status: unknown) => void
 ) {
   const [isConnected, setIsConnected] = useState(false);
 
@@ -184,7 +184,7 @@ export function useRealtimeSyncStatus(
     const channel = supabase
       .channel("realtime-sync-status")
       .on(
-        "postgres_changes" as any,
+        "postgres_changes",
         {
           event: "*",
           schema: "public",

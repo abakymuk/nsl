@@ -98,7 +98,7 @@ const services = [
       "Specialized equipment and expertise for oversized/overweight containers",
       "Documentation support to resolve release issues quickly",
       "Urgent response protocol for time-critical situations",
-      "We're honest about when we can't help - this builds trust",
+      "We&apos;re honest about when we can&apos;t help - this builds trust",
     ],
   },
 ];
@@ -181,7 +181,7 @@ export default function ServicesPage() {
 
       <div className="mx-auto mt-16 max-w-3xl rounded-lg bg-muted/50 p-8 text-center">
         <p className="text-lg font-medium text-foreground">
-          This creates the image of a process-driven company, not "truck & pray."
+          This creates the image of a process-driven company, not &quot;truck &amp; pray.&quot;
         </p>
       </div>
     </div>

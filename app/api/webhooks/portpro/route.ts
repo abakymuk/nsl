@@ -254,6 +254,7 @@ async function handleLoadInfoUpdated(payload: WebhookPayload) {
 
   if (!referenceNumber || !data) return;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updates: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };
@@ -291,6 +292,7 @@ async function handleEquipmentUpdated(payload: WebhookPayload) {
 
   if (!referenceNumber || !data) return;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updates: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, ReactNode, Suspense } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, Suspense, useCallback } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import mixpanel from "mixpanel-browser";
 import type { MixpanelUserProperties, MixpanelEventProperties } from "./types";
@@ -65,11 +65,13 @@ function PageViewTracker() {
 
 export function MixpanelProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isInitialized = useRef(false);
+  const [isReady, setIsReady] = useState(false);
+  const initAttempted = useRef(false);
 
   // Initialize Mixpanel
   useEffect(() => {
-    if (!MIXPANEL_TOKEN || isInitialized.current) return;
+    if (!MIXPANEL_TOKEN || initAttempted.current) return;
+    initAttempted.current = true;
 
     try {
       mixpanel.init(MIXPANEL_TOKEN, {
@@ -87,7 +89,8 @@ export function MixpanelProvider({ children }: { children: ReactNode }) {
         platform: "web",
       });
 
-      isInitialized.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsReady(true);
 
       if (!IS_PRODUCTION) {
         console.log("[Mixpanel] Initialized");
@@ -97,9 +100,7 @@ export function MixpanelProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const track = (event: string, properties?: MixpanelEventProperties) => {
-    if (!isInitialized.current) return;
-
+  const track = useCallback((event: string, properties?: MixpanelEventProperties) => {
     const enrichedProperties = {
       ...properties,
       path: pathname,
@@ -107,34 +108,42 @@ export function MixpanelProvider({ children }: { children: ReactNode }) {
     };
 
     if (IS_PRODUCTION) {
-      mixpanel.track(event, enrichedProperties);
+      try {
+        mixpanel.track(event, enrichedProperties);
+      } catch {
+        // Not initialized yet
+      }
     } else {
       console.log(`[Mixpanel] ${event}:`, enrichedProperties);
     }
-  };
+  }, [pathname]);
 
-  const identify = (userId: string, properties?: MixpanelUserProperties) => {
-    if (!isInitialized.current) return;
-
+  const identify = useCallback((userId: string, properties?: MixpanelUserProperties) => {
     if (IS_PRODUCTION) {
-      mixpanel.identify(userId);
-      if (properties) {
-        mixpanel.people.set(properties);
+      try {
+        mixpanel.identify(userId);
+        if (properties) {
+          mixpanel.people.set(properties);
+        }
+      } catch {
+        // Not initialized yet
       }
     } else {
       console.log("[Mixpanel] identify:", userId, properties);
     }
-  };
+  }, []);
 
-  const reset = () => {
-    if (!isInitialized.current) return;
-
+  const reset = useCallback(() => {
     if (IS_PRODUCTION) {
-      mixpanel.reset();
+      try {
+        mixpanel.reset();
+      } catch {
+        // Not initialized yet
+      }
     } else {
       console.log("[Mixpanel] reset");
     }
-  };
+  }, []);
 
   return (
     <MixpanelContext.Provider
@@ -142,7 +151,7 @@ export function MixpanelProvider({ children }: { children: ReactNode }) {
         track,
         identify,
         reset,
-        isReady: isInitialized.current,
+        isReady,
       }}
     >
       <Suspense fallback={null}>
