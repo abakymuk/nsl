@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 import { Resend } from "resend";
-import { getOrCreateAcceptToken, buildAcceptUrl } from "@/lib/quotes/tokens";
+import { getOrCreateAcceptToken, getOrCreateStatusToken, buildAcceptUrl, buildStatusUrl } from "@/lib/quotes/tokens";
 import { QuoteStatus, PricingBreakdown } from "@/types/database";
 
 // Lazy initialization to avoid module-scope env var access
@@ -148,6 +148,7 @@ export async function PATCH(
     }
 
     let acceptUrl: string | null = null;
+    let statusUrl: string | null = null;
 
     // Send email notification when quote is sent
     if (status === "quoted" && currentQuote.email) {
@@ -155,6 +156,12 @@ export async function PATCH(
       const acceptToken = await getOrCreateAcceptToken(id);
       if (acceptToken) {
         acceptUrl = buildAcceptUrl(acceptToken);
+      }
+
+      // Generate status token and URL
+      const statusToken = await getOrCreateStatusToken(id);
+      if (statusToken) {
+        statusUrl = buildStatusUrl(statusToken);
       }
 
       const price = quoted_price || currentQuote.quoted_price;
@@ -199,9 +206,7 @@ Valid Until: ${validUntil}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${acceptUrl ? `ACCEPT OR DECLINE THIS QUOTE:\n${acceptUrl}\n\nOr you can ` : "To accept this quote, "}reply to this email or call us at (888) 533-0302.
-${quote_notes ? `\nNOTES:\n${quote_notes}\n` : ""}
-You can also track your quote status anytime at:
-${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/quote/status/${currentQuote.status_token || ""}
+${quote_notes ? `\nNOTES:\n${quote_notes}\n` : ""}${statusUrl ? `You can also track your quote status anytime at:\n${statusUrl}` : ""}
 
 Thank you for choosing New Stream Logistics!
 
