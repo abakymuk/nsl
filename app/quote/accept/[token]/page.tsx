@@ -162,7 +162,7 @@ export default function QuoteAcceptPage({ params }: AcceptPageProps) {
       }
 
       setSuccess({
-        action: mode as "accepted" | "rejected",
+        action: mode === "accept" ? "accepted" : "rejected",
         confirmationNumber: data.confirmationNumber,
       });
     } catch {
