@@ -273,12 +273,18 @@ function formatContainerInfo(size: unknown, type: unknown): string | null {
   return sizeStr || formattedType;
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid module-scope env var access during build
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase environment variables are not configured");
+  }
+  return createClient(url, key);
+}
 
 async function getLoad(id: string) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from("loads")
     .select("*")
@@ -293,6 +299,7 @@ async function getLoad(id: string) {
 }
 
 async function getLoadEvents(loadId: string) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from("load_events")
     .select("*")

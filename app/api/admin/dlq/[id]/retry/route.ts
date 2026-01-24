@@ -5,15 +5,24 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { hasModuleAccess } from "@/lib/auth";
 import { getDeadLetterItems, updateRetryAttempt } from "@/lib/webhook-dlq";
 import { mapPortProStatus, WebhookPayload } from "@/lib/portpro";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase environment variables are not configured");
+    }
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 export async function POST(
   request: NextRequest,
@@ -51,6 +60,7 @@ async function reprocessWebhook(
   eventType: string,
   payload: WebhookPayload
 ): Promise<boolean> {
+  const supabase = getSupabase();
   const data = payload.data;
   if (!data) return false;
 

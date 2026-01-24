@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   verifyWebhookSignature,
   mapPortProStatus,
@@ -13,16 +13,26 @@ import {
   markEventProcessed,
 } from "@/lib/webhook-dedup";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase environment variables are not configured");
+    }
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 /**
  * PortPro Webhook Handler
  * Receives events from PortPro TMS and syncs with our database
  */
 export async function POST(request: NextRequest) {
+  const supabase = getSupabase();
   try {
     // Get raw body for signature verification
     const body = await request.text();
@@ -136,6 +146,7 @@ export async function POST(request: NextRequest) {
  * Handle new load creation
  */
 async function handleLoadCreated(payload: WebhookPayload) {
+  const supabase = getSupabase();
   const data = payload.data;
   if (!data) return;
 
@@ -195,6 +206,7 @@ async function handleLoadCreated(payload: WebhookPayload) {
  * Handle load status updates
  */
 async function handleLoadStatusUpdated(payload: WebhookPayload) {
+  const supabase = getSupabase();
   const data = payload.data || payload.changedValues;
   const referenceNumber = payload.reference_number || data?.reference_number;
 
@@ -249,6 +261,7 @@ async function handleLoadStatusUpdated(payload: WebhookPayload) {
  * Handle load info/dates updates
  */
 async function handleLoadInfoUpdated(payload: WebhookPayload) {
+  const supabase = getSupabase();
   const data = payload.changedValues || payload.data;
   const referenceNumber = payload.reference_number;
 
@@ -287,6 +300,7 @@ async function handleLoadInfoUpdated(payload: WebhookPayload) {
  * Handle equipment updates
  */
 async function handleEquipmentUpdated(payload: WebhookPayload) {
+  const supabase = getSupabase();
   const data = payload.changedValues || payload.data;
   const referenceNumber = payload.reference_number;
 
@@ -315,6 +329,7 @@ async function handleEquipmentUpdated(payload: WebhookPayload) {
  * Handle document additions
  */
 async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
+  const supabase = getSupabase();
   const data = payload.data;
   const referenceNumber = payload.reference_number || data?.reference_number;
 
@@ -357,6 +372,7 @@ async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
  * Handle tender status changes
  */
 async function handleTenderStatusChanged(payload: WebhookPayload) {
+  const supabase = getSupabase();
   const data = payload.data;
   if (!data) return;
 
