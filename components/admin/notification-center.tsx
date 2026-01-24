@@ -112,15 +112,15 @@ export function NotificationCenter({ employeeId, className }: NotificationCenter
           filter: `recipient_id=eq.${employeeId}`,
         },
         (payload) => {
+          const updatedNotification = payload.new as Notification;
           // Update notification in list
           setNotifications((prev) =>
-            prev.map((n) => (n.id === payload.new.id ? (payload.new as Notification) : n))
+            prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
           );
-          // Recalculate unread count
-          setNotifications((prev) => {
-            setUnreadCount(prev.filter((n) => !n.read_at).length);
-            return prev;
-          });
+          // Update unread count based on the change
+          if (updatedNotification.read_at) {
+            setUnreadCount((prev) => Math.max(0, prev - 1));
+          }
         }
       )
       .subscribe();
