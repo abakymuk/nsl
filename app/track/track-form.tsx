@@ -31,7 +31,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { showNewMessage } from "@intercom/messenger-js-sdk";
-import { IntercomEvents } from "@/lib/intercom";
+import { Analytics } from "@/lib/analytics";
 
 // Types
 interface TrackingEvent {
@@ -760,7 +760,7 @@ function NotFound({ containerNumber, onTrackAnother }: { containerNumber: string
 
   // Track not found event
   useEffect(() => {
-    IntercomEvents.trackNotFound(containerNumber);
+    Analytics.trackNotFound(containerNumber);
   }, [containerNumber]);
 
   return (
@@ -883,7 +883,7 @@ export default function TrackForm() {
     }
 
     // Track search event
-    IntercomEvents.trackSearched(searchNumber);
+    Analytics.trackSearched(searchNumber);
 
     try {
       const response = await fetch(
@@ -899,7 +899,7 @@ export default function TrackForm() {
 
       // Track result viewed
       if (data.found && data.type && data.data) {
-        IntercomEvents.trackResultViewed(data.data.status, data.type);
+        Analytics.trackResultViewed(data.data.status, data.type);
       }
 
       setResult(data);

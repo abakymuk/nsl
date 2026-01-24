@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Analytics } from "@/lib/analytics";
 
 export default function ContactPage() {
   const router = useRouter();
@@ -19,6 +20,11 @@ export default function ContactPage() {
     phone: "",
     message: "",
   });
+
+  // Track page view
+  useEffect(() => {
+    Analytics.contactFormViewed();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,9 +51,13 @@ export default function ContactPage() {
         throw new Error(errorMessage);
       }
 
+      // Track successful submission
+      Analytics.contactFormSubmitted({ hasPhone: !!formData.phone });
       router.push("/contact/thank-you");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+      Analytics.contactFormError(errorMessage);
       setLoading(false);
     }
   };

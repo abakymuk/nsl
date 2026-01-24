@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AlertCircle, Loader2, Mail, Sparkles } from "lucide-react";
+import { Analytics } from "@/lib/analytics";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -42,9 +43,17 @@ export default function SignInPage() {
 
     if (error) {
       setError(error.message);
+      Analytics.errorOccurred({
+        errorType: "auth_error",
+        errorMessage: error.message,
+        location: "sign-in",
+      });
       setLoading(false);
       return;
     }
+
+    // Track successful login
+    Analytics.login("email");
 
     // Determine redirect destination
     if (explicitRedirect) {

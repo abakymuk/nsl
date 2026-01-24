@@ -133,6 +133,53 @@ export const Analytics = {
   logout: () => {
     MixpanelEvents.logout();
   },
+
+  // Contact form
+  contactFormViewed: () => {
+    MixpanelEvents.contactFormViewed();
+  },
+
+  contactFormSubmitted: (data: { hasPhone: boolean }) => {
+    MixpanelEvents.contactFormSubmitted(data);
+  },
+
+  contactFormError: (error: string) => {
+    MixpanelEvents.contactFormError(error);
+  },
+
+  // CTA tracking
+  ctaClicked: (data: {
+    ctaName: string;
+    ctaLocation: string;
+    ctaText?: string;
+  }) => {
+    MixpanelEvents.ctaClicked(data);
+  },
+
+  // Navigation
+  navigationClicked: (data: { linkName: string; destination: string }) => {
+    MixpanelEvents.navigationClicked(data);
+  },
+
+  // Phone calls
+  phoneCallClicked: (location: string) => {
+    MixpanelEvents.phoneCallClicked(location);
+  },
+
+  // External links
+  externalLinkClicked: (data: { url: string; location: string }) => {
+    MixpanelEvents.externalLinkClicked(data);
+  },
+
+  // Errors
+  errorOccurred: (data: { errorType: string; errorMessage: string; location: string }) => {
+    MixpanelEvents.errorOccurred(data);
+  },
+
+  // Feature engagement
+  featureUsed: (data: { featureName: string; context?: string }) => {
+    MixpanelEvents.featureUsed(data);
+  },
 };
 
 /**
