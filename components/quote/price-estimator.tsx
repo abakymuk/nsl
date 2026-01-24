@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calculator, ArrowRight, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   accessorialFees,
   type CityRate,
 } from "@/lib/data/pricing-rates";
+import { Analytics } from "@/lib/analytics";
 
 interface PriceEstimatorProps {
   onGetFullQuote?: () => void;
@@ -37,6 +38,8 @@ export function PriceEstimator({ onGetFullQuote }: PriceEstimatorProps) {
     setSearchTerm(city.city);
     setShowSuggestions(false);
     setNotFound(false);
+    // Track price estimate viewed
+    Analytics.priceEstimateViewed(city.city, city.totalRate);
   };
 
   const handleSearch = () => {
@@ -51,6 +54,8 @@ export function PriceEstimator({ onGetFullQuote }: PriceEstimatorProps) {
       setSelectedCity(result);
       setSearchTerm(result.city);
       setNotFound(false);
+      // Track price estimate viewed
+      Analytics.priceEstimateViewed(result.city, result.totalRate);
     } else {
       setSelectedCity(null);
       setNotFound(true);

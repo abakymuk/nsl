@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import type { QuoteFormData } from "@/types";
 import { cn } from "@/lib/utils";
-import { IntercomEvents } from "@/lib/intercom";
+import { Analytics } from "@/lib/analytics";
 import {
   VALID_TERMINALS,
   REQUEST_TYPES,
@@ -85,7 +85,7 @@ export default function QuoteForm() {
   });
 
   useEffect(() => {
-    IntercomEvents.quoteStarted();
+    Analytics.quoteStarted();
   }, []);
 
   // Step 1 validation: Name, Company, Phone required
@@ -127,11 +127,18 @@ export default function QuoteForm() {
       }
 
       const result = await response.json();
-      IntercomEvents.quoteSubmitted({
+      Analytics.quoteSubmitted({
         container: formData.containerNumber || "not_provided",
         terminal: formData.terminal || "not_selected",
         zip: formData.deliveryZip,
         containerType: formData.containerType || "not_selected",
+      });
+      // Track successful submission with additional data
+      Analytics.quoteSubmitSuccess({
+        referenceNumber: result.referenceNumber || null,
+        requestType: formData.requestType,
+        isUrgent: result.isUrgent || formData.timeSensitive,
+        leadScore: result.leadScore || 0,
       });
 
       const params = new URLSearchParams();
@@ -141,14 +148,30 @@ export default function QuoteForm() {
       if (result.isUrgent) params.set("urgent", "true");
       router.push(`/quote/thank-you?${params.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+      Analytics.quoteSubmitError(errorMessage);
       setLoading(false);
     }
   };
 
   const nextStep = () => {
     if (currentStep < 3) {
-      IntercomEvents.quoteStepCompleted(currentStep);
+      Analytics.quoteStepCompleted(currentStep);
+      // Track step-specific data
+      if (currentStep === 1) {
+        Analytics.quoteStep1Complete({
+          requestType: formData.requestType,
+          port: formData.port,
+          timeSensitive: formData.timeSensitive ?? false,
+        });
+      } else if (currentStep === 2) {
+        Analytics.quoteStep2Complete({
+          hasContainer: !!formData.containerNumber,
+          hasTerminal: !!formData.terminal,
+          hasLfd: !!formData.lfd,
+        });
+      }
       setCurrentStep(currentStep + 1);
     }
   };

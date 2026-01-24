@@ -27,6 +27,7 @@ import {
   Sparkles,
   Ticket,
 } from "lucide-react";
+import { Analytics } from "@/lib/analytics";
 
 type Step = "account" | "organization" | "complete";
 
@@ -286,9 +287,17 @@ export default function SignUpPage() {
 
       if (!res.ok) {
         setError(data.error || "Failed to create account");
+        Analytics.errorOccurred({
+          errorType: "signup_error",
+          errorMessage: data.error || "Failed to create account",
+          location: "sign-up",
+        });
         setLoading(false);
         return;
       }
+
+      // Track successful sign-up
+      Analytics.signUp("email");
 
       // Sign in the user
       const supabase = createClient();

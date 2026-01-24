@@ -18,16 +18,16 @@ function track(event: string, properties?: Record<string, unknown>) {
 
 /**
  * Mixpanel event tracking helpers
- * Mirrors IntercomEvents structure for consistency
+ * Comprehensive analytics for conversion funnel and user behavior
  */
 export const MixpanelEvents = {
   // Quote flow events - conversion funnel tracking
   quoteView: () => {
-    track("quote_view");
+    track("quote_view", { funnel_step: "view" });
   },
 
   quoteStarted: () => {
-    track("quote_started");
+    track("quote_started", { funnel_step: "started" });
   },
 
   quoteStep1Complete: (data: {
@@ -146,5 +146,69 @@ export const MixpanelEvents = {
 
   logout: () => {
     track("logout");
+  },
+
+  // Contact form events
+  contactFormViewed: () => {
+    track("contact_form_viewed");
+  },
+
+  contactFormSubmitted: (data: { hasPhone: boolean }) => {
+    track("contact_form_submitted", { has_phone: data.hasPhone });
+  },
+
+  contactFormError: (error: string) => {
+    track("contact_form_error", { error });
+  },
+
+  // CTA / Button click events
+  ctaClicked: (data: {
+    ctaName: string;
+    ctaLocation: string;
+    ctaText?: string;
+  }) => {
+    track("cta_clicked", {
+      cta_name: data.ctaName,
+      cta_location: data.ctaLocation,
+      cta_text: data.ctaText,
+    });
+  },
+
+  // Navigation events
+  navigationClicked: (data: { linkName: string; destination: string }) => {
+    track("navigation_clicked", {
+      link_name: data.linkName,
+      destination: data.destination,
+    });
+  },
+
+  // Phone call events
+  phoneCallClicked: (location: string) => {
+    track("phone_call_clicked", { location });
+  },
+
+  // External link events
+  externalLinkClicked: (data: { url: string; location: string }) => {
+    track("external_link_clicked", {
+      url: data.url,
+      location: data.location,
+    });
+  },
+
+  // Error events
+  errorOccurred: (data: { errorType: string; errorMessage: string; location: string }) => {
+    track("error_occurred", {
+      error_type: data.errorType,
+      error_message: data.errorMessage,
+      location: data.location,
+    });
+  },
+
+  // Feature engagement
+  featureUsed: (data: { featureName: string; context?: string }) => {
+    track("feature_used", {
+      feature_name: data.featureName,
+      context: data.context,
+    });
   },
 };

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
+import { DashboardAnalyticsTracker } from "@/components/dashboard/analytics-tracker";
 import Link from "next/link";
 import { Truck, Search, MapPin } from "lucide-react";
 
@@ -83,6 +84,9 @@ export default async function ShipmentsPage({
 
   return (
     <div className="space-y-6">
+      {/* Analytics tracking */}
+      <DashboardAnalyticsTracker section="loads" />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

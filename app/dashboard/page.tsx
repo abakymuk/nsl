@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache, Suspense } from "react";
 import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import { StatsCard } from "@/components/dashboard/stats-card";
+import { DashboardAnalyticsTracker } from "@/components/dashboard/analytics-tracker";
 import { FileText, Truck, Clock, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
@@ -330,6 +331,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Analytics tracking */}
+      <DashboardAnalyticsTracker section="overview" />
+
       {/* Header - renders immediately */}
       <div>
         <h1 className="text-2xl font-bold">Welcome back, {firstName}!</h1>
