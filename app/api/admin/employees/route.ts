@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { isSuperAdmin, EMPLOYEE_MODULES, type EmployeeModule } from "@/lib/auth";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // GET: List all employees (super admin only)
 export async function GET() {
@@ -12,7 +19,7 @@ export async function GET() {
     }
 
     // Get all employees with their profile info
-    const { data: employees, error } = await supabase
+    const { data: employees, error } = await getSupabase()
       .from("employees")
       .select(
         `
@@ -51,7 +58,7 @@ export async function GET() {
 
     let creatorMap = new Map<string, { email: string; full_name: string }>();
     if (creatorIds.length > 0) {
-      const { data: creators } = await supabase
+      const { data: creators } = await getSupabase()
         .from("profiles")
         .select("id, email, full_name")
         .in("id", creatorIds);
@@ -129,7 +136,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Check if user exists
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await getSupabase()
       .from("profiles")
       .select("id, email, role")
       .eq("id", userId)
@@ -148,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if employee already exists
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabase()
       .from("employees")
       .select("id")
       .eq("user_id", userId)
@@ -162,7 +169,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create employee
-    const { data: employee, error: createError } = await supabase
+    const { data: employee, error: createError } = await getSupabase()
       .from("employees")
       .insert({
         user_id: userId,
@@ -243,7 +250,7 @@ export async function PATCH(request: NextRequest) {
       updateData.is_active = Boolean(isActive);
     }
 
-    const { data: employee, error: updateError } = await supabase
+    const { data: employee, error: updateError } = await getSupabase()
       .from("employees")
       .update(updateData)
       .eq("id", employeeId)
@@ -292,7 +299,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await getSupabase()
       .from("employees")
       .delete()
       .eq("id", employeeId);
