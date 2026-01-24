@@ -42,7 +42,11 @@ jobs:
       - name: Build application
         run: pnpm build
         env:
-          # Provide dummy env vars for build
+          # Supabase (required for server components)
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Email
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || 'dummy_key_for_ci' }}
 
       - name: Upload build artifacts

@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { getUserOrgMembership } from "@/lib/auth";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // GET: Get current user's organization
 export async function GET() {
@@ -52,7 +59,7 @@ export async function PATCH(request: NextRequest) {
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("organizations")
       .update(updateData)
       .eq("id", membership.organization.id)

@@ -5,10 +5,17 @@ import { StatsCard } from "@/components/dashboard/stats-card";
 import { FileText, Truck, Clock, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 const getCustomerCompany = cache(async (email: string) => {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from("quotes")
     .select("company_name")
     .eq("email", email)
@@ -34,10 +41,10 @@ const getCustomerStats = cache(async (email: string, companyName: string | null)
     { count: activeShipments },
     { count: completedShipments },
   ] = await Promise.all([
-    supabase.from("quotes").select("*", { count: "exact", head: true }).eq(quoteFilter.column, quoteFilter.value),
-    supabase.from("quotes").select("*", { count: "exact", head: true }).eq(quoteFilter.column, quoteFilter.value).eq("status", "pending"),
-    supabase.from("loads").select("*", { count: "exact", head: true }).eq(shipmentFilter.column, shipmentFilter.value).in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]),
-    supabase.from("loads").select("*", { count: "exact", head: true }).eq(shipmentFilter.column, shipmentFilter.value).eq("status", "delivered"),
+    getSupabase().from("quotes").select("*", { count: "exact", head: true }).eq(quoteFilter.column, quoteFilter.value),
+    getSupabase().from("quotes").select("*", { count: "exact", head: true }).eq(quoteFilter.column, quoteFilter.value).eq("status", "pending"),
+    getSupabase().from("loads").select("*", { count: "exact", head: true }).eq(shipmentFilter.column, shipmentFilter.value).in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]),
+    getSupabase().from("loads").select("*", { count: "exact", head: true }).eq(shipmentFilter.column, shipmentFilter.value).eq("status", "delivered"),
   ]);
 
   return {
@@ -53,7 +60,7 @@ const getRecentQuotes = cache(async (email: string, companyName: string | null) 
     ? { column: "company_name", value: companyName }
     : { column: "email", value: email };
 
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from("quotes")
     .select("id, service_type, container_number, status, created_at")
     .eq(filter.column, filter.value)
@@ -74,13 +81,13 @@ const getRecentActivity = cache(async (email: string, companyName: string | null
 
   // Run both queries in parallel
   const [{ data: quotes }, { data: shipments }] = await Promise.all([
-    supabase
+    getSupabase()
       .from("quotes")
       .select("id, company_name, status, created_at")
       .eq(quoteFilter.column, quoteFilter.value)
       .order("created_at", { ascending: false })
       .limit(3),
-    supabase
+    getSupabase()
       .from("loads")
       .select("id, container_number, status, updated_at")
       .eq(shipmentFilter.column, shipmentFilter.value)

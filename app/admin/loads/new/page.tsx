@@ -4,12 +4,18 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { LoadCreationForm } from "./load-creation-form";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid module-scope env var access during build
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase environment variables are not configured");
+  }
+  return createClient(url, key);
+}
 
 async function getQuote(quoteId: string) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from("quotes")
     .select("*")

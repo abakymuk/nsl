@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // GET: List all organizations (super admin only)
 export async function GET() {
@@ -13,7 +20,7 @@ export async function GET() {
 
     // Run both queries in parallel
     const [orgsResult, memberCountsResult] = await Promise.all([
-      supabase
+      getSupabase()
         .from("organizations")
         .select(`
           id,
@@ -24,7 +31,7 @@ export async function GET() {
           created_at
         `)
         .order("created_at", { ascending: false }),
-      supabase
+      getSupabase()
         .from("organization_members")
         .select("organization_id"),
     ]);

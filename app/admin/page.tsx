@@ -9,12 +9,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid module-scope env var access during build
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase environment variables are not configured");
+  }
+  return createClient(url, key);
+}
 
 const getStats = cache(async () => {
+  const supabase = getSupabase();
   const now = new Date();
   const startOfToday = new Date(now.setHours(0, 0, 0, 0));
 
@@ -46,6 +52,7 @@ const getStats = cache(async () => {
 });
 
 const getRecentQuotes = cache(async () => {
+  const supabase = getSupabase();
   const { data } = await supabase
     .from("quotes")
     .select("id, company_name, container_number, service_type, status, created_at")
@@ -56,6 +63,7 @@ const getRecentQuotes = cache(async () => {
 });
 
 const getActiveShipments = cache(async () => {
+  const supabase = getSupabase();
   const { data } = await supabase
     .from("loads")
     .select("id, tracking_number, container_number, status, eta, updated_at")

@@ -4,8 +4,22 @@ import { getUserOrgMembership, isOrgAdmin, getProfile } from "@/lib/auth";
 import { Resend } from "resend";
 import type { OrgRole } from "@/types/database";
 
-const supabase = createUntypedAdminClient();
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
+
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY not configured");
+  }
+  return new Resend(apiKey);
+}
 
 // GET: List invitations for user's organization
 export async function GET() {
@@ -25,7 +39,7 @@ export async function GET() {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("invitations")
       .select("*")
       .eq("organization_id", membership.organization.id)
@@ -73,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already a member
-    const { data: existingMember } = await supabase
+    const { data: existingMember } = await getSupabase()
       .from("organization_members")
       .select("id")
       .eq("organization_id", membership.organization.id)
@@ -85,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if pending invitation exists
-    const { data: existingInvite } = await supabase
+    const { data: existingInvite } = await getSupabase()
       .from("invitations")
       .select("id")
       .eq("organization_id", membership.organization.id)
@@ -102,7 +116,7 @@ export async function POST(request: NextRequest) {
     const inviterName = inviterProfile?.full_name || user.email;
 
     // Create invitation
-    const { data: invitation, error: insertError } = await supabase
+    const { data: invitation, error: insertError } = await getSupabase()
       .from("invitations")
       .insert({
         organization_id: membership.organization.id,
@@ -125,7 +139,7 @@ export async function POST(request: NextRequest) {
     const inviteUrl = `${siteUrl}/invite/${invitation.token}`;
 
     try {
-      await resend.emails.send({
+      await getResend().emails.send({
         from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
         to: email.toLowerCase(),
         subject: `You're invited to join ${membership.organization.name} on New Stream Logistics`,
@@ -183,7 +197,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify invitation belongs to user's org
-    const { data: invitation } = await supabase
+    const { data: invitation } = await getSupabase()
       .from("invitations")
       .select("id, organization_id")
       .eq("id", invitationId)
@@ -194,7 +208,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Update status to revoked
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from("invitations")
       .update({ status: "revoked" })
       .eq("id", invitationId);

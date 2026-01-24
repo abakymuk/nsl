@@ -3,7 +3,14 @@ import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { addUserToOrganization, getUserOrgMembership, grantSuperAdmin } from "@/lib/auth";
 import type { OrgRole } from "@/types/database";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // POST: Accept invitation
 export async function POST(
@@ -19,7 +26,7 @@ export async function POST(
     const { token } = await params;
 
     // Get invitation
-    const { data: invitation, error: fetchError } = await supabase
+    const { data: invitation, error: fetchError } = await getSupabase()
       .from("invitations")
       .select("*")
       .eq("token", token)
@@ -39,7 +46,7 @@ export async function POST(
 
     // Check expiry
     if (new Date(invitation.expires_at) < new Date()) {
-      await supabase
+      await getSupabase()
         .from("invitations")
         .update({ status: "expired" })
         .eq("id", invitation.id);
@@ -71,7 +78,7 @@ export async function POST(
       }
 
       // Mark invitation as accepted
-      await supabase
+      await getSupabase()
         .from("invitations")
         .update({
           status: "accepted",
@@ -110,7 +117,7 @@ export async function POST(
     }
 
     // Mark invitation as accepted
-    await supabase
+    await getSupabase()
       .from("invitations")
       .update({
         status: "accepted",

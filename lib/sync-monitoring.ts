@@ -5,6 +5,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { getDeadLetterStats } from "@/lib/webhook-dlq";
+import { captureError, log } from "@/lib/sentry";
 
 export type AlertType =
   | "dlq_overflow"
@@ -34,7 +35,7 @@ export async function sendSlackAlert(
 ): Promise<boolean> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
-    console.warn("Slack alerting disabled: SLACK_WEBHOOK_URL not configured");
+    log.warn("Slack alerting disabled: SLACK_WEBHOOK_URL not configured");
     return false;
   }
 
@@ -51,14 +52,17 @@ export async function sendSlackAlert(
     });
 
     if (!response.ok) {
-      console.error("Slack alert failed:", await response.text());
+      const errorText = await response.text();
+      captureError(new Error(`Slack alert failed: ${errorText}`), {
+        tags: { source: "sync-monitoring", alert_type: type },
+      });
       return false;
     }
 
-    console.log(`Slack alert sent: ${type}`);
+    log.info("Slack alert sent", { type });
     return true;
   } catch (error) {
-    console.error("Failed to send Slack alert:", error);
+    captureError(error, { tags: { source: "sync-monitoring", operation: "send-slack-alert" } });
     return false;
   }
 }
@@ -304,6 +308,7 @@ export async function getSyncMetrics(): Promise<{
     },
     lastReconciliation: {
       time: lastSync?.started_at || null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       discrepancies: (lastSync?.metadata as any)?.discrepancies || 0,
       status: lastSync?.status || null,
     },

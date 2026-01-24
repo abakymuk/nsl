@@ -4,6 +4,7 @@
  */
 
 import { Redis } from "@upstash/redis";
+import { captureError, captureDLQError, log } from "@/lib/sentry";
 
 const DLQ_KEY = "portpro:dlq";
 const DLQ_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
@@ -50,7 +51,7 @@ export async function pushToDeadLetterQueue(
 ): Promise<boolean> {
   const redis = getRedis();
   if (!redis) {
-    console.warn("DLQ: Redis not configured, cannot queue failed webhook");
+    log.warn("DLQ: Redis not configured, cannot queue failed webhook");
     return false;
   }
 
@@ -73,10 +74,12 @@ export async function pushToDeadLetterQueue(
     await redis.hset(DLQ_KEY, { [id]: JSON.stringify(item) });
     await redis.expire(DLQ_KEY, DLQ_TTL);
 
-    console.log(`DLQ: Queued failed webhook ${id} (${eventType})`);
+    // Track in Sentry for visibility
+    captureDLQError(eventType, payload, error);
+    log.info("DLQ: Queued failed webhook", { id, eventType });
     return true;
   } catch (err) {
-    console.error("DLQ: Failed to queue webhook:", err);
+    captureError(err, { tags: { source: "dlq", operation: "push" } });
     return false;
   }
 }
@@ -105,7 +108,7 @@ export async function getDeadLetterItems(limit?: number): Promise<DLQItem[]> {
 
     return limit ? parsed.slice(0, limit) : parsed;
   } catch (err) {
-    console.error("DLQ: Failed to fetch items:", err);
+    captureError(err, { tags: { source: "dlq", operation: "fetch" } });
     return [];
   }
 }
@@ -139,7 +142,7 @@ export async function updateRetryAttempt(
     if (success) {
       // Remove from DLQ on success
       await redis.hdel(DLQ_KEY, id);
-      console.log(`DLQ: Removed ${id} after successful retry`);
+      log.info("DLQ: Removed after successful retry", { id });
       return true;
     }
 
@@ -155,7 +158,7 @@ export async function updateRetryAttempt(
     if (item.attempts >= MAX_RETRIES) {
       // Max retries reached - keep in DLQ for manual review
       item.nextRetryAt = undefined;
-      console.warn(`DLQ: ${id} reached max retries (${MAX_RETRIES})`);
+      log.warn("DLQ: Max retries reached", { id, maxRetries: MAX_RETRIES });
     } else {
       // Schedule next retry with backoff
       item.nextRetryAt = new Date(Date.now() + getBackoffDelay(item.attempts)).toISOString();
@@ -164,7 +167,7 @@ export async function updateRetryAttempt(
     await redis.hset(DLQ_KEY, { [id]: JSON.stringify(item) });
     return true;
   } catch (err) {
-    console.error("DLQ: Failed to update retry attempt:", err);
+    captureError(err, { tags: { source: "dlq", operation: "update-retry" } });
     return false;
   }
 }
@@ -178,10 +181,10 @@ export async function removeFromDeadLetterQueue(id: string): Promise<boolean> {
 
   try {
     await redis.hdel(DLQ_KEY, id);
-    console.log(`DLQ: Manually removed ${id}`);
+    log.info("DLQ: Manually removed", { id });
     return true;
   } catch (err) {
-    console.error("DLQ: Failed to remove item:", err);
+    captureError(err, { tags: { source: "dlq", operation: "remove" } });
     return false;
   }
 }

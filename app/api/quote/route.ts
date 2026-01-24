@@ -8,6 +8,7 @@ import {
 } from "@/lib/validations/quote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { createStatusToken, buildStatusUrl } from "@/lib/quotes/tokens";
 import type { QuoteInsert } from "@/types/database";
 
 // Simple sanitizer (avoid isomorphic-dompurify issues on serverless)
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
 
     const body = parseResult.data;
     let referenceNumber: string | null = null;
+    let statusUrl: string | null = null;
 
     // Calculate lead score and urgency
     const leadScore = calculateLeadScore(body);
@@ -138,19 +140,26 @@ export async function POST(request: NextRequest) {
           is_urgent: isUrgent,
           // Status (use 'pending' for all new quotes, is_urgent field tracks urgency)
           status: "pending",
+          lifecycle_status: "pending",
         };
 
         const { data: quote, error: dbError } = await supabase
           .from("quotes")
           .insert(quoteData as never)
-          .select("reference_number")
+          .select("id, reference_number")
           .single();
 
         if (dbError) {
           console.error("Database error inserting quote:", dbError.message);
         } else if (quote) {
-          referenceNumber =
-            (quote as { reference_number: string }).reference_number || null;
+          const quoteRecord = quote as { id: string; reference_number: string };
+          referenceNumber = quoteRecord.reference_number || null;
+
+          // Generate status token for customer tracking
+          const statusToken = await createStatusToken(quoteRecord.id);
+          if (statusToken) {
+            statusUrl = buildStatusUrl(statusToken);
+          }
         }
       } catch (dbException) {
         console.error("Exception during database insert:", dbException);
@@ -300,6 +309,7 @@ Submitted at: ${new Date().toISOString()}
       referenceNumber,
       leadScore,
       isUrgent,
+      statusUrl,
     });
   } catch (error) {
     console.error("Error processing quote request:", error);

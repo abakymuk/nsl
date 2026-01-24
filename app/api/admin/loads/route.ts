@@ -3,8 +3,22 @@ import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 import { Resend } from "resend";
 
-const supabase = createUntypedAdminClient();
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
+
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY not configured");
+  }
+  return new Resend(apiKey);
+}
 
 // Generate tracking number: NSL + random alphanumeric
 function generateTrackingNumber(): string {
@@ -25,7 +39,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
-    let query = supabase
+    let query = getSupabase()
       .from("loads")
       .select("*")
       .order("created_at", { ascending: false });
@@ -89,7 +103,7 @@ export async function POST(request: NextRequest) {
     const tracking_number = generateTrackingNumber();
 
     // Create load
-    const { data: load, error: loadError } = await supabase
+    const { data: load, error: loadError } = await getSupabase()
       .from("loads")
       .insert({
         quote_id,
@@ -119,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create initial load event
-    await supabase.from("load_events").insert({
+    await getSupabase().from("load_events").insert({
       load_id: load.id,
       status: "booked",
       description: "Load created and booked",
@@ -128,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // If created from quote, update quote status to completed
     if (quote_id) {
-      await supabase
+      await getSupabase()
         .from("quotes")
         .update({
           status: "completed",
@@ -140,7 +154,7 @@ export async function POST(request: NextRequest) {
     // Send tracking notification email if customer email provided
     if (customer_email) {
       try {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
           to: customer_email,
           subject: `Load Booked - ${tracking_number} - New Stream Logistics`,

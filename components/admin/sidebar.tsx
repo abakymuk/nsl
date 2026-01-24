@@ -132,7 +132,14 @@ export function SidebarProvider({
   permissions = [],
   isSuperAdmin = false,
 }: SidebarProviderProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  // Initialize collapsed state from localStorage (lazy initial state)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("admin-sidebar-collapsed");
+      return stored ? JSON.parse(stored) : false;
+    }
+    return false;
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Filter nav items based on permissions
@@ -140,22 +147,15 @@ export function SidebarProvider({
     return navItems.filter((item) => permissions.includes(item.module));
   }, [permissions]);
 
-  // Load collapsed state from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("admin-sidebar-collapsed");
-    if (stored) {
-      setCollapsed(JSON.parse(stored));
-    }
-  }, []);
-
   // Save collapsed state to localStorage
   useEffect(() => {
     localStorage.setItem("admin-sidebar-collapsed", JSON.stringify(collapsed));
   }, [collapsed]);
 
-  // Close mobile menu on route change
+  // Close mobile menu on route change (sync with external navigation)
   const pathname = usePathname();
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileOpen(false);
   }, [pathname]);
 

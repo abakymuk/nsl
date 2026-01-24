@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { Receiver } from "@upstash/qstash";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   getPortProClient,
   mapPortProStatus,
@@ -17,10 +17,19 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60; // 1 minute max
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase environment variables are not configured");
+    }
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 // Verify QStash signature
 async function verifyQStash(request: NextRequest, body: string): Promise<boolean> {
@@ -76,6 +85,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing signature" }, { status: 401 });
   }
 
+  const supabase = getSupabase();
   const startTime = Date.now();
   let synced = 0;
   let updated = 0;
