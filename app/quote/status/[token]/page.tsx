@@ -12,7 +12,7 @@ import {
   ArrowRight,
   Phone,
 } from "lucide-react";
-import { validateToken, buildAcceptUrl } from "@/lib/quotes/tokens";
+import { validateToken, getOrCreateAcceptToken, buildAcceptUrl } from "@/lib/quotes/tokens";
 import { Quote, QuoteStatus } from "@/types/database";
 
 interface StatusPageProps {
@@ -136,8 +136,14 @@ export default async function QuoteStatusPage({ params }: StatusPageProps) {
   // Calculate time remaining for quoted status
   const timeRemaining = status === "quoted" ? getTimeRemaining(quote.expires_at) : null;
 
-  // Get accept URL if quote is ready
-  const acceptUrl = status === "quoted" ? buildAcceptUrl(token) : null;
+  // Get accept URL if quote is ready (generate proper accept token)
+  let acceptUrl: string | null = null;
+  if (status === "quoted") {
+    const acceptToken = await getOrCreateAcceptToken(quote.id);
+    if (acceptToken) {
+      acceptUrl = buildAcceptUrl(acceptToken);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">

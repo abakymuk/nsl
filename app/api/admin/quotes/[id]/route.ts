@@ -2,10 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 import { Resend } from "resend";
-import { getOrCreateAcceptToken, buildAcceptUrl } from "@/lib/quotes/tokens";
+import { getOrCreateAcceptToken, getOrCreateStatusToken, buildAcceptUrl, buildStatusUrl } from "@/lib/quotes/tokens";
 import { QuoteStatus, PricingBreakdown } from "@/types/database";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization to avoid module-scope env var access
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+    _resend = new Resend(apiKey);
+  }
+  return _resend;
+}
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
@@ -137,6 +148,7 @@ export async function PATCH(
     }
 
     let acceptUrl: string | null = null;
+    let statusUrl: string | null = null;
 
     // Send email notification when quote is sent
     if (status === "quoted" && currentQuote.email) {
@@ -144,6 +156,12 @@ export async function PATCH(
       const acceptToken = await getOrCreateAcceptToken(id);
       if (acceptToken) {
         acceptUrl = buildAcceptUrl(acceptToken);
+      }
+
+      // Generate status token and URL
+      const statusToken = await getOrCreateStatusToken(id);
+      if (statusToken) {
+        statusUrl = buildStatusUrl(statusToken);
       }
 
       const price = quoted_price || currentQuote.quoted_price;
@@ -188,9 +206,7 @@ Valid Until: ${validUntil}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${acceptUrl ? `ACCEPT OR DECLINE THIS QUOTE:\n${acceptUrl}\n\nOr you can ` : "To accept this quote, "}reply to this email or call us at (888) 533-0302.
-${quote_notes ? `\nNOTES:\n${quote_notes}\n` : ""}
-You can also track your quote status anytime at:
-${process.env.NEXT_PUBLIC_SITE_URL || "https://newstreamlogistics.com"}/quote/status/${currentQuote.status_token || ""}
+${quote_notes ? `\nNOTES:\n${quote_notes}\n` : ""}${statusUrl ? `You can also track your quote status anytime at:\n${statusUrl}` : ""}
 
 Thank you for choosing New Stream Logistics!
 
@@ -200,23 +216,29 @@ New Stream Logistics Team
 info@newstreamlogistics.com
         `.trim();
 
-        await resend.emails.send({
+        const emailResult = await getResend().emails.send({
           from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
           to: currentQuote.email,
           subject: `Quote Ready - ${currentQuote.reference_number} - New Stream Logistics`,
           text: emailText,
         });
-        console.log(`Quote email sent to ${currentQuote.email}`);
+        console.log(`Quote email sent to ${currentQuote.email}`, emailResult);
       } catch (emailError) {
         console.error("Failed to send quote email:", emailError);
-        // Don't fail the request if email fails
+        // Return success but include email error so admin knows
+        return NextResponse.json({
+          success: true,
+          quote: data,
+          acceptUrl,
+          emailError: emailError instanceof Error ? emailError.message : "Failed to send email to customer",
+        });
       }
     }
 
     // Send email notification when quote is accepted (manual)
     if (status === "accepted" && currentQuote.email) {
       try {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
           to: currentQuote.email,
           subject: `Quote Accepted - ${currentQuote.reference_number} - New Stream Logistics`,
@@ -276,7 +298,7 @@ export async function GET(
       .select(
         `
         *,
-        assignee:profiles!quotes_assignee_id_fkey (
+        assignee:profiles!assignee_id (
           id,
           full_name,
           email

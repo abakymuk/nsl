@@ -264,11 +264,11 @@ export default function QuoteAcceptPage({ params }: AcceptPageProps) {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href={`/quote/status/${token}`}
+            href="/"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Status
+            Back to Home
           </Link>
           <h1 className="text-2xl font-bold">Review Your Quote</h1>
           <p className="text-muted-foreground">

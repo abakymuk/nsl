@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        assignee:profiles!quotes_assignee_id_fkey (
+        assignee:profiles!assignee_id (
           id,
           full_name,
           email
@@ -79,10 +79,9 @@ export async function GET(request: NextRequest) {
         { count: "exact" }
       );
 
-    // Filter by status (can be comma-separated)
+    // Filter by lifecycle_status (can be comma-separated)
     if (statusParam) {
       const statuses = statusParam.split(",").map((s) => s.trim());
-      // Use lifecycle_status if available, fall back to status
       query = query.in("lifecycle_status", statuses);
     } else {
       // Default: show pending, in_review, quoted (active quotes)
