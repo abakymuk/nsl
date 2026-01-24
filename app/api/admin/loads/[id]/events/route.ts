@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // Read-only endpoint - events come from PortPro
 export async function GET(
@@ -16,7 +23,7 @@ export async function GET(
 
     const { id } = await params;
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("load_events")
       .select("*")
       .eq("load_id", id)

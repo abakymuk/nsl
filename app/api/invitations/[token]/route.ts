@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // GET: Get invitation details by token (public endpoint for viewing invite)
 export async function GET(
@@ -11,7 +18,7 @@ export async function GET(
   try {
     const { token } = await params;
 
-    const { data: invitation, error } = await supabase
+    const { data: invitation, error } = await getSupabase()
       .from("invitations")
       .select(`
         id,
@@ -38,7 +45,7 @@ export async function GET(
     const isExpired = new Date(invitation.expires_at) < new Date();
     if (isExpired && invitation.status === "pending") {
       // Mark as expired
-      await supabase
+      await getSupabase()
         .from("invitations")
         .update({ status: "expired" })
         .eq("id", invitation.id);

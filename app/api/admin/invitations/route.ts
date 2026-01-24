@@ -3,7 +3,14 @@ import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { isSuperAdmin, getProfile } from "@/lib/auth";
 import { Resend } from "resend";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -20,7 +27,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("invitations")
       .select("*")
       .not("platform_role", "is", null)
@@ -60,7 +67,7 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if email is already a super_admin
-    const { data: existingAdmin } = await supabase
+    const { data: existingAdmin } = await getSupabase()
       .from("profiles")
       .select("id, role")
       .eq("email", normalizedEmail)
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if pending platform invitation exists
-    const { data: existingInvite } = await supabase
+    const { data: existingInvite } = await getSupabase()
       .from("invitations")
       .select("id")
       .eq("email", normalizedEmail)
@@ -88,7 +95,7 @@ export async function POST(request: NextRequest) {
     const inviterName = inviterProfile?.full_name || user.email;
 
     // Create invitation
-    const { data: invitation, error: insertError } = await supabase
+    const { data: invitation, error: insertError } = await getSupabase()
       .from("invitations")
       .insert({
         email: normalizedEmail,
@@ -161,7 +168,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify it's a platform invitation
-    const { data: invitation } = await supabase
+    const { data: invitation } = await getSupabase()
       .from("invitations")
       .select("id, platform_role")
       .eq("id", invitationId)
@@ -173,7 +180,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Update status to revoked
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from("invitations")
       .update({ status: "revoked" })
       .eq("id", invitationId);

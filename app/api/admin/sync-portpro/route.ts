@@ -3,7 +3,14 @@ import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 import { getPortProClient, mapPortProStatus, formatLocation, extractLookupValue, PortProLoad, PortProDriverOrder, PortProMove, PortProLocation } from "@/lib/portpro";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if load already exists by container_number
-        const { data: existing, error: selectError } = await supabase
+        const { data: existing, error: selectError } = await getSupabase()
           .from("loads")
           .select("id")
           .eq("container_number", load.containerNo)
@@ -143,7 +150,7 @@ export async function POST(request: NextRequest) {
 
         if (existing && existing.length > 0) {
           // Update existing shipment (don't change tracking_number)
-          const { error: updateError } = await supabase
+          const { error: updateError } = await getSupabase()
             .from("loads")
             .update(shipmentData)
             .eq("id", existing[0].id);
@@ -158,7 +165,7 @@ export async function POST(request: NextRequest) {
           console.log(`Updated shipment for ${load.reference_number}`);
         } else {
           // Create new shipment with tracking number
-          const { data: newLoad, error: insertError } = await supabase
+          const { data: newLoad, error: insertError } = await getSupabase()
             .from("loads")
             .insert({
               ...shipmentData,
@@ -314,7 +321,7 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
   console.log(`Syncing ${driverOrders.length} driver orders for load ${loadId}`);
 
   // First, clear existing portpro tracking events for this load (to avoid duplicates)
-  await supabase
+  await getSupabase()
     .from("load_events")
     .delete()
     .eq("load_id", loadId)
@@ -381,7 +388,7 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
 
   // Batch insert all events at once
   if (eventsToInsert.length > 0) {
-    const { error } = await supabase.from("load_events").insert(eventsToInsert);
+    const { error } = await getSupabase().from("load_events").insert(eventsToInsert);
     if (error) {
       console.error(`Error batch inserting events:`, error);
     } else {

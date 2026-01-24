@@ -1,16 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { isSuperAdmin, grantSuperAdmin, revokeSuperAdmin } from "@/lib/auth";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
-// Create admin auth client for accessing auth.users
-const authAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+// Lazy auth admin client initialization
+let _authAdmin: SupabaseClient | null = null;
+function getAuthAdmin(): SupabaseClient {
+  if (!_authAdmin) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase environment variables are not configured");
+    }
+    _authAdmin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  }
+  return _authAdmin;
+}
 
 // GET: List all users (super admin only)
 export async function GET() {
@@ -20,7 +34,7 @@ export async function GET() {
     }
 
     // Get all profiles with org membership
-    const { data: profiles, error } = await supabase
+    const { data: profiles, error } = await getSupabase()
       .from("profiles")
       .select(`
         id,
@@ -37,7 +51,7 @@ export async function GET() {
     }
 
     // Get auth users to fetch last_sign_in_at
-    const { data: authData } = await authAdmin.auth.admin.listUsers({
+    const { data: authData } = await getAuthAdmin().auth.admin.listUsers({
       perPage: 1000, // Adjust as needed
     });
 
@@ -53,7 +67,7 @@ export async function GET() {
     }
 
     // Get org memberships for all users
-    const { data: memberships } = await supabase
+    const { data: memberships } = await getSupabase()
       .from("organization_members")
       .select(`
         user_id,
@@ -78,7 +92,7 @@ export async function GET() {
     }
 
     // Get employee status for all users
-    const { data: employees } = await supabase
+    const { data: employees } = await getSupabase()
       .from("employees")
       .select("user_id, permissions, is_active");
 

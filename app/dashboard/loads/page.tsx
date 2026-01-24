@@ -3,11 +3,18 @@ import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Truck, Search, MapPin } from "lucide-react";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 async function getCustomerCompany(email: string) {
   // First check quotes table for company name
-  const { data: quoteData } = await supabase
+  const { data: quoteData } = await getSupabase()
     .from("quotes")
     .select("company_name")
     .eq("email", email)
@@ -17,7 +24,7 @@ async function getCustomerCompany(email: string) {
   if (quoteData?.company_name) return quoteData.company_name;
 
   // Fallback: check shipments for customer_name
-  const { data: shipmentData } = await supabase
+  const { data: shipmentData } = await getSupabase()
     .from("loads")
     .select("customer_name")
     .eq("customer_email", email)
@@ -34,7 +41,7 @@ async function getShipments(email: string, companyName: string | null, status?: 
     : { column: "customer_email", value: email };
 
   // Only select columns needed for the list view
-  let query = supabase
+  let query = getSupabase()
     .from("loads")
     .select("id, tracking_number, container_number, origin, destination, status, eta, created_at")
     .eq(filter.column, filter.value)

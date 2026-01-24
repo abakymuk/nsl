@@ -3,10 +3,17 @@ import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 async function getCustomerCompany(email: string) {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from("quotes")
     .select("company_name")
     .eq("email", email)
@@ -23,7 +30,7 @@ async function getQuotes(email: string, companyName: string | null, status?: str
     : { column: "email", value: email };
 
   // Only select columns needed for the list view
-  let query = supabase
+  let query = getSupabase()
     .from("quotes")
     .select("id, service_type, container_number, pickup_location, delivery_location, status, quoted_price, created_at")
     .eq(filter.column, filter.value)

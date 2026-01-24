@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { getUserOrgMembership } from "@/lib/auth";
 
-const supabase = createUntypedAdminClient();
+// Lazy initialization to avoid module-scope env var access during build
+let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createUntypedAdminClient();
+  }
+  return _supabase;
+}
 
 // GET: List organization members
 export async function GET() {
@@ -17,7 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: "No organization" }, { status: 404 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("organization_members")
       .select(`
         id,
@@ -81,7 +88,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Verify member belongs to user's org
-    const { data: member } = await supabase
+    const { data: member } = await getSupabase()
       .from("organization_members")
       .select("id, organization_id, user_id, role")
       .eq("id", memberId)
@@ -94,7 +101,7 @@ export async function PATCH(request: NextRequest) {
     // Prevent demoting yourself (last admin check)
     if (member.user_id === user.id && role !== "admin") {
       // Check if there are other admins
-      const { data: admins } = await supabase
+      const { data: admins } = await getSupabase()
         .from("organization_members")
         .select("id")
         .eq("organization_id", membership.organization.id)
@@ -109,7 +116,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update role
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from("organization_members")
       .update({ role })
       .eq("id", memberId);
@@ -151,7 +158,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify member belongs to user's org
-    const { data: member } = await supabase
+    const { data: member } = await getSupabase()
       .from("organization_members")
       .select("id, organization_id, user_id")
       .eq("id", memberId)
@@ -167,7 +174,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete member
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await getSupabase()
       .from("organization_members")
       .delete()
       .eq("id", memberId);
