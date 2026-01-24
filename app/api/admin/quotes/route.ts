@@ -80,13 +80,13 @@ export async function GET(request: NextRequest) {
       );
 
     // Filter by status (can be comma-separated)
+    // Use status column for compatibility (lifecycle_status may not exist yet)
     if (statusParam) {
       const statuses = statusParam.split(",").map((s) => s.trim());
-      // Use lifecycle_status if available, fall back to status
-      query = query.in("lifecycle_status", statuses);
+      query = query.in("status", statuses);
     } else {
       // Default: show pending, in_review, quoted (active quotes)
-      query = query.in("lifecycle_status", ["pending", "in_review", "quoted"]);
+      query = query.in("status", ["pending", "in_review", "quoted"]);
     }
 
     // Filter by assignee
