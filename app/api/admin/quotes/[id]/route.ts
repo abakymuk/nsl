@@ -5,7 +5,18 @@ import { Resend } from "resend";
 import { getOrCreateAcceptToken, buildAcceptUrl } from "@/lib/quotes/tokens";
 import { QuoteStatus, PricingBreakdown } from "@/types/database";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization to avoid module-scope env var access
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+    _resend = new Resend(apiKey);
+  }
+  return _resend;
+}
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
@@ -200,23 +211,29 @@ New Stream Logistics Team
 info@newstreamlogistics.com
         `.trim();
 
-        await resend.emails.send({
+        const emailResult = await getResend().emails.send({
           from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
           to: currentQuote.email,
           subject: `Quote Ready - ${currentQuote.reference_number} - New Stream Logistics`,
           text: emailText,
         });
-        console.log(`Quote email sent to ${currentQuote.email}`);
+        console.log(`Quote email sent to ${currentQuote.email}`, emailResult);
       } catch (emailError) {
         console.error("Failed to send quote email:", emailError);
-        // Don't fail the request if email fails
+        // Return success but include email error so admin knows
+        return NextResponse.json({
+          success: true,
+          quote: data,
+          acceptUrl,
+          emailError: emailError instanceof Error ? emailError.message : "Failed to send email to customer",
+        });
       }
     }
 
     // Send email notification when quote is accepted (manual)
     if (status === "accepted" && currentQuote.email) {
       try {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
           to: currentQuote.email,
           subject: `Quote Accepted - ${currentQuote.reference_number} - New Stream Logistics`,
