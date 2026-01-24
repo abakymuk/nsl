@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        assignee:profiles!quotes_assignee_id_fkey (
+        assignee:profiles!assignee_id (
           id,
           full_name,
           email

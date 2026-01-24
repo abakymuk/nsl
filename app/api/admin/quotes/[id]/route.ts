@@ -276,7 +276,7 @@ export async function GET(
       .select(
         `
         *,
-        assignee:profiles!quotes_assignee_id_fkey (
+        assignee:profiles!assignee_id (
           id,
           full_name,
           email
