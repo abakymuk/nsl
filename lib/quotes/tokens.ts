@@ -221,3 +221,12 @@ export function buildAcceptUrl(token: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   return `${baseUrl}/quote/accept/${token}`;
 }
+
+/**
+ * Build email tracking pixel URL
+ * Uses status token to track email opens
+ */
+export function buildTrackingPixelUrl(statusToken: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${baseUrl}/api/quote/track?token=${statusToken}&event=email_opened`;
+}

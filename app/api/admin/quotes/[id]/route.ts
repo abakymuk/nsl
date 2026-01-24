@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
 import { Resend } from "resend";
-import { getOrCreateAcceptToken, getOrCreateStatusToken, buildAcceptUrl, buildStatusUrl } from "@/lib/quotes/tokens";
+import { getOrCreateAcceptToken, getOrCreateStatusToken, buildAcceptUrl, buildStatusUrl, buildTrackingPixelUrl } from "@/lib/quotes/tokens";
+import { logQuoteActivity, notify } from "@/lib/notifications";
 import { QuoteStatus, PricingBreakdown } from "@/types/database";
 
 // Lazy initialization to avoid module-scope env var access
@@ -160,8 +161,10 @@ export async function PATCH(
 
       // Generate status token and URL
       const statusToken = await getOrCreateStatusToken(id);
+      let trackingPixelUrl: string | null = null;
       if (statusToken) {
         statusUrl = buildStatusUrl(statusToken);
+        trackingPixelUrl = buildTrackingPixelUrl(statusToken);
       }
 
       const price = quoted_price || currentQuote.quoted_price;
@@ -216,13 +219,76 @@ New Stream Logistics Team
 info@newstreamlogistics.com
         `.trim();
 
+        // Build HTML email with tracking pixel
+        const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #1a1a1a;">Hello ${currentQuote.contact_name || "Valued Customer"},</h2>
+  <p>Great news! Your quote request has been processed.</p>
+
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 20px 0;">
+    <h3 style="margin-top: 0; color: #1a1a1a;">Quote Details</h3>
+    <p><strong>Reference:</strong> ${currentQuote.reference_number}</p>
+    <p><strong>Container:</strong> ${currentQuote.container_number || "N/A"}</p>
+    <p><strong>Terminal:</strong> ${currentQuote.pickup_terminal || currentQuote.pickup_location || "N/A"}</p>
+    <p><strong>Delivery:</strong> ${currentQuote.delivery_zip || currentQuote.delivery_location || "N/A"}</p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
+    <p style="font-size: 24px; font-weight: bold; color: #22c55e; margin: 0;">$${price?.toLocaleString() || "N/A"}</p>
+    <p style="color: #666; margin-top: 5px;">Valid Until: ${validUntil}</p>
+  </div>
+
+  ${acceptUrl ? `
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${acceptUrl}" style="display: inline-block; background: #22c55e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Accept or Decline Quote</a>
+  </div>
+  ` : ""}
+
+  ${quote_notes ? `<p><strong>Notes:</strong> ${quote_notes}</p>` : ""}
+
+  ${statusUrl ? `<p>Track your quote status anytime: <a href="${statusUrl}">${statusUrl}</a></p>` : ""}
+
+  <p>Or reply to this email or call us at <a href="tel:+18885330302">(888) 533-0302</a>.</p>
+
+  <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+  <p style="color: #666; font-size: 14px;">
+    Thank you for choosing New Stream Logistics!<br>
+    <strong>New Stream Logistics Team</strong><br>
+    (888) 533-0302 | info@newstreamlogistics.com
+  </p>
+  ${trackingPixelUrl ? `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:none;">` : ""}
+</body>
+</html>
+        `.trim();
+
         const emailResult = await getResend().emails.send({
           from: process.env.EMAIL_FROM || "noreply@newstreamlogistics.com",
           to: currentQuote.email,
           subject: `Quote Ready - ${currentQuote.reference_number} - New Stream Logistics`,
           text: emailText,
+          html: emailHtml,
         });
         console.log(`Quote email sent to ${currentQuote.email}`, emailResult);
+
+        // Log email sent activity
+        await logQuoteActivity(id, "email_sent", {
+          metadata: { email: currentQuote.email },
+          skipNotification: true, // Don't notify on email sent (admin initiated)
+        });
+
+        // Notify employees that quote was sent to customer
+        notify("quote_sent", id, {
+          reference: currentQuote.reference_number,
+          contact_name: currentQuote.contact_name,
+          amount: quoted_price || currentQuote.quoted_price,
+          customer_email: currentQuote.email,
+        }).catch((err) => {
+          console.error("Failed to send quote_sent notification:", err);
+        });
       } catch (emailError) {
         console.error("Failed to send quote email:", emailError);
         // Return success but include email error so admin knows

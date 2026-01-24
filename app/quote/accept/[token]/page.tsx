@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle,
   XCircle,
   Package,
   MapPin,
-  DollarSign,
   Clock,
   AlertTriangle,
   Loader2,
@@ -79,12 +77,12 @@ function PricingBreakdownDisplay({ breakdown }: { breakdown: PricingBreakdown | 
 }
 
 export default function QuoteAcceptPage({ params }: AcceptPageProps) {
-  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activityLogged, setActivityLogged] = useState(false);
 
   // Form state
   const [mode, setMode] = useState<"accept" | "reject" | null>(null);
@@ -98,6 +96,21 @@ export default function QuoteAcceptPage({ params }: AcceptPageProps) {
     action: "accepted" | "rejected";
     confirmationNumber?: string;
   } | null>(null);
+
+  // Helper to log activity (non-blocking)
+  const logActivity = async (activityType: string, currentToken?: string) => {
+    const t = currentToken || token;
+    if (!t) return;
+    try {
+      await fetch("/api/quote/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: t, activity_type: activityType }),
+      });
+    } catch {
+      // Silently fail - activity logging shouldn't block UX
+    }
+  };
 
   useEffect(() => {
     async function loadQuote() {
@@ -117,6 +130,12 @@ export default function QuoteAcceptPage({ params }: AcceptPageProps) {
 
         const data = await response.json();
         setQuote(data.quote);
+
+        // Log page view (only once)
+        if (!activityLogged) {
+          setActivityLogged(true);
+          logActivity("accept_page_viewed", t);
+        }
       } catch {
         setError("Failed to load quote");
       } finally {
@@ -125,7 +144,13 @@ export default function QuoteAcceptPage({ params }: AcceptPageProps) {
     }
 
     loadQuote();
-  }, [params]);
+  }, [params, activityLogged]);
+
+  // Log when user starts filling the form (selects accept or reject)
+  const handleModeSelect = (selectedMode: "accept" | "reject") => {
+    setMode(selectedMode);
+    logActivity("acceptance_started");
+  };
 
   const handleSubmit = async () => {
     if (!token || !quote) return;
@@ -341,14 +366,14 @@ export default function QuoteAcceptPage({ params }: AcceptPageProps) {
         {!mode && (
           <div className="grid grid-cols-2 gap-4">
             <button
-              onClick={() => setMode("accept")}
+              onClick={() => handleModeSelect("accept")}
               className="flex flex-col items-center gap-2 p-6 bg-success/10 border-2 border-success/30 rounded-xl hover:border-success transition-colors"
             >
               <CheckCircle className="h-8 w-8 text-success" />
               <span className="font-medium">Accept Quote</span>
             </button>
             <button
-              onClick={() => setMode("reject")}
+              onClick={() => handleModeSelect("reject")}
               className="flex flex-col items-center gap-2 p-6 bg-muted border-2 border-transparent rounded-xl hover:border-muted-foreground/30 transition-colors"
             >
               <XCircle className="h-8 w-8 text-muted-foreground" />

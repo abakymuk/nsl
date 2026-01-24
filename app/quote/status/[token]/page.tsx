@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import {
   Clock,
@@ -13,7 +14,8 @@ import {
   Phone,
 } from "lucide-react";
 import { validateToken, getOrCreateAcceptToken, buildAcceptUrl } from "@/lib/quotes/tokens";
-import { Quote, QuoteStatus } from "@/types/database";
+import { QuoteStatus } from "@/types/database";
+import { logQuoteActivity } from "@/lib/notifications";
 
 interface StatusPageProps {
   params: Promise<{ token: string }>;
@@ -129,6 +131,17 @@ export default async function QuoteStatusPage({ params }: StatusPageProps) {
   }
 
   const { quote } = result;
+
+  // Log customer activity (non-blocking)
+  const headersList = await headers();
+  const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const userAgent = headersList.get("user-agent");
+
+  // Fire and forget - don't block page render
+  logQuoteActivity(quote.id, "status_viewed", {
+    ipAddress,
+    userAgent,
+  }).catch((err) => console.error("Failed to log activity:", err));
   const status = (quote.lifecycle_status || quote.status) as QuoteStatus;
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const StatusIcon = statusConfig.icon;

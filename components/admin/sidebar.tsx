@@ -24,6 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { AdminModule } from "@/lib/auth";
+import { NotificationCenter, NotificationBell } from "./notification-center";
 
 // Sidebar context for sharing collapsed state and permissions
 interface SidebarContextType {
@@ -33,6 +34,7 @@ interface SidebarContextType {
   setMobileOpen: (open: boolean) => void;
   permissions: AdminModule[];
   isSuperAdmin: boolean;
+  employeeId: string | null;
 }
 
 const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -53,6 +55,7 @@ export interface SidebarProviderProps {
   };
   permissions?: AdminModule[];
   isSuperAdmin?: boolean;
+  employeeId?: string | null;
 }
 
 interface NavItem {
@@ -131,6 +134,7 @@ export function SidebarProvider({
   user,
   permissions = [],
   isSuperAdmin = false,
+  employeeId = null,
 }: SidebarProviderProps) {
   // Initialize collapsed state from localStorage (lazy initial state)
   const [collapsed, setCollapsed] = useState(() => {
@@ -168,6 +172,7 @@ export function SidebarProvider({
         setMobileOpen,
         permissions,
         isSuperAdmin,
+        employeeId,
       }}
     >
       <div className="min-h-screen bg-muted/30">
@@ -211,7 +216,7 @@ function DesktopSidebar({
   navItems: NavItem[];
 }) {
   const pathname = usePathname();
-  const { collapsed, setCollapsed } = useSidebar();
+  const { collapsed, setCollapsed, employeeId } = useSidebar();
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -269,6 +274,16 @@ function DesktopSidebar({
             </div>
           )}
         </div>
+        {/* Notifications */}
+        {employeeId && (
+          <div className={cn("mt-3", collapsed ? "flex justify-center" : "")}>
+            {collapsed ? (
+              <NotificationBell employeeId={employeeId} />
+            ) : (
+              <NotificationCenter employeeId={employeeId} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -462,7 +477,7 @@ function MobileSidebar({
 }
 
 function MobileHeader({ user }: { user: { email: string; name?: string } }) {
-  const { setMobileOpen } = useSidebar();
+  const { setMobileOpen, employeeId } = useSidebar();
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -488,10 +503,13 @@ function MobileHeader({ user }: { user: { email: string; name?: string } }) {
         <span className="font-semibold text-sm">New Stream</span>
       </Link>
 
-      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-        <span className="text-primary-foreground font-medium text-xs">
-          {initials}
-        </span>
+      <div className="flex items-center gap-2">
+        {employeeId && <NotificationCenter employeeId={employeeId} />}
+        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+          <span className="text-primary-foreground font-medium text-xs">
+            {initials}
+          </span>
+        </div>
       </div>
     </header>
   );
