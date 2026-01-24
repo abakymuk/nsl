@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log webhook event to database for debugging/auditing
-    await supabase.from("portpro_webhook_logs").insert({
+    await getSupabase().from("portpro_webhook_logs").insert({
       event_type: eventType,
       reference_number: referenceNumber,
       payload: payload,
@@ -192,7 +192,7 @@ async function handleLoadCreated(payload: WebhookPayload) {
   }
 
   // Create initial event
-  await supabase.from("load_events").insert({
+  await getSupabase().from("load_events").insert({
     load_id: shipment.id,
     status,
     description: `Load created in PortPro: ${referenceNumber}`,
@@ -247,7 +247,7 @@ async function handleLoadStatusUpdated(payload: WebhookPayload) {
     delivered: "Load completed",
   };
 
-  await supabase.from("load_events").insert({
+  await getSupabase().from("load_events").insert({
     load_id: shipment.id,
     status: mappedStatus,
     description: statusDescriptions[mappedStatus] || `Status updated to ${newStatus}`,
@@ -345,7 +345,7 @@ async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
   if (!shipment) return;
 
   // Create event for document addition
-  await supabase.from("load_events").insert({
+  await getSupabase().from("load_events").insert({
     load_id: shipment.id,
     status: "document",
     description: `${docType} document added`,
@@ -359,7 +359,7 @@ async function handleDocumentAdded(payload: WebhookPayload, docType: string) {
       .update({ status: "delivered", updated_at: new Date().toISOString() })
       .eq("id", shipment.id);
 
-    await supabase.from("load_events").insert({
+    await getSupabase().from("load_events").insert({
       load_id: shipment.id,
       status: "delivered",
       description: "Proof of delivery received",
@@ -389,7 +389,7 @@ async function handleTenderStatusChanged(payload: WebhookPayload) {
     .single();
 
   if (shipment) {
-    await supabase.from("load_events").insert({
+    await getSupabase().from("load_events").insert({
       load_id: shipment.id,
       status: "tender",
       description: `Tender ${tenderStatus.toLowerCase()}`,
