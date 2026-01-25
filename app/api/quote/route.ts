@@ -162,16 +162,19 @@ export async function POST(request: NextRequest) {
             statusUrl = buildStatusUrl(statusToken);
           }
 
-          // Trigger notification for new quote submission
-          notify("quote_submitted", quoteRecord.id, {
-            reference: quoteRecord.reference_number,
-            contact_name: body.fullName,
-            company_name: body.companyName,
-            is_urgent: isUrgent,
-            lead_score: leadScore,
-          }).catch((err) => {
+          // Trigger notification for new quote submission (await to ensure it completes before function exits)
+          try {
+            const notifyResult = await notify("quote_submitted", quoteRecord.id, {
+              reference: quoteRecord.reference_number,
+              contact_name: body.fullName,
+              company_name: body.companyName,
+              is_urgent: isUrgent,
+              lead_score: leadScore,
+            });
+            console.log("[Quote API] Notification result:", notifyResult);
+          } catch (err) {
             console.error("Failed to send quote_submitted notification:", err);
-          });
+          }
         }
       } catch (dbException) {
         console.error("Exception during database insert:", dbException);
