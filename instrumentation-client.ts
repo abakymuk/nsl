@@ -40,6 +40,9 @@ Sentry.init({
     "Load failed",
     // ResizeObserver errors (benign)
     "ResizeObserver loop",
+    // Supabase Auth lock timeout (benign - happens with multiple tabs/background tabs)
+    "signal is aborted without reason",
+    "AbortError",
   ],
 
   // Before sending, add extra context
