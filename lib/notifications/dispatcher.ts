@@ -115,6 +115,8 @@ async function getNotificationRecipients(permission: string): Promise<string[]> 
     getSuperAdminEmployeeIds(),
   ]);
 
+  console.log("[getNotificationRecipients]", { permission, employees, superAdmins });
+
   // Combine and dedupe
   const allIds = new Set([...employees, ...superAdmins]);
   return Array.from(allIds);
@@ -240,6 +242,8 @@ export async function dispatch(
   entityId: string,
   data: Record<string, unknown>
 ): Promise<DispatchResult> {
+  console.log("[Notification Dispatch] Starting:", { event, entityId, data });
+
   const config = EVENT_CONFIGS[event];
   const notification = buildNotification(event, entityId, data);
 
@@ -260,6 +264,7 @@ export async function dispatch(
   // For new quote submissions, always notify all employees + super admins
   if (event === "quote_submitted") {
     targetEmployees = await getNotificationRecipients(config.permission);
+    console.log("[Notification Dispatch] quote_submitted recipients:", targetEmployees);
   } else if (config.entityType === "quote") {
     // For other quote events, notify assigned employee or all if unassigned
     const assignee = await getQuoteAssignee(entityId);

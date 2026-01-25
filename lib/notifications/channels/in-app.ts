@@ -37,10 +37,11 @@ export async function sendInAppNotification(
     .single();
 
   if (error) {
-    console.error("Failed to insert notification:", error);
+    console.error("[In-App] Failed to insert notification:", error);
     return { success: false, error: error.message };
   }
 
+  console.log("[In-App] Notification created:", { employeeId, notificationId: data.id, title: notification.title });
   return { success: true, notificationId: data.id };
 }
 
