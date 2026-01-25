@@ -17,7 +17,8 @@ import { cn } from "@/lib/utils";
 import type { Notification, NotificationPriority, NotificationEntityType } from "@/lib/notifications/types";
 
 interface NotificationCenterProps {
-  employeeId: string;
+  employeeId?: string | null;
+  isSuperAdmin?: boolean;
   className?: string;
 }
 
@@ -49,26 +50,37 @@ function formatTimeAgo(dateString: string): string {
   return date.toLocaleDateString();
 }
 
-export function NotificationCenter({ employeeId, className }: NotificationCenterProps) {
+export function NotificationCenter({ employeeId, isSuperAdmin, className }: NotificationCenterProps) {
+  // Need either employeeId or isSuperAdmin to show notifications
+  const canViewNotifications = Boolean(employeeId || isSuperAdmin);
+
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(canViewNotifications);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Initial fetch
   useEffect(() => {
+    if (!canViewNotifications) return;
+
     let cancelled = false;
 
     async function fetchNotifications() {
       const supabase = createClient();
-      const { data, error } = await supabase
+      let query = supabase
         .from("notifications")
         .select("*")
-        .eq("recipient_id", employeeId)
         .is("dismissed_at", null)
         .order("created_at", { ascending: false })
         .limit(10);
+
+      // Super admin sees all notifications, employees see only their own
+      if (employeeId && !isSuperAdmin) {
+        query = query.eq("recipient_id", employeeId);
+      }
+
+      const { data, error } = await query;
 
       if (cancelled) return;
 
@@ -89,54 +101,48 @@ export function NotificationCenter({ employeeId, className }: NotificationCenter
     return () => {
       cancelled = true;
     };
-  }, [employeeId]);
+  }, [employeeId, isSuperAdmin, canViewNotifications]);
 
   // Real-time subscription
   useEffect(() => {
+    if (!canViewNotifications) return;
+
     const supabase = createClient();
+    const channelName = isSuperAdmin ? "notifications:all" : `notifications:${employeeId}`;
+
+    // Build subscription config - super admin sees all, employee sees own
+    const insertConfig = isSuperAdmin
+      ? { event: "INSERT" as const, schema: "public", table: "notifications" }
+      : { event: "INSERT" as const, schema: "public", table: "notifications", filter: `recipient_id=eq.${employeeId}` };
+
+    const updateConfig = isSuperAdmin
+      ? { event: "UPDATE" as const, schema: "public", table: "notifications" }
+      : { event: "UPDATE" as const, schema: "public", table: "notifications", filter: `recipient_id=eq.${employeeId}` };
 
     const channel = supabase
-      .channel(`notifications:${employeeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${employeeId}`,
-        },
-        (payload) => {
-          // Add new notification to top of list
-          setNotifications((prev) => [payload.new as Notification, ...prev.slice(0, 9)]);
-          setUnreadCount((prev) => prev + 1);
+      .channel(channelName)
+      .on("postgres_changes", insertConfig, (payload) => {
+        // Add new notification to top of list
+        setNotifications((prev) => [payload.new as Notification, ...prev.slice(0, 9)]);
+        setUnreadCount((prev) => prev + 1);
+      })
+      .on("postgres_changes", updateConfig, (payload) => {
+        const updatedNotification = payload.new as Notification;
+        // Update notification in list
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
+        );
+        // Update unread count based on the change
+        if (updatedNotification.read_at) {
+          setUnreadCount((prev) => Math.max(0, prev - 1));
         }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${employeeId}`,
-        },
-        (payload) => {
-          const updatedNotification = payload.new as Notification;
-          // Update notification in list
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
-          );
-          // Update unread count based on the change
-          if (updatedNotification.read_at) {
-            setUnreadCount((prev) => Math.max(0, prev - 1));
-          }
-        }
-      )
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [employeeId]);
+  }, [employeeId, isSuperAdmin, canViewNotifications]);
 
   // Close on click outside
   useEffect(() => {
@@ -248,7 +254,7 @@ export function NotificationCenter({ employeeId, className }: NotificationCenter
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-100 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -361,49 +367,55 @@ export function NotificationCenter({ employeeId, className }: NotificationCenter
 // Compact version for collapsed sidebar
 export function NotificationBell({
   employeeId,
+  isSuperAdmin,
   className,
 }: {
-  employeeId: string;
+  employeeId?: string | null;
+  isSuperAdmin?: boolean;
   className?: string;
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const canViewNotifications = employeeId || isSuperAdmin;
 
   useEffect(() => {
+    if (!canViewNotifications) return;
+
     const supabase = createClient();
 
     // Initial fetch
     const fetchCount = async () => {
-      const { count } = await supabase
+      let query = supabase
         .from("notifications")
         .select("*", { count: "exact", head: true })
-        .eq("recipient_id", employeeId)
         .is("read_at", null)
         .is("dismissed_at", null);
 
+      // Super admin sees all, employee sees own
+      if (employeeId && !isSuperAdmin) {
+        query = query.eq("recipient_id", employeeId);
+      }
+
+      const { count } = await query;
       setUnreadCount(count || 0);
     };
 
     fetchCount();
 
     // Subscribe to changes
+    const channelName = isSuperAdmin ? "notification-count:all" : `notification-count:${employeeId}`;
+    const subscribeConfig = isSuperAdmin
+      ? { event: "*" as const, schema: "public", table: "notifications" }
+      : { event: "*" as const, schema: "public", table: "notifications", filter: `recipient_id=eq.${employeeId}` };
+
     const channel = supabase
-      .channel(`notification-count:${employeeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${employeeId}`,
-        },
-        () => fetchCount()
-      )
+      .channel(channelName)
+      .on("postgres_changes", subscribeConfig, () => fetchCount())
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [employeeId]);
+  }, [employeeId, isSuperAdmin, canViewNotifications]);
 
   return (
     <Link
