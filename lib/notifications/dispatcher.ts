@@ -69,6 +69,58 @@ async function getEmployeesWithPermission(permission: string): Promise<string[]>
 }
 
 /**
+ * Get all super admin employee IDs
+ * Super admins should receive all notifications regardless of employee permissions
+ */
+async function getSuperAdminEmployeeIds(): Promise<string[]> {
+  const supabase = createUntypedAdminClient();
+
+  // Get all super admin user IDs from profiles
+  const { data: superAdmins, error: profileError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "super_admin");
+
+  if (profileError) {
+    console.error("Error fetching super admins:", profileError);
+    return [];
+  }
+
+  if (!superAdmins || superAdmins.length === 0) {
+    return [];
+  }
+
+  // Get employee records for these users
+  const userIds = superAdmins.map((a) => a.id);
+  const { data: employees, error: empError } = await supabase
+    .from("employees")
+    .select("id")
+    .in("user_id", userIds)
+    .eq("is_active", true);
+
+  if (empError) {
+    console.error("Error fetching super admin employees:", empError);
+    return [];
+  }
+
+  return (employees || []).map((e) => e.id);
+}
+
+/**
+ * Get all notification recipients (employees with permission + super admins)
+ */
+async function getNotificationRecipients(permission: string): Promise<string[]> {
+  const [employees, superAdmins] = await Promise.all([
+    getEmployeesWithPermission(permission),
+    getSuperAdminEmployeeIds(),
+  ]);
+
+  // Combine and dedupe
+  const allIds = new Set([...employees, ...superAdmins]);
+  return Array.from(allIds);
+}
+
+/**
  * Get the employee assigned to a quote
  */
 async function getQuoteAssignee(quoteId: string): Promise<string | null> {
@@ -202,17 +254,22 @@ export async function dispatch(
     errors: [],
   };
 
-  // Get target employees based on assignment
+  // Get target employees based on event type and assignment
   let targetEmployees: string[] = [];
 
-  if (config.entityType === "quote") {
-    // For quotes, notify only the assigned employee
+  // For new quote submissions, always notify all employees + super admins
+  if (event === "quote_submitted") {
+    targetEmployees = await getNotificationRecipients(config.permission);
+  } else if (config.entityType === "quote") {
+    // For other quote events, notify assigned employee or all if unassigned
     const assignee = await getQuoteAssignee(entityId);
     if (assignee) {
-      targetEmployees = [assignee];
+      // Also include super admins for important quote events
+      const superAdmins = await getSuperAdminEmployeeIds();
+      targetEmployees = Array.from(new Set([assignee, ...superAdmins]));
     } else {
-      // No assignee - notify all with quotes permission
-      targetEmployees = await getEmployeesWithPermission(config.permission);
+      // No assignee - notify all with quotes permission + super admins
+      targetEmployees = await getNotificationRecipients(config.permission);
     }
   } else if (config.entityType === "load") {
     // For loads, notify only the assigned employee
@@ -220,12 +277,12 @@ export async function dispatch(
     if (assignee) {
       targetEmployees = [assignee];
     } else {
-      // No assignee - notify all with loads permission
-      targetEmployees = await getEmployeesWithPermission(config.permission);
+      // No assignee - notify all with loads permission + super admins
+      targetEmployees = await getNotificationRecipients(config.permission);
     }
   } else {
-    // For other entity types, notify all with required permission
-    targetEmployees = await getEmployeesWithPermission(config.permission);
+    // For other entity types, notify all with required permission + super admins
+    targetEmployees = await getNotificationRecipients(config.permission);
   }
 
   // Send to each employee
