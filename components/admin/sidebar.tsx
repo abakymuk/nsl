@@ -173,7 +173,17 @@ function useUnreadCount(employeeId: string | null, isSuperAdmin: boolean) {
           fetchCount();
         }
       )
-      .subscribe();
+      .subscribe((_status, err) => {
+        if (err) {
+          // AbortError can happen when auth lock times out (multiple tabs, background tab, etc.)
+          // This is a known Supabase behavior and not a critical error
+          if (err.message?.includes("AbortError") || err.name === "AbortError") {
+            console.debug("Notification subscription aborted (auth lock timeout)");
+          } else {
+            console.error("Notification subscription error:", err);
+          }
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
