@@ -142,7 +142,7 @@ export function Nav() {
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
                         isSuperAdmin
-                          ? "bg-gradient-to-br from-primary to-accent"
+                          ? "bg-linear-to-br from-primary to-accent"
                           : "bg-primary"
                       }`}>
                         <span className="text-primary-foreground font-medium text-xs">
