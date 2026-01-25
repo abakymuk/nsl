@@ -216,7 +216,7 @@ function DesktopSidebar({
   navItems: NavItem[];
 }) {
   const pathname = usePathname();
-  const { collapsed, setCollapsed, employeeId } = useSidebar();
+  const { collapsed, setCollapsed, employeeId, isSuperAdmin } = useSidebar();
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -275,12 +275,12 @@ function DesktopSidebar({
           )}
         </div>
         {/* Notifications */}
-        {employeeId && (
+        {(employeeId || isSuperAdmin) && (
           <div className={cn("mt-3", collapsed ? "flex justify-center" : "")}>
             {collapsed ? (
-              <NotificationBell employeeId={employeeId} />
+              <NotificationBell employeeId={employeeId} isSuperAdmin={isSuperAdmin} />
             ) : (
-              <NotificationCenter employeeId={employeeId} />
+              <NotificationCenter employeeId={employeeId} isSuperAdmin={isSuperAdmin} />
             )}
           </div>
         )}
@@ -477,7 +477,7 @@ function MobileSidebar({
 }
 
 function MobileHeader({ user }: { user: { email: string; name?: string } }) {
-  const { setMobileOpen, employeeId } = useSidebar();
+  const { setMobileOpen, employeeId, isSuperAdmin } = useSidebar();
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -504,7 +504,7 @@ function MobileHeader({ user }: { user: { email: string; name?: string } }) {
       </Link>
 
       <div className="flex items-center gap-2">
-        {employeeId && <NotificationCenter employeeId={employeeId} />}
+        {(employeeId || isSuperAdmin) && <NotificationCenter employeeId={employeeId} isSuperAdmin={isSuperAdmin} />}
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
           <span className="text-primary-foreground font-medium text-xs">
             {initials}
