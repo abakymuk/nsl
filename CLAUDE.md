@@ -168,3 +168,21 @@ Standard pattern:
 - **Forms**: react-hook-form, Zod
 - **External API**: PortPro TMS
 - **Package Manager**: pnpm
+
+## Documentation Requirements
+
+For every project, write a detailed `FOR_Vlad.md` file that explains the whole project in plain language.
+
+Include:
+- **Technical architecture**: How the system is designed and why
+- **Codebase structure**: How the various parts are connected
+- **Technologies used**: What tools/libraries and why we chose them
+- **Technical decisions**: The reasoning behind key choices
+- **Lessons learned**:
+  - Bugs we ran into and how we fixed them
+  - Potential pitfalls and how to avoid them
+  - New technologies used and what we learned
+  - How good engineers think and work
+  - Best practices discovered
+
+**Writing style**: Make it engaging to read - not boring technical documentation. Use analogies and anecdotes to make concepts understandable and memorable. Write like you're explaining to a smart friend over coffee, not writing a textbook.
