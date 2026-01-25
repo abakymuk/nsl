@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { validateToken, markTokenUsed } from "@/lib/quotes/tokens";
 import { QuoteStatus } from "@/types/database";
+import { logQuoteActivity } from "@/lib/notifications";
 
 interface AcceptRequest {
   token: string;
@@ -172,9 +173,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send notification emails (Phase 4)
-    // - If accepted: send confirmation email to customer, notify team
-    // - If rejected: send confirmation email to customer, notify team
+    // Log activity and trigger notifications
+    const userAgent = request.headers.get("user-agent");
+    await logQuoteActivity(
+      quote.id,
+      action === "accept" ? "accepted" : "rejected",
+      {
+        ipAddress: ip,
+        userAgent,
+        metadata: {
+          signature: action === "accept" ? signature?.trim() : undefined,
+          reason: action === "reject" ? rejection_reason : undefined,
+          notes: action === "reject" ? rejection_notes : undefined,
+        },
+      }
+    );
 
     return NextResponse.json({
       success: true,

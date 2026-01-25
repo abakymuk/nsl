@@ -9,6 +9,7 @@ import {
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createStatusToken, buildStatusUrl } from "@/lib/quotes/tokens";
+import { notify } from "@/lib/notifications";
 import type { QuoteInsert } from "@/types/database";
 
 // Simple sanitizer (avoid isomorphic-dompurify issues on serverless)
@@ -160,6 +161,17 @@ export async function POST(request: NextRequest) {
           if (statusToken) {
             statusUrl = buildStatusUrl(statusToken);
           }
+
+          // Trigger notification for new quote submission
+          notify("quote_submitted", quoteRecord.id, {
+            reference: quoteRecord.reference_number,
+            contact_name: body.fullName,
+            company_name: body.companyName,
+            is_urgent: isUrgent,
+            lead_score: leadScore,
+          }).catch((err) => {
+            console.error("Failed to send quote_submitted notification:", err);
+          });
         }
       } catch (dbException) {
         console.error("Exception during database insert:", dbException);
