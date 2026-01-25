@@ -21,10 +21,11 @@ import {
   Building2,
   UserCog,
   UserPlus,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import type { AdminModule } from "@/lib/auth";
-import { NotificationCenter, NotificationBell } from "./notification-center";
+import { createClient } from "@/lib/supabase/client";
 
 // Sidebar context for sharing collapsed state and permissions
 interface SidebarContextType {
@@ -72,6 +73,12 @@ const navItems: NavItem[] = [
     href: "/admin",
     icon: LayoutDashboard,
     module: "admin",
+  },
+  {
+    title: "Notifications",
+    href: "/admin/notifications",
+    icon: Bell,
+    module: "admin", // Available to all admin users
   },
   {
     title: "Quotes",
@@ -128,6 +135,53 @@ const navItems: NavItem[] = [
     module: "settings",
   },
 ];
+
+// Hook to fetch unread notification count
+function useUnreadCount(employeeId: string | null, isSuperAdmin: boolean) {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const canViewNotifications = Boolean(employeeId || isSuperAdmin);
+    if (!canViewNotifications) return;
+
+    const fetchCount = async () => {
+      try {
+        const response = await fetch("/api/notifications?unread_only=true&limit=1");
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadCount(data.total || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+      }
+    };
+
+    fetchCount();
+
+    // Set up realtime subscription for new notifications
+    const supabase = createClient();
+    const channel = supabase
+      .channel("notification-count")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+        },
+        () => {
+          fetchCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [employeeId, isSuperAdmin]);
+
+  return unreadCount;
+}
 
 export function SidebarProvider({
   children,
@@ -217,6 +271,7 @@ function DesktopSidebar({
 }) {
   const pathname = usePathname();
   const { collapsed, setCollapsed, employeeId, isSuperAdmin } = useSidebar();
+  const unreadCount = useUnreadCount(employeeId, isSuperAdmin);
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -274,16 +329,6 @@ function DesktopSidebar({
             </div>
           )}
         </div>
-        {/* Notifications */}
-        {(employeeId || isSuperAdmin) && (
-          <div className={cn("mt-3", collapsed ? "flex justify-center" : "")}>
-            {collapsed ? (
-              <NotificationBell employeeId={employeeId} isSuperAdmin={isSuperAdmin} />
-            ) : (
-              <NotificationCenter employeeId={employeeId} isSuperAdmin={isSuperAdmin} />
-            )}
-          </div>
-        )}
       </div>
 
       {/* Navigation */}
@@ -295,6 +340,8 @@ function DesktopSidebar({
           const isActive =
             pathname === item.href ||
             (item.href !== "/admin" && pathname.startsWith(item.href));
+          const isNotifications = item.href === "/admin/notifications";
+          const showBadge = isNotifications && unreadCount > 0;
 
           return (
             <Link
@@ -302,7 +349,7 @@ function DesktopSidebar({
               href={item.href}
               title={collapsed ? item.title : undefined}
               className={cn(
-                "flex items-center rounded-lg text-sm font-medium transition-colors",
+                "flex items-center rounded-lg text-sm font-medium transition-colors relative",
                 collapsed
                   ? "justify-center h-10 w-full"
                   : "gap-3 px-3 py-2.5",
@@ -311,8 +358,24 @@ function DesktopSidebar({
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              <item.icon className={cn("shrink-0", collapsed ? "h-5 w-5" : "h-5 w-5")} />
-              {!collapsed && <span>{item.title}</span>}
+              <div className="relative">
+                <item.icon className="h-5 w-5 shrink-0" />
+                {showBadge && collapsed && (
+                  <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold bg-primary text-primary-foreground rounded-full">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </div>
+              {!collapsed && (
+                <>
+                  <span className="flex-1">{item.title}</span>
+                  {showBadge && (
+                    <span className="h-5 min-w-5 px-1.5 flex items-center justify-center text-xs font-medium bg-primary text-primary-foreground rounded-full">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </>
+              )}
             </Link>
           );
         })}
@@ -377,7 +440,8 @@ function MobileSidebar({
   navItems: NavItem[];
 }) {
   const pathname = usePathname();
-  const { mobileOpen, setMobileOpen } = useSidebar();
+  const { mobileOpen, setMobileOpen, employeeId, isSuperAdmin } = useSidebar();
+  const unreadCount = useUnreadCount(employeeId, isSuperAdmin);
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -436,6 +500,8 @@ function MobileSidebar({
           const isActive =
             pathname === item.href ||
             (item.href !== "/admin" && pathname.startsWith(item.href));
+          const isNotifications = item.href === "/admin/notifications";
+          const showBadge = isNotifications && unreadCount > 0;
 
           return (
             <Link
@@ -449,7 +515,12 @@ function MobileSidebar({
               )}
             >
               <item.icon className="h-5 w-5" />
-              {item.title}
+              <span className="flex-1">{item.title}</span>
+              {showBadge && (
+                <span className="h-5 min-w-5 px-1.5 flex items-center justify-center text-xs font-medium bg-primary text-primary-foreground rounded-full">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -477,7 +548,7 @@ function MobileSidebar({
 }
 
 function MobileHeader({ user }: { user: { email: string; name?: string } }) {
-  const { setMobileOpen, employeeId, isSuperAdmin } = useSidebar();
+  const { setMobileOpen } = useSidebar();
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -504,7 +575,6 @@ function MobileHeader({ user }: { user: { email: string; name?: string } }) {
       </Link>
 
       <div className="flex items-center gap-2">
-        {(employeeId || isSuperAdmin) && <NotificationCenter employeeId={employeeId} isSuperAdmin={isSuperAdmin} />}
         <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary to-primary/60 flex items-center justify-center">
           <span className="text-primary-foreground font-medium text-xs">
             {initials}
