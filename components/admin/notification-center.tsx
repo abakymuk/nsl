@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -56,32 +56,40 @@ export function NotificationCenter({ employeeId, className }: NotificationCenter
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications
-  const fetchNotifications = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("recipient_id", employeeId)
-      .is("dismissed_at", null)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (error) {
-      console.error("Failed to fetch notifications:", error);
-      return;
-    }
-
-    const typedData = (data || []) as unknown as Notification[];
-    setNotifications(typedData);
-    setUnreadCount(typedData.filter((n) => !n.read_at).length);
-    setLoading(false);
-  }, [employeeId]);
-
   // Initial fetch
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchNotifications() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("recipient_id", employeeId)
+        .is("dismissed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to fetch notifications:", error);
+        setLoading(false);
+        return;
+      }
+
+      const typedData = (data || []) as unknown as Notification[];
+      setNotifications(typedData);
+      setUnreadCount(typedData.filter((n) => !n.read_at).length);
+      setLoading(false);
+    }
+
     fetchNotifications();
-  }, [fetchNotifications]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId]);
 
   // Real-time subscription
   useEffect(() => {
