@@ -98,7 +98,7 @@ const services = [
       "Specialized equipment and expertise for oversized/overweight containers",
       "Documentation support to resolve release issues quickly",
       "Urgent response protocol for time-critical situations",
-      "We&apos;re honest about when we can&apos;t help - this builds trust",
+      "We're honest about when we can't help - this builds trust",
     ],
   },
 ];

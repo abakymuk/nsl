@@ -49,8 +49,8 @@ export function Nav() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { isSuperAdmin } = usePermissions();
+  const [mounted, setMounted] = useState(false);
+  const { isSuperAdmin, loading: permissionsLoading } = usePermissions();
 
   // Check if on admin pages
   const isSuperAdminPage = pathname?.startsWith("/admin");
@@ -59,13 +59,16 @@ export function Nav() {
   const portalLink = isSuperAdmin ? "/admin" : "/dashboard";
   const portalLabel = isSuperAdmin ? "Admin Panel" : "Dashboard";
 
+  // Auth loading state - only show auth UI after mount and auth check
+  const loading = !mounted || permissionsLoading;
+
   useEffect(() => {
     const supabase = createClient();
 
-    // Get initial session
+    // Get initial session and mark as mounted
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
-      setLoading(false);
+      setMounted(true);
     });
 
     // Listen for auth changes
@@ -113,8 +116,8 @@ export function Nav() {
         }
         ctaButton={
           <div className="flex items-center gap-3">
-            {/* Auth buttons */}
-            {!loading && !user && (
+            {/* Auth buttons - only render after mount to prevent hydration mismatch */}
+            {mounted && !loading && !user && (
               <Link
                 href="/sign-in"
                 className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -124,7 +127,7 @@ export function Nav() {
               </Link>
             )}
 
-            {!loading && user && (
+            {mounted && !loading && user && (
               <>
                 <Link
                   href={portalLink}
