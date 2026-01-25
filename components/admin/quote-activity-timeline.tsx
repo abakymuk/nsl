@@ -192,7 +192,7 @@ export function QuoteActivityTimeline({ quoteId, className }: QuoteActivityTimel
                   {/* Timeline dot */}
                   <div
                     className={cn(
-                      "absolute -left-[31px] p-1.5 rounded-full",
+                      "absolute -left-7.75 p-1.5 rounded-full",
                       config.bgColor
                     )}
                   >

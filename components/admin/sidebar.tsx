@@ -262,7 +262,7 @@ function DesktopSidebar({
           "flex items-center",
           collapsed ? "justify-center" : "gap-3"
         )}>
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-full bg-linear-to-br from-primary to-primary/60 flex items-center justify-center shrink-0">
             <span className="text-primary-foreground font-medium text-sm">
               {initials}
             </span>
@@ -418,7 +418,7 @@ function MobileSidebar({
       {/* User Info */}
       <div className="px-4 py-4 border-b">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-full bg-linear-to-br from-primary to-primary/60 flex items-center justify-center">
             <span className="text-primary-foreground font-medium text-sm">
               {initials}
             </span>
@@ -505,7 +505,7 @@ function MobileHeader({ user }: { user: { email: string; name?: string } }) {
 
       <div className="flex items-center gap-2">
         {(employeeId || isSuperAdmin) && <NotificationCenter employeeId={employeeId} isSuperAdmin={isSuperAdmin} />}
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary to-primary/60 flex items-center justify-center">
           <span className="text-primary-foreground font-medium text-xs">
             {initials}
           </span>

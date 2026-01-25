@@ -40,6 +40,9 @@ export default async function AdminLayout({
   // Get employee ID for notifications
   const employeeId = await getEmployeeId(user.id);
 
+  // Debug logging
+  console.log("[AdminLayout] user:", user.email, "isAdmin:", isAdmin, "employeeId:", employeeId);
+
   // Extract user info for sidebar
   const userData = {
     email: user.email || "",

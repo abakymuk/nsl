@@ -51,21 +51,18 @@ function formatTimeAgo(dateString: string): string {
 }
 
 export function NotificationCenter({ employeeId, isSuperAdmin, className }: NotificationCenterProps) {
+  // Need either employeeId or isSuperAdmin to show notifications
+  const canViewNotifications = Boolean(employeeId || isSuperAdmin);
+
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(canViewNotifications);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Need either employeeId or isSuperAdmin to show notifications
-  const canViewNotifications = employeeId || isSuperAdmin;
 
   // Initial fetch
   useEffect(() => {
-    if (!canViewNotifications) {
-      setLoading(false);
-      return;
-    }
+    if (!canViewNotifications) return;
 
     let cancelled = false;
 
@@ -257,7 +254,7 @@ export function NotificationCenter({ employeeId, isSuperAdmin, className }: Noti
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-100 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
