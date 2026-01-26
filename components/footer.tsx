@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Phone, Mail, MapPin, ArrowUpRight } from "lucide-react";
+import { CONTACT } from "@/lib/contact";
 
 const navigation = {
   main: [
@@ -52,18 +53,18 @@ export function Footer() {
             {/* Contact Info */}
             <div className="mt-6 space-y-3">
               <Link
-                href="tel:+18885330302"
+                href={`tel:${CONTACT.PHONE_TEL}`}
                 className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Phone className="h-4 w-4 text-primary" />
-                (888) 533-0302
+                {CONTACT.PHONE_TOLL_FREE}
               </Link>
               <Link
-                href="mailto:info@newstreamlogistics.com"
+                href={`mailto:${CONTACT.EMAIL_INFO}`}
                 className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Mail className="h-4 w-4 text-primary" />
-                info@newstreamlogistics.com
+                {CONTACT.EMAIL_INFO}
               </Link>
               <div className="flex items-start gap-3 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 text-primary mt-0.5" />

@@ -29,7 +29,9 @@ function parseContainerField(value: unknown): string | null {
       try {
         const parsed = JSON.parse(value);
         return parsed.label || parsed.name || null;
-      } catch {
+      } catch (error) {
+        // Log malformed JSON for debugging, return raw value as fallback
+        console.error("Failed to parse container field JSON:", { value, error });
         return value;
       }
     }

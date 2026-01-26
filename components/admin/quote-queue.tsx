@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { QuoteQueueItem, QuoteQueueResponse } from "@/app/api/admin/quotes/route";
 import { SLAStatus } from "@/lib/quotes/priority";
+import { getQuoteStatusConfig, formatStatusLabel } from "@/lib/status-config";
 
 interface QuoteQueueProps {
   initialData?: QuoteQueueResponse;
@@ -92,23 +93,12 @@ function PriorityBadge({ score }: { score: number }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, string> = {
-    pending: "bg-warning/15 text-warning",
-    in_review: "bg-primary/15 text-primary",
-    quoted: "bg-blue-500/15 text-blue-600",
-    accepted: "bg-success/15 text-success",
-    rejected: "bg-destructive/15 text-destructive",
-    expired: "bg-muted text-muted-foreground",
-    cancelled: "bg-muted text-muted-foreground",
-  };
-
+  const config = getQuoteStatusConfig(status);
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        config[status] || "bg-muted text-muted-foreground"
-      }`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.badgeClass}`}
     >
-      {status.replace("_", " ")}
+      {formatStatusLabel(status)}
     </span>
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { getUserOrgMembership, isOrgAdmin, getProfile } from "@/lib/auth";
-import { Resend } from "resend";
+import { getResend } from "@/lib/resend";
 import type { OrgRole } from "@/types/database";
 
 // Lazy initialization to avoid module-scope env var access during build
@@ -11,14 +11,6 @@ function getSupabase() {
     _supabase = createUntypedAdminClient();
   }
   return _supabase;
-}
-
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY not configured");
-  }
-  return new Resend(apiKey);
 }
 
 // GET: List invitations for user's organization

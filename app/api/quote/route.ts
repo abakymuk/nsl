@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import {
   quoteFormSchema,
   calculateLeadScore,
@@ -10,6 +9,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createStatusToken, buildStatusUrl } from "@/lib/quotes/tokens";
 import { notify } from "@/lib/notifications";
+import { getResend } from "@/lib/resend";
 import type { QuoteInsert } from "@/types/database";
 
 // Simple sanitizer (avoid isomorphic-dompurify issues on serverless)
@@ -32,13 +32,6 @@ function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   return result;
 }
 
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured");
-  }
-  return new Resend(apiKey);
-}
 
 export async function POST(request: NextRequest) {
   try {

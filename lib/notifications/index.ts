@@ -38,6 +38,9 @@ import { QuoteActivityType } from "./types";
  */
 export const notify = dispatch;
 
+// Deduplication window for email_opened events (1 hour in milliseconds)
+const EMAIL_OPENED_DEDUP_WINDOW_MS = 60 * 60 * 1000;
+
 /**
  * Log customer activity on a quote
  * This creates an activity log entry AND triggers notifications to assigned employee
@@ -51,8 +54,25 @@ export async function logQuoteActivity(
     metadata?: Record<string, unknown>;
     skipNotification?: boolean;
   }
-): Promise<{ success: boolean; activityId?: string }> {
+): Promise<{ success: boolean; activityId?: string; deduplicated?: boolean }> {
   const supabase = createUntypedAdminClient();
+
+  // Deduplication for email_opened events (email clients often load tracking pixels multiple times)
+  if (activityType === "email_opened") {
+    const windowStart = new Date(Date.now() - EMAIL_OPENED_DEDUP_WINDOW_MS).toISOString();
+    const { data: recentActivity } = await supabase
+      .from("quote_activity_log")
+      .select("id")
+      .eq("quote_id", quoteId)
+      .eq("activity_type", "email_opened")
+      .gte("created_at", windowStart)
+      .limit(1);
+
+    if (recentActivity && recentActivity.length > 0) {
+      // Skip duplicate - already logged email_opened within the window
+      return { success: true, deduplicated: true };
+    }
+  }
 
   // Insert activity log
   const { data, error } = await supabase

@@ -1,23 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
-import { Resend } from "resend";
 import { getOrCreateAcceptToken, getOrCreateStatusToken, buildAcceptUrl, buildStatusUrl, buildTrackingPixelUrl } from "@/lib/quotes/tokens";
 import { logQuoteActivity, notify } from "@/lib/notifications";
+import { getResend } from "@/lib/resend";
 import { QuoteStatus, PricingBreakdown } from "@/types/database";
-
-// Lazy initialization to avoid module-scope env var access
-let _resend: Resend | null = null;
-function getResend(): Resend {
-  if (!_resend) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error("RESEND_API_KEY is not configured");
-    }
-    _resend = new Resend(apiKey);
-  }
-  return _resend;
-}
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {

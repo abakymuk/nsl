@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { contactFormSchema } from "@/lib/validations/contact";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { createServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getResendOptional } from "@/lib/resend";
 import type { ContactInsert } from "@/types/database";
 
 // Simple server-safe sanitization (no jsdom dependency)
@@ -24,14 +24,6 @@ function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   return result;
 }
 
-function getResend(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn("RESEND_API_KEY is not configured - emails will not be sent");
-    return null;
-  }
-  return new Resend(apiKey);
-}
 
 // Send notification to Slack
 async function sendSlackNotification(body: {
@@ -168,7 +160,7 @@ ${body.message}
 Submitted at: ${new Date().toISOString()}
     `.trim();
 
-    const resend = getResend();
+    const resend = getResendOptional();
     if (resend) {
       await resend.emails.send({
         from: emailFrom,

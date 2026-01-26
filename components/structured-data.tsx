@@ -1,14 +1,16 @@
+import { CONTACT } from "@/lib/contact";
+
 export function LocalBusinessSchema() {
   const schema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "@id": "https://newstreamlogistics.com",
+    "@id": CONTACT.SITE_URL,
     name: "New Stream Logistics",
     description:
       "Reliable LA/LB Drayage — Without Guesswork. Clear pricing. Real tracking. Straightforward communication.",
-    url: "https://newstreamlogistics.com",
-    telephone: "+1-888-533-0302",
-    email: "info@newstreamlogistics.com",
+    url: CONTACT.SITE_URL,
+    telephone: CONTACT.PHONE_TEL,
+    email: CONTACT.EMAIL_INFO,
     address: {
       "@type": "PostalAddress",
       streetAddress: "18501 South Main Street",

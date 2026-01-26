@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
-import { Resend } from "resend";
+import { getResend } from "@/lib/resend";
 
 // Lazy initialization to avoid module-scope env var access during build
 let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
@@ -10,14 +10,6 @@ function getSupabase() {
     _supabase = createUntypedAdminClient();
   }
   return _supabase;
-}
-
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY not configured");
-  }
-  return new Resend(apiKey);
 }
 
 // Generate tracking number: NSL + random alphanumeric

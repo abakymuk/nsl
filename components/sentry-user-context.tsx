@@ -15,18 +15,18 @@ export function SentryUserContext() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Set initial user context
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    // Set initial user context (using getUser() instead of deprecated getSession())
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
         // Sentry
         setUserContext({
-          id: session.user.id,
-          email: session.user.email,
+          id: user.id,
+          email: user.email,
         });
         // Mixpanel
-        identify(session.user.id, {
-          $email: session.user.email,
-          $name: session.user.user_metadata?.full_name,
+        identify(user.id, {
+          $email: user.email,
+          $name: user.user_metadata?.full_name,
         });
       } else {
         setUserContext(null);
