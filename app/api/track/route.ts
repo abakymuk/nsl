@@ -81,10 +81,10 @@ export async function GET(request: NextRequest) {
     if (shipments && shipments.length > 0) {
       const shipment = shipments[0];
 
-      // Get events
+      // Get events - include enhanced tracking fields from migration 012
       const { data: events } = await supabase
         .from("load_events")
-        .select("id, status, location, notes, created_at")
+        .select("id, status, location, notes, description, location_name, location_address, created_at")
         .eq("load_id", shipment.id)
         .order("created_at", { ascending: false });
 
@@ -109,10 +109,19 @@ export async function GET(request: NextRequest) {
           chassisNumber: shipment.chassis_number,
           publicNotes: shipment.public_notes,
           lastUpdate: shipment.updated_at,
-          events: (events || []).map((e: { status: string; location: string | null; notes: string | null; created_at: string }) => ({
+          events: (events || []).map((e: {
+            status: string;
+            location: string | null;
+            notes: string | null;
+            description: string | null;
+            location_name: string | null;
+            location_address: string | null;
+            created_at: string
+          }) => ({
             status: e.status,
-            location: e.location,
-            notes: e.notes,
+            // Use enhanced fields with fallback to legacy fields
+            location: e.location_name || e.location_address || e.location,
+            notes: e.description || e.notes,
             timestamp: e.created_at,
           })),
         },
