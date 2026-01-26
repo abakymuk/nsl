@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         drop: "out_for_delivery",
         deliver: "delivered",
         return: "delivered",
-        yard: "in_transit",
+        yard: "booked",      // Chassis operations are prep work
         terminal: "at_port",
       };
 

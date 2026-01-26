@@ -285,6 +285,10 @@ function mapMoveTypeToStopType(moveType?: string): string | null {
     RETURNCONTAINER: "return",
     GETLOADED: "pickup",
     GETUNLOADED: "deliver",
+    CHASSISPICK: "yard",       // Picking up chassis before container
+    CHASSISTERMINATION: "yard", // Returning chassis after delivery
+    LIVELOAD: "pickup",
+    LIVEUNLOAD: "deliver",
   };
   return typeMap[moveType.toUpperCase()] || null;
 }
