@@ -125,6 +125,22 @@ export async function GET(request: NextRequest) {
           let displayStatus = e.status;
           if (e.stop_type && stopTypeToStatus[e.stop_type]) {
             displayStatus = stopTypeToStatus[e.stop_type];
+          } else if (!e.stop_type && e.description) {
+            // Fallback: infer from description for legacy data without stop_type
+            const desc = e.description.toUpperCase();
+            if (desc.includes("CHASSISPICK") || desc.includes("CHASSIS PICK")) {
+              displayStatus = "booked";
+            } else if (desc.includes("PICK UP") || desc.includes("PULL")) {
+              displayStatus = "picked_up";
+            } else if (desc.includes("DELIVER") || desc.includes("UNLOAD")) {
+              displayStatus = "delivered";
+            } else if (desc.includes("DROP")) {
+              displayStatus = "out_for_delivery";
+            } else if (desc.includes("RETURN")) {
+              displayStatus = "delivered";
+            } else if (desc.includes("HOOK")) {
+              displayStatus = "picked_up";
+            }
           }
 
           return {
