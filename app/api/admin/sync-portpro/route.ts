@@ -95,14 +95,37 @@ export async function POST(request: NextRequest) {
         const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
         // Determine locations using the formatLocation helper
-        const pickupLocation = formatLocation(load.pickupLocation)
+        // Try top-level fields first, then fall back to driverOrder moves
+        let pickupLocation = formatLocation(load.pickupLocation)
           || formatLocation(load.shipper)
           || formatLocation(load.terminal);
 
-        const deliveryLocation = formatLocation(load.deliveryLocation)
+        let deliveryLocation = formatLocation(load.deliveryLocation)
           || formatLocation(load.consignee);
 
         const returnLocation = formatLocation(load.returnLocation);
+
+        // If no origin/destination from top-level fields, extract from driverOrder moves
+        if ((!pickupLocation || !deliveryLocation) && load.driverOrder?.length) {
+          for (const order of load.driverOrder) {
+            if (order.moves?.length) {
+              for (const move of order.moves) {
+                const moveType = move.type?.toUpperCase();
+                const loc = formatMoveLocation(move);
+                const locationStr = loc.name || loc.address;
+
+                // First pickup-type move becomes origin
+                if (!pickupLocation && (moveType === "PULLCONTAINER" || moveType === "HOOKCONTAINER" || moveType === "GETLOADED")) {
+                  pickupLocation = locationStr;
+                }
+                // First delivery-type move becomes destination
+                if (!deliveryLocation && (moveType === "DELIVERLOAD" || moveType === "GETUNLOADED" || moveType === "DROPCONTAINER")) {
+                  deliveryLocation = locationStr;
+                }
+              }
+            }
+          }
+        }
 
         // Full shipment data from PortPro with all available fields
         const shipmentData = {
