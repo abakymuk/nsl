@@ -82,11 +82,61 @@ export async function GET(request: NextRequest) {
       const shipment = shipments[0];
 
       // Get events - include enhanced tracking fields from migration 012
+      // Order by move_number and stop_number for logical sequence
       const { data: events } = await supabase
         .from("load_events")
-        .select("id, status, location, notes, description, location_name, location_address, created_at")
+        .select("id, status, event_type, stop_type, move_number, stop_number, location, notes, description, location_name, location_address, arrival_time, created_at")
         .eq("load_id", shipment.id)
-        .order("created_at", { ascending: false });
+        .order("move_number", { ascending: true, nullsFirst: true })
+        .order("stop_number", { ascending: true, nullsFirst: true })
+        .order("created_at", { ascending: true });
+
+      // Map stop_type to customer-friendly status
+      const stopTypeToStatus: Record<string, string> = {
+        pickup: "picked_up",
+        hook: "picked_up",
+        drop: "out_for_delivery",
+        deliver: "delivered",
+        return: "delivered",
+        yard: "in_transit",
+        terminal: "at_port",
+      };
+
+      // Filter and transform events for customer display
+      // Only show "stop" events (not move_start which are internal)
+      // Also include legacy status_update events
+      const customerEvents = (events || [])
+        .filter((e: { event_type: string | null }) =>
+          e.event_type === "stop" || e.event_type === "status_update" || !e.event_type
+        )
+        .map((e: {
+          status: string;
+          event_type: string | null;
+          stop_type: string | null;
+          location: string | null;
+          notes: string | null;
+          description: string | null;
+          location_name: string | null;
+          location_address: string | null;
+          arrival_time: string | null;
+          created_at: string;
+        }) => {
+          // Determine display status: use stop_type mapping, fall back to event status
+          let displayStatus = e.status;
+          if (e.stop_type && stopTypeToStatus[e.stop_type]) {
+            displayStatus = stopTypeToStatus[e.stop_type];
+          }
+
+          return {
+            status: displayStatus,
+            location: e.location_name || e.location_address || e.location,
+            notes: e.description || e.notes,
+            // Use arrival_time if available (actual event time), fall back to created_at
+            timestamp: e.arrival_time || e.created_at,
+          };
+        })
+        // Reverse to show most recent first
+        .reverse();
 
       const response = NextResponse.json({
         success: true,
@@ -109,21 +159,7 @@ export async function GET(request: NextRequest) {
           chassisNumber: shipment.chassis_number,
           publicNotes: shipment.public_notes,
           lastUpdate: shipment.updated_at,
-          events: (events || []).map((e: {
-            status: string;
-            location: string | null;
-            notes: string | null;
-            description: string | null;
-            location_name: string | null;
-            location_address: string | null;
-            created_at: string
-          }) => ({
-            status: e.status,
-            // Use enhanced fields with fallback to legacy fields
-            location: e.location_name || e.location_address || e.location,
-            notes: e.description || e.notes,
-            timestamp: e.created_at,
-          })),
+          events: customerEvents,
         },
       });
       // Cache tracking data for 5 minutes
