@@ -5,8 +5,13 @@
 
 import { Client } from "@upstash/qstash";
 
+if (!process.env.QSTASH_TOKEN) {
+  console.error("❌ QSTASH_TOKEN environment variable is required");
+  process.exit(1);
+}
+
 const client = new Client({
-  token: process.env.QSTASH_TOKEN || "eyJVc2VySUQiOiI1YTBkMzMxYy0xYmNkLTQyZWItOGVjMC1lOGQxMWQ4ZDc5MWMiLCJQYXNzd29yZCI6ImQxOTA3MzdmNzE2NzQ2MWZiNWM3OWNjOWQ4NWU5ZmU4In0=",
+  token: process.env.QSTASH_TOKEN,
 });
 
 async function setupSchedule() {
