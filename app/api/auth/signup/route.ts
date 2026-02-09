@@ -5,6 +5,7 @@ import {
   addUserToOrganization,
   createOrganization,
 } from "@/lib/auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // Personal email domains that are not allowed
 const BLOCKED_EMAIL_DOMAINS = [
@@ -44,6 +45,12 @@ function getSupabase() {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit signup requests
+  const rateLimit = await checkRateLimit(request, "signup");
+  if (!rateLimit.success) {
+    return rateLimitResponse(rateLimit.reset);
+  }
+
   const supabase = getSupabase();
   try {
     const body = await request.json();
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm for better UX (can disable for production)
+      email_confirm: process.env.NODE_ENV !== "production",
       user_metadata: {
         full_name: fullName,
       },

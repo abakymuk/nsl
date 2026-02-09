@@ -33,9 +33,14 @@ function getSupabase(): SupabaseClient {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret (fail closed)
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("CRON_SECRET not configured — rejecting cron request");
+    return NextResponse.json({ error: "Cron not configured" }, { status: 503 });
+  }
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

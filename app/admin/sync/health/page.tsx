@@ -342,9 +342,7 @@ export default function SyncHealthPage() {
           <Button
             variant="outline"
             onClick={async () => {
-              await fetch("/api/cron/portpro-reconcile", {
-                headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET}` },
-              });
+              await fetch("/api/admin/sync-portpro", { method: "POST" });
               fetchMetrics();
             }}
           >

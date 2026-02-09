@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limit tracking requests
+    const rateLimit = await checkRateLimit(request, "track");
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.reset);
+    }
+
     // Get container number from query params
     const { searchParams } = new URL(request.url);
     const containerNumber = searchParams.get("container");
@@ -73,7 +80,7 @@ export async function GET(request: NextRequest) {
     if (shipmentError) {
       console.error("Supabase shipment error:", shipmentError);
       return NextResponse.json(
-        { error: "Database query failed", details: shipmentError.message },
+        { error: "Failed to look up shipment" },
         { status: 500 }
       );
     }
@@ -219,9 +226,8 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("Tracking API error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error", details: message },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

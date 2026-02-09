@@ -33,26 +33,35 @@ function getSupabase(): SupabaseClient {
  */
 export async function POST(request: NextRequest) {
   const supabase = getSupabase();
+
+  // Get raw body and verify signature BEFORE parsing JSON
+  const body = await request.text();
+  const signature = request.headers.get("X-Hub-Signature");
+  const webhookSecret = process.env.PORTPRO_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error("PORTPRO_WEBHOOK_SECRET not configured — rejecting webhook");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+  }
+  if (!signature) {
+    console.error("Missing webhook signature header");
+    return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+  }
+  if (!verifyWebhookSignature(signature, body, webhookSecret)) {
+    console.error("Invalid webhook signature");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  // Parse JSON only after signature is verified
+  let payload: WebhookPayload;
   try {
-    // Get raw body for signature verification
-    const body = await request.text();
-    const payload: WebhookPayload = JSON.parse(body);
+    payload = JSON.parse(body);
+  } catch {
+    console.error("Invalid JSON in webhook body");
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
 
-    // Log incoming webhook headers for debugging
-    const signature = request.headers.get("X-Hub-Signature");
-    const authHeader = request.headers.get("Authorization");
-    console.log("Webhook received - Headers:", {
-      "X-Hub-Signature": signature ? "present" : "missing",
-      "Authorization": authHeader ? "present" : "missing",
-    });
-
-    // Verify webhook signature (HMAC-SHA1) - skip if no signature header
-    const webhookSecret = process.env.PORTPRO_WEBHOOK_SECRET;
-    if (signature && webhookSecret && !verifyWebhookSignature(signature, body, webhookSecret)) {
-      console.error("Invalid webhook signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
+  try {
     // Get event type (PortPro uses both event_type and eventType)
     const eventType = (payload.event_type || payload.eventType) as WebhookEventType;
     const referenceNumber = payload.reference_number || payload.data?.reference_number;
@@ -137,8 +146,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error processing PortPro webhook:", error);
-    // Still return 200 to prevent retries for parsing errors
-    return NextResponse.json({ success: false, error: "Processing error" });
+    return NextResponse.json({ error: "Processing error" }, { status: 500 });
   }
 }
 

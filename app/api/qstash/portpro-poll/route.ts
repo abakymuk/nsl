@@ -37,8 +37,12 @@ async function verifyQStash(request: NextRequest, body: string): Promise<boolean
   const nextSigningKey = process.env.QSTASH_NEXT_SIGNING_KEY;
 
   if (!signingKey) {
-    console.warn("QStash signing keys not configured, skipping verification");
-    return true; // Allow in dev
+    if (process.env.NODE_ENV === "production") {
+      console.error("QStash signing keys not configured in production — rejecting request");
+      return false;
+    }
+    console.warn("QStash signing keys not configured, skipping verification in dev");
+    return true;
   }
 
   const receiver = new Receiver({
@@ -71,18 +75,10 @@ async function verifyQStash(request: NextRequest, body: string): Promise<boolean
 export async function POST(request: NextRequest) {
   const body = await request.text();
 
-  // Log headers for debugging
-  const signature = request.headers.get("upstash-signature");
-  console.log("QStash request received:", {
-    hasSignature: !!signature,
-    url: request.url,
-  });
-
-  // TODO: Re-enable signature verification after debugging
-  // For now, allow requests from QStash (they have upstash-signature header)
-  if (!signature) {
-    // Not from QStash, reject
-    return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+  // Verify QStash signature (fail-closed)
+  const isValid = await verifyQStash(request, body);
+  if (!isValid) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   const supabase = getSupabase();

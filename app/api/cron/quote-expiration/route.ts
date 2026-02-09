@@ -12,12 +12,16 @@ import { headers } from "next/headers";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret
+    // Verify cron secret (fail closed)
     const headersList = await headers();
     const authHeader = headersList.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret) {
+      console.error("CRON_SECRET not configured — rejecting cron request");
+      return NextResponse.json({ error: "Cron not configured" }, { status: 503 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

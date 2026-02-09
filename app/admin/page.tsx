@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createClient } from "@supabase/supabase-js";
 import { cache, Suspense } from "react";
 import { StatsCard } from "@/components/dashboard/stats-card";

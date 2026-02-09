@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 // Create rate limiters only if Redis is configured
 let quoteRateLimiter: Ratelimit | null = null;
 let contactRateLimiter: Ratelimit | null = null;
+let trackRateLimiter: Ratelimit | null = null;
+let signupRateLimiter: Ratelimit | null = null;
 
 function getRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -52,13 +54,54 @@ function getContactRateLimiter() {
   return contactRateLimiter;
 }
 
-export type RateLimitType = "quote" | "contact";
+function getTrackRateLimiter() {
+  if (trackRateLimiter) return trackRateLimiter;
+
+  const redis = getRedis();
+  if (!redis) return null;
+
+  trackRateLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(20, "1 m"), // 20 requests per minute per IP
+    analytics: true,
+    prefix: "ratelimit:track",
+  });
+
+  return trackRateLimiter;
+}
+
+function getSignupRateLimiter() {
+  if (signupRateLimiter) return signupRateLimiter;
+
+  const redis = getRedis();
+  if (!redis) return null;
+
+  signupRateLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "10 m"), // 5 signups per 10 minutes per IP
+    analytics: true,
+    prefix: "ratelimit:signup",
+  });
+
+  return signupRateLimiter;
+}
+
+export type RateLimitType = "quote" | "contact" | "track" | "signup";
+
+function getLimiter(type: RateLimitType) {
+  switch (type) {
+    case "quote": return getQuoteRateLimiter();
+    case "contact": return getContactRateLimiter();
+    case "track": return getTrackRateLimiter();
+    case "signup": return getSignupRateLimiter();
+  }
+}
 
 export async function checkRateLimit(
   request: NextRequest,
   type: RateLimitType
 ): Promise<{ success: boolean; remaining?: number; reset?: number }> {
-  const limiter = type === "quote" ? getQuoteRateLimiter() : getContactRateLimiter();
+  const limiter = getLimiter(type);
 
   // If no Redis configured, allow all requests (development mode)
   if (!limiter) {
