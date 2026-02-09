@@ -98,6 +98,8 @@ describe("verifyWebhookSignature", () => {
   });
 
   it("handles malformed hex in signature", () => {
+    // Buffer.from("notvalidhex", "hex") produces a shorter buffer,
+    // causing timingSafeEqual to throw on length mismatch, caught by try/catch
     expect(verifyWebhookSignature("sha1=notvalidhex", body, secret)).toBe(false);
   });
 });
@@ -198,10 +200,7 @@ describe("formatLocation", () => {
       },
     };
     const result = formatLocation(location);
-    expect(result).toContain("APM Terminal");
-    expect(result).toContain("2500 Navy Way");
-    expect(result).toContain("San Pedro");
-    expect(result).toContain("CA 90731");
+    expect(result).toBe("APM Terminal\n2500 Navy Way, San Pedro, CA 90731");
   });
 
   it("formats address without company name", () => {
@@ -356,6 +355,17 @@ describe("convertLoadToShipment", () => {
     expect(result.load_margin).toBe(550);
   });
 
+  it("prefers finalAmount over amount when both present on same expense", () => {
+    const loadWithBoth: PortProLoad = {
+      ...baseLoad,
+      totalAmount: 1000,
+      expense: [{ amount: 100, finalAmount: 200 }],
+    };
+    const result = convertLoadToShipment(loadWithBoth);
+    // finalAmount (200) should take precedence over amount (100)
+    expect(result.load_margin).toBe(800);
+  });
+
   it("returns null margin when totalAmount missing", () => {
     const loadWithoutTotal: PortProLoad = {
       ...baseLoad,
@@ -389,6 +399,32 @@ describe("convertLoadToShipment", () => {
     };
     const result = convertLoadToShipment(loadWithEmptyCosts);
     expect(result.load_margin).toBe(1000);
+  });
+
+  it("passes containerSize and containerType through as raw values", () => {
+    // Note: source code uses `load.containerSize || null` without calling extractLookupValue.
+    // When these fields are objects, an object is stored instead of a string.
+    const loadWithObjectFields: PortProLoad = {
+      ...baseLoad,
+      containerSize: { _id: "123", label: "40'" } as unknown as string,
+      containerType: { _id: "456", label: "High Cube" } as unknown as string,
+    };
+    const result = convertLoadToShipment(loadWithObjectFields);
+    // These will be objects, not strings — this documents a potential bug
+    // where extractLookupValue should be called but isn't
+    expect(result.container_size).toEqual({ _id: "123", label: "40'" });
+    expect(result.container_type).toEqual({ _id: "456", label: "High Cube" });
+  });
+
+  it("handles string containerSize and containerType", () => {
+    const loadWithStringFields: PortProLoad = {
+      ...baseLoad,
+      containerSize: "40",
+      containerType: "HC",
+    };
+    const result = convertLoadToShipment(loadWithStringFields);
+    expect(result.container_size).toBe("40");
+    expect(result.container_type).toBe("HC");
   });
 
   it("maps equipment fields", () => {

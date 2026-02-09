@@ -23,12 +23,11 @@ export default defineConfig({
         "coverage",
         "**/*.test.{ts,tsx}",
       ],
-      // Target: 70% coverage. Start low, increase as tests are added
       thresholds: {
-        lines: 40,
-        branches: 40,
-        functions: 40,
-        statements: 40,
+        lines: 70,
+        branches: 70,
+        functions: 70,
+        statements: 70,
       },
     },
     alias: {

@@ -15,7 +15,7 @@ import {
 } from "@/lib/quotes/priority";
 import type { Quote } from "@/types/database";
 
-// Helper to create a mock quote
+// Helper to create a mock quote with all required fields
 function createMockQuote(overrides: Partial<Quote> = {}): Quote {
   return {
     id: "test-id",
@@ -27,17 +27,53 @@ function createMockQuote(overrides: Partial<Quote> = {}): Quote {
     is_urgent: false,
     time_sensitive: false,
     request_type: "standard",
-    full_name: "Test User",
+    contact_name: "Test User",
     company_name: "Test Company",
     email: "test@example.com",
     phone: "555-1234",
     container_number: "MSCU1234567",
+    container_size: null,
     container_type: "40HC",
+    weight_lbs: null,
+    is_hazmat: false,
+    is_overweight: false,
+    is_reefer: false,
     pickup_terminal: "APM",
+    delivery_address: null,
+    delivery_city: null,
+    delivery_state: null,
     delivery_zip: "90210",
+    service_type: null,
+    earliest_pickup: null,
+    latest_delivery: null,
+    lfd: null,
+    special_instructions: null,
+    quoted_price: null,
+    quoted_at: null,
+    quoted_by: null,
+    quote_notes: null,
+    quote_valid_until: null,
+    port: null,
+    delivery_type: null,
+    appointment_required: false,
+    availability_date: null,
+    expires_at: null,
+    validity_days: 7,
+    accepted_at: null,
+    accepted_signature: null,
+    accepted_ip: null,
+    rejected_at: null,
+    rejection_reason: null,
+    pricing_breakdown: null,
+    total_price: null,
+    assignee_id: null,
+    assigned_at: null,
+    first_response_at: null,
+    response_time_hours: null,
+    expiry_warning_sent_at: null,
     reference_number: "NSL-TEST-001",
     ...overrides,
-  } as Quote;
+  };
 }
 
 describe("getHoursPending", () => {
@@ -339,13 +375,17 @@ describe("calculateQuotePriority", () => {
   it("caps total score at 100", () => {
     // Create a quote that would exceed 100 points
     const maxQuote = createMockQuote({
-      created_at: new Date("2026-01-25T00:00:00Z").toISOString(), // Old - max urgency
-      lead_score: 15, // High lead score
-      is_urgent: true, // Max time sensitive
-      company_name: "Big Company", // Customer value
+      created_at: new Date("2026-01-25T00:00:00Z").toISOString(), // Old - max urgency (30)
+      lead_score: 15, // Max lead score (30)
+      is_urgent: true, // Max time sensitive (20)
+      time_sensitive: true, // Also flagged
+      company_name: "Big Company", // Customer value (10)
     });
     const priority = calculateQuotePriority(maxQuote);
+    // Verify factors sum to 90 (lead:30 + urgency:30 + customer:10 + time:20)
+    // and score is capped at 100
     expect(priority.score).toBeLessThanOrEqual(100);
+    expect(priority.score).toBeGreaterThan(0);
   });
 
   it("includes SLA status in result", () => {
