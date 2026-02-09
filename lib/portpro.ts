@@ -225,7 +225,8 @@ class PortProClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<T> {
     const url = `${PORTPRO_API_URL}${endpoint}`;
 
@@ -238,11 +239,10 @@ class PortProClient {
       },
     });
 
-    if (response.status === 401) {
-      // Token expired, try to refresh
+    if (response.status === 401 && !isRetry) {
+      // Token expired, try to refresh (only once to prevent infinite loop)
       await this.refreshAccessToken();
-      // Retry request
-      return this.request<T>(endpoint, options);
+      return this.request<T>(endpoint, options, true);
     }
 
     if (!response.ok) {

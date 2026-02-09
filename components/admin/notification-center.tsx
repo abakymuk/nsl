@@ -137,7 +137,11 @@ export function NotificationCenter({ employeeId, isSuperAdmin, className }: Noti
           setUnreadCount((prev) => Math.max(0, prev - 1));
         }
       })
-      .subscribe();
+      .subscribe((_status, err) => {
+        if (err && !err.message?.includes("mismatch") && !err.message?.includes("AbortError")) {
+          console.error("Notification center subscription error:", err);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -410,7 +414,11 @@ export function NotificationBell({
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", subscribeConfig, () => fetchCount())
-      .subscribe();
+      .subscribe((_status, err) => {
+        if (err && !err.message?.includes("mismatch") && !err.message?.includes("AbortError")) {
+          console.error("Notification count subscription error:", err);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

@@ -176,9 +176,12 @@ function useUnreadCount(employeeId: string | null, isSuperAdmin: boolean) {
       .subscribe((_status, err) => {
         if (err) {
           // AbortError can happen when auth lock times out (multiple tabs, background tab, etc.)
-          // This is a known Supabase behavior and not a critical error
+          // "mismatch" errors happen when the table isn't in the Supabase Realtime publication
+          // Both are non-critical and shouldn't alarm users
           if (err.message?.includes("AbortError") || err.name === "AbortError") {
             console.debug("Notification subscription aborted (auth lock timeout)");
+          } else if (err.message?.includes("mismatch")) {
+            console.debug("Notification subscription: table not yet in Realtime publication");
           } else {
             console.error("Notification subscription error:", err);
           }
