@@ -30,9 +30,12 @@ function checkOriginForMutations(request: NextRequest): NextResponse | null {
   if (!origin) return null;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+  const host = request.headers.get("host");
   const allowedOrigins = new Set([
     new URL(siteUrl).origin,
     request.nextUrl.origin,
+    // Also allow the Host header origin (handles www vs non-www mismatches)
+    ...(host ? [`https://${host}`] : []),
   ]);
 
   if (!allowedOrigins.has(origin)) {
