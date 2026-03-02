@@ -191,12 +191,21 @@ describe("calculateLeadScore", () => {
     fullName: "John Doe",
     companyName: "Acme Corp",
     phone: "555-123-4567",
+    email: undefined,
     port: "la",
     requestType: "standard",
     timeSensitive: false,
+    containerNumber: undefined,
+    terminal: undefined,
+    lfd: undefined,
+    availabilityDate: undefined,
+    notes: undefined,
     deliveryZip: "90210",
+    deliveryType: undefined,
     appointmentRequired: false,
+    containerType: undefined,
     moveType: "import",
+    commodityType: undefined,
   };
 
   it("returns base score for minimal data", () => {
@@ -272,12 +281,21 @@ describe("isUrgentLead", () => {
     fullName: "John Doe",
     companyName: "Acme Corp",
     phone: "555-123-4567",
+    email: undefined,
     port: "la",
     requestType: "standard",
     timeSensitive: false,
+    containerNumber: undefined,
+    terminal: undefined,
+    lfd: undefined,
+    availabilityDate: undefined,
+    notes: undefined,
     deliveryZip: "90210",
+    deliveryType: undefined,
     appointmentRequired: false,
+    containerType: undefined,
     moveType: "import",
+    commodityType: undefined,
   };
 
   it("returns true for score >= 3", () => {
