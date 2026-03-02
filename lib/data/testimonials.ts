@@ -43,10 +43,10 @@ export const testimonials: Testimonial[] = [
     rating: 5,
   },
   {
-    quote: "Container was on hold for customs. They worked with the terminal and got it released same day.",
-    author: "Lisa Nakamura",
-    title: "Operations Lead",
-    company: "Transpacific Cargo",
+    quote: "A true team effort — from dispatch to the driver, Jose del Valle. On-time delivery made possible by every person at New Stream.",
+    author: "Tim Wu",
+    title: "Team Leader",
+    company: "Well Cargo LLC",
     rating: 5,
   },
   {
