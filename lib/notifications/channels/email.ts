@@ -123,7 +123,7 @@ export async function sendEmailNotification(
   ) {
     // Queue for digest if we have a notification ID
     if (notificationId) {
-      await queueForDigest(employeeId, notificationId);
+      if (!await queueForDigest(employeeId, notificationId)) return { success: false, error: "Digest queue unavailable" };
     }
     return { success: true, queued: true };
   }
@@ -133,7 +133,7 @@ export async function sendEmailNotification(
   if (!meetsPriorityThreshold(notification.priority, threshold)) {
     // Queue for digest if we have a notification ID
     if (notificationId) {
-      await queueForDigest(employeeId, notificationId);
+      if (!await queueForDigest(employeeId, notificationId)) return { success: false, error: "Digest queue unavailable" };
     }
     return { success: true, queued: true };
   }
@@ -163,7 +163,7 @@ export async function sendEmailNotification(
       urgent: "🚨 ",
     }[notification.priority];
 
-    await getResend().emails.send({
+    const { error: sendError } = await getResend().emails.send({
       from: fromEmail,
       to: email,
       subject: `${priorityEmoji}${notification.title} - New Stream Logistics`,
@@ -180,6 +180,7 @@ You can manage your notification preferences in your admin settings.
       `.trim(),
     });
 
+    if (sendError) throw new Error(sendError.message);
     return { success: true };
   } catch (error) {
     console.error("Failed to send notification email:", error);

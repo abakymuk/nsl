@@ -1,3 +1,4 @@
+import { getUserOrgMembership } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import { DashboardAnalyticsTracker } from "@/components/dashboard/analytics-tracker";
@@ -13,28 +14,14 @@ function getSupabase() {
   return _supabase;
 }
 
-async function getCustomerCompany(email: string) {
-  const { data } = await getSupabase()
-    .from("quotes")
-    .select("company_name")
-    .eq("email", email)
-    .limit(1)
-    .single();
+async function getQuotes(organizationId: string, status?: string) {
 
-  return data?.company_name || null;
-}
-
-async function getQuotes(email: string, companyName: string | null, status?: string) {
-  // Filter by company name if available (to show all company quotes)
-  const filter = companyName
-    ? { column: "company_name", value: companyName }
-    : { column: "email", value: email };
 
   // Only select columns needed for the list view
   let query = getSupabase()
     .from("quotes")
     .select("id, service_type, container_number, pickup_location, delivery_location, status, quoted_price, created_at")
-    .eq(filter.column, filter.value)
+    .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
   if (status && status !== "all") {
@@ -62,12 +49,12 @@ export default async function QuotesPage({
     redirect("/sign-in");
   }
 
-  const email = user.email || "";
   const { status } = await searchParams;
 
-  // Get company name to show all company quotes
-  const companyName = await getCustomerCompany(email);
-  const quotes = await getQuotes(email, companyName, status);
+  // Resolve organization membership
+  const membership = await getUserOrgMembership(user.id);
+  const organizationId = membership?.organization.id || "00000000-0000-0000-0000-000000000000";
+  const quotes = await getQuotes(organizationId, status);
 
   const statuses = ["all", "pending", "quoted", "accepted", "rejected"];
 

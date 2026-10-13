@@ -1,3 +1,4 @@
+import { requireAdminModule } from "@/lib/require-admin-module";
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +35,7 @@ export default async function QuoteDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminModule("quotes");
   const { id } = await params;
   const quote = await getQuote(id);
 

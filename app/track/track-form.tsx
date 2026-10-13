@@ -910,6 +910,23 @@ export default function TrackForm() {
     }
   };
 
+  useEffect(() => {
+    if (!searchedNumber) return;
+    let disposed = false;
+    const controller = new AbortController();
+    const interval = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const response = await fetch(`/api/track?container=${encodeURIComponent(searchedNumber)}`, { signal: controller.signal });
+        if (response.ok) {
+          const data: TrackingResult = await response.json();
+          if (!disposed) setResult(data);
+        }
+      } catch { /* Keep the last successful result during transient outages. */ }
+    }, 30000);
+    return () => { disposed = true; controller.abort(); clearInterval(interval); };
+  }, [searchedNumber]);
+
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     handleSearchWithNumber(containerNumber);

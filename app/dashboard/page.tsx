@@ -1,3 +1,4 @@
+import { getUserOrgMembership } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { cache, Suspense } from "react";
 import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
@@ -15,25 +16,10 @@ function getSupabase() {
   return _supabase;
 }
 
-const getCustomerCompany = cache(async (email: string) => {
-  const { data } = await getSupabase()
-    .from("quotes")
-    .select("company_name")
-    .eq("email", email)
-    .limit(1)
-    .single();
+const getCustomerStats = cache(async (organizationId: string) => {
 
-  return data?.company_name || null;
-});
 
-const getCustomerStats = cache(async (email: string, companyName: string | null) => {
-  const quoteFilter = companyName
-    ? { column: "company_name", value: companyName }
-    : { column: "email", value: email };
 
-  const shipmentFilter = companyName
-    ? { column: "customer_name", value: companyName }
-    : { column: "customer_email", value: email };
 
   // Run all 4 queries in parallel
   const [
@@ -42,10 +28,10 @@ const getCustomerStats = cache(async (email: string, companyName: string | null)
     { count: activeShipments },
     { count: completedShipments },
   ] = await Promise.all([
-    getSupabase().from("quotes").select("*", { count: "exact", head: true }).eq(quoteFilter.column, quoteFilter.value),
-    getSupabase().from("quotes").select("*", { count: "exact", head: true }).eq(quoteFilter.column, quoteFilter.value).eq("status", "pending"),
-    getSupabase().from("loads").select("*", { count: "exact", head: true }).eq(shipmentFilter.column, shipmentFilter.value).in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]),
-    getSupabase().from("loads").select("*", { count: "exact", head: true }).eq(shipmentFilter.column, shipmentFilter.value).eq("status", "delivered"),
+    getSupabase().from("quotes").select("*", { count: "exact", head: true }).eq("organization_id", organizationId),
+    getSupabase().from("quotes").select("*", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "pending"),
+    getSupabase().from("loads").select("*", { count: "exact", head: true }).eq("organization_id", organizationId).in("status", ["booked", "in_transit", "at_port", "out_for_delivery"]),
+    getSupabase().from("loads").select("*", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "delivered"),
   ]);
 
   return {
@@ -56,42 +42,36 @@ const getCustomerStats = cache(async (email: string, companyName: string | null)
   };
 });
 
-const getRecentQuotes = cache(async (email: string, companyName: string | null) => {
-  const filter = companyName
-    ? { column: "company_name", value: companyName }
-    : { column: "email", value: email };
+const getRecentQuotes = cache(async (organizationId: string) => {
+
 
   const { data } = await getSupabase()
     .from("quotes")
     .select("id, service_type, container_number, status, created_at")
-    .eq(filter.column, filter.value)
+    .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .limit(5);
 
   return data || [];
 });
 
-const getRecentActivity = cache(async (email: string, companyName: string | null) => {
-  const quoteFilter = companyName
-    ? { column: "company_name", value: companyName }
-    : { column: "email", value: email };
+const getRecentActivity = cache(async (organizationId: string) => {
 
-  const shipmentFilter = companyName
-    ? { column: "customer_name", value: companyName }
-    : { column: "customer_email", value: email };
+
+
 
   // Run both queries in parallel
   const [{ data: quotes }, { data: shipments }] = await Promise.all([
     getSupabase()
       .from("quotes")
       .select("id, company_name, status, created_at")
-      .eq(quoteFilter.column, quoteFilter.value)
+      .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
       .limit(3),
     getSupabase()
       .from("loads")
       .select("id, container_number, status, updated_at")
-      .eq(shipmentFilter.column, shipmentFilter.value)
+      .eq("organization_id", organizationId)
       .order("updated_at", { ascending: false })
       .limit(3),
   ]);
@@ -165,8 +145,8 @@ function QuotesSkeleton() {
 }
 
 // Async components
-async function StatsSection({ email, companyName }: { email: string; companyName: string | null }) {
-  const stats = await getCustomerStats(email, companyName);
+async function StatsSection({ organizationId }: { organizationId: string }) {
+  const stats = await getCustomerStats(organizationId);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -198,8 +178,8 @@ async function StatsSection({ email, companyName }: { email: string; companyName
   );
 }
 
-async function RecentActivitySection({ email, companyName }: { email: string; companyName: string | null }) {
-  const recentActivity = await getRecentActivity(email, companyName);
+async function RecentActivitySection({ organizationId }: { organizationId: string }) {
+  const recentActivity = await getRecentActivity(organizationId);
 
   if (recentActivity.length === 0) {
     return (
@@ -251,8 +231,8 @@ async function RecentActivitySection({ email, companyName }: { email: string; co
   );
 }
 
-async function RecentQuotesSection({ email, companyName }: { email: string; companyName: string | null }) {
-  const recentQuotes = await getRecentQuotes(email, companyName);
+async function RecentQuotesSection({ organizationId }: { organizationId: string }) {
+  const recentQuotes = await getRecentQuotes(organizationId);
 
   if (recentQuotes.length === 0) {
     return (
@@ -326,8 +306,9 @@ export default async function DashboardPage() {
   const email = user.email || "";
   const firstName = user.user_metadata?.full_name?.split(" ")[0] || email.split("@")[0];
 
-  // Get company name first (needed for child components)
-  const companyName = await getCustomerCompany(email);
+  // Resolve membership from the verified session
+  const membership = await getUserOrgMembership(user.id);
+  const organizationId = membership?.organization.id || "00000000-0000-0000-0000-000000000000";
 
   return (
     <div className="space-y-8">
@@ -344,7 +325,7 @@ export default async function DashboardPage() {
 
       {/* Stats Grid - streams independently */}
       <Suspense fallback={<StatsSkeleton />}>
-        <StatsSection email={email} companyName={companyName} />
+        <StatsSection organizationId={organizationId} />
       </Suspense>
 
       {/* Quick Actions & Recent Activity */}
@@ -378,7 +359,7 @@ export default async function DashboardPage() {
         <div className="rounded-xl border bg-card p-6">
           <h2 className="font-semibold text-lg mb-4">Recent Activity</h2>
           <Suspense fallback={<ActivitySkeleton />}>
-            <RecentActivitySection email={email} companyName={companyName} />
+            <RecentActivitySection organizationId={organizationId} />
           </Suspense>
         </div>
       </div>
@@ -395,7 +376,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
         <Suspense fallback={<QuotesSkeleton />}>
-          <RecentQuotesSection email={email} companyName={companyName} />
+          <RecentQuotesSection organizationId={organizationId} />
         </Suspense>
       </div>
     </div>

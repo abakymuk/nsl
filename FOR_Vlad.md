@@ -352,3 +352,29 @@ The architecture does the heavy lifting. You just add the business logic.
 Questions? The code is the documentation. Start with `CLAUDE.md` for the overview, then dive into specific files. The patterns repeat everywhere - once you understand one flow, you understand them all.
 
 Happy coding! 🚀
+
+## October 2026: access and reliability repair
+
+The portal now treats an organization ID as the ownership boundary. Company names
+are display text, not credentials. Old records without a verified organization
+stay hidden from customer accounts until reviewed and assigned. Employees also
+need permission for the specific admin page, even when opening its URL directly.
+
+Signup now goes through Supabase's actual email-confirmation flow. A signed-in,
+verified recipient accepts an invitation through one database transaction. The
+browser cannot grant itself an admin role, enumerate offer tokens, or call the old
+privileged invitation functions.
+
+The biggest reliability change is the acknowledgement boundary: success means a
+quote or transport event has actually been committed. New quotes create durable
+notification jobs in that same transaction. Email outages delay delivery instead
+of losing requests. PortPro events commit the load, timeline and deduplication
+marker together; a failed write rolls all of them back. If neither the database
+nor the retry queue accepts an event, PortPro receives a retryable error.
+
+The SQL regression suite exercises real PostgreSQL grants, row isolation,
+invitation recipients, replayed acceptance and webhook rollback. This uncovered a
+legacy trigger relying on the caller's search path; the migration now pins it.
+CI runs these checks before the production deployment job can start. See README's
+release steps: the prepared migrations must be applied to Supabase before this
+application version is published. No hosted database was changed by this work.

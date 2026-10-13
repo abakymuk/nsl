@@ -1,3 +1,4 @@
+import { requireAdminModule } from "@/lib/require-admin-module";
 import { createClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -31,6 +32,7 @@ export default async function NewLoadPage({
 }: {
   searchParams: Promise<{ quote_id?: string }>;
 }) {
+  await requireAdminModule("loads");
   const { quote_id } = await searchParams;
 
   let quote = null;

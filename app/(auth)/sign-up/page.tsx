@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,29 +128,25 @@ export default function SignUpPage() {
 
     setCheckingEmail(true);
     try {
-      const res = await fetch(`/api/auth/signup?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
-
+      // Only an explicit invitation can identify a team before verification.
       const options: OrgOption[] = [];
-
-      if (data.hasInvitation && data.invitation) {
-        options.push({
-          type: "invitation",
-          organizationId: data.invitation.organizationId,
-          organizationName: data.invitation.organizationName,
-          inviterName: data.invitation.inviterName,
-          role: data.invitation.role,
-          token: data.invitation.token,
-        });
+      const token = inviteToken || orgOptions.find((option) => option.type === "invitation")?.token;
+      if (token) {
+        const res = await fetch(`/api/invitations/${token}`);
+        const data = await res.json();
+        const invitation = data.invitation;
+        if (res.ok && invitation?.status === "pending"
+          && invitation.email.toLowerCase() === email.toLowerCase()) {
+          options.push({
+            type: "invitation", token,
+            organizationId: invitation.organizationId,
+            organizationName: invitation.organizationName,
+            inviterName: invitation.inviterName,
+            role: invitation.role,
+          });
+        }
       }
-
-      if (data.hasDomainMatch && data.organization) {
-        options.push({
-          type: "domain",
-          organizationId: data.organization.id,
-          organizationName: data.organization.name,
-        });
-      }
+      setSelectedOrgOption(null);
 
       // Always allow creating new org
       options.push({ type: "create" });
@@ -233,8 +228,8 @@ export default function SignUpPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -299,15 +294,7 @@ export default function SignUpPage() {
       // Track successful sign-up
       Analytics.signUp("email");
 
-      // Sign in the user
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        // Account created but couldn't auto-sign in
+      if (data.verificationRequired) {
         setStep("complete");
         setLoading(false);
         return;

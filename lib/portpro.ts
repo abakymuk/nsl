@@ -232,6 +232,7 @@ class PortProClient {
 
     const response = await fetch(url, {
       ...options,
+      signal: options.signal || AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${this.accessToken}`,
         "Content-Type": "application/json",
@@ -256,6 +257,7 @@ class PortProClient {
   private async refreshAccessToken(): Promise<void> {
     const response = await fetch(`${PORTPRO_API_URL}/auth/refresh`, {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/json",
       },
