@@ -163,8 +163,9 @@ against your hosted Supabase project.
 - Production deployment depends on the same commit's CI checks. Configure the
   GitHub `production` environment and set repository variable
   `VERCEL_CLI_VERSION` to a reviewed exact CLI version. If Vercel Git integration
-  also publishes production automatically, disable that duplicate release path
-  or configure equivalent deployment checks there.
+  is configured not to auto-deploy `main`, avoiding an unchecked duplicate release.
+  The workflow stages production with `--skip-domain`; verify the staged deployment
+  and apply pending migrations before promoting it to the public domains.
 
 ### Local verification
 
