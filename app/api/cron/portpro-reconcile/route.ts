@@ -8,11 +8,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   getPortProClient,
-  mapPortProStatus,
-  formatLocation,
-  extractLookupValue,
   PortProLoad,
 } from "@/lib/portpro";
+import { syncPortProLoad } from "@/lib/portpro-processing";
 import { sendSlackAlert } from "@/lib/sync-monitoring";
 
 export const runtime = "nodejs";
@@ -47,10 +45,10 @@ export async function GET(request: NextRequest) {
   const supabase = getSupabase();
 
   const startTime = Date.now();
-  let synced = 0;
+  const synced = 0;
   let updated = 0;
   let errors = 0;
-  let discrepancies = 0;
+  const discrepancies = 0;
 
   try {
     // Log sync start
@@ -87,7 +85,7 @@ export async function GET(request: NextRequest) {
       if (hasMore) await new Promise((r) => setTimeout(r, 500));
 
       // Safety limit to prevent infinite loops
-      if (skip > 10000) break;
+      if (skip > 10000) throw new Error("Reconciliation limit exceeded; use cursor polling");
     }
 
     console.log(`Reconciliation: Fetched ${allLoads.length} loads from PortPro`);
@@ -95,52 +93,8 @@ export async function GET(request: NextRequest) {
     // Process each load
     for (const load of allLoads) {
       try {
-        if (!load.containerNo) continue;
-
-        // Check if load exists in our database
-        const { data: existing } = await supabase
-          .from("loads")
-          .select("id, status, updated_at, billing_total")
-          .eq("portpro_reference", load.reference_number)
-          .single();
-
-        const shipmentData = buildShipmentData(load);
-
-        if (existing) {
-          // Check for discrepancies
-          const localStatus = existing.status;
-          const remoteStatus = mapPortProStatus(load.status);
-
-          if (localStatus !== remoteStatus) {
-            discrepancies++;
-            console.log(
-              `Discrepancy: ${load.reference_number} status ${localStatus} -> ${remoteStatus}`
-            );
-          }
-
-          // Update existing record
-          const { error } = await supabase
-            .from("loads")
-            .update(shipmentData)
-            .eq("id", existing.id);
-
-          if (error) throw error;
-          updated++;
-        } else {
-          // Create new record
-          const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random()
-            .toString(36)
-            .substring(2, 6)
-            .toUpperCase()}`;
-
-          const { error } = await supabase.from("loads").insert({
-            ...shipmentData,
-            tracking_number: trackingNumber,
-          });
-
-          if (error) throw error;
-          synced++;
-        }
+        const result = await syncPortProLoad(load);
+        if (!result.duplicate) updated++;
       } catch (loadError) {
         console.error(`Error processing ${load.reference_number}:`, loadError);
         errors++;
@@ -154,7 +108,7 @@ export async function GET(request: NextRequest) {
       await supabase
         .from("sync_status")
         .update({
-          status: "completed",
+          status: errors ? "failed" : "completed",
           completed_at: new Date().toISOString(),
           records_processed: allLoads.length,
           records_failed: errors,
@@ -179,7 +133,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: true,
+      success: errors === 0,
       total: allLoads.length,
       synced,
       updated,
@@ -200,72 +154,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function buildShipmentData(load: PortProLoad) {
-  const pickupLocation =
-    formatLocation(load.pickupLocation) ||
-    formatLocation(load.shipper) ||
-    formatLocation(load.terminal);
-
-  const deliveryLocation =
-    formatLocation(load.deliveryLocation) || formatLocation(load.consignee);
-
-  return {
-    container_number: load.containerNo,
-    container_size: extractLookupValue(load.containerSize ?? null),
-    container_type: extractLookupValue(load.containerType ?? null),
-    status: mapPortProStatus(load.status),
-    origin: pickupLocation,
-    destination: deliveryLocation,
-    customer_name: load.caller?.company_name || null,
-    customer_email: load.caller?.email || null,
-    eta: load.deliveryTimes?.[0]?.deliveryFromTime || null,
-    pickup_time: load.pickupTimes?.[0]?.pickupFromTime || null,
-    last_free_day: load.lastFreeDay || null,
-    weight: load.weight || null,
-    seal_number: load.sealNo || null,
-    chassis_number: load.chassisNo || null,
-    total_miles: load.totalMiles || null,
-    billing_total: load.totalAmount || null,
-    load_margin: calculateMargin(load),
-    portpro_reference: load.reference_number,
-    portpro_load_id: load._id,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function calculateMargin(load: PortProLoad): number | null {
-  if (load.totalAmount == null) return null;
-
-  let totalCosts = 0;
-
-  if (load.expense?.length) {
-    totalCosts += load.expense.reduce(
-      (sum, e) => sum + (e.finalAmount || e.amount || 0),
-      0
-    );
-  }
-
-  if (load.vendorPay?.length) {
-    totalCosts += load.vendorPay.reduce((sum, vp) => {
-      if (vp.totalAmount != null) return sum + vp.totalAmount;
-      if (vp.pricing?.length) {
-        return (
-          sum +
-          vp.pricing.reduce((s, p) => s + (p.finalAmount || p.amount || 0), 0)
-        );
-      }
-      return sum;
-    }, 0);
-  }
-
-  if (load.driverPay?.length) {
-    totalCosts += load.driverPay.reduce(
-      (sum, dp) => sum + (dp.totalAmount || dp.amount || 0),
-      0
-    );
-  }
-
-  return load.totalAmount - totalCosts;
 }

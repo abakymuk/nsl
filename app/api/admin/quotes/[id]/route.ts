@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
@@ -27,7 +28,20 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const parsed = z.object({
+      status: z.enum(["pending", "in_review", "quoted", "accepted", "rejected", "expired", "cancelled"]).optional(),
+      quoted_price: z.number().positive().max(10000000).optional(),
+      expires_at: z.iso.datetime({ offset: true }).optional(),
+      quote_notes: z.string().max(10000).optional(),
+      organization_id: z.uuid().nullable().optional(),
+      pricing_breakdown: z.object({
+        items: z.array(z.object({ description: z.string(), amount: z.number().nonnegative() }).passthrough()),
+        fees: z.array(z.object({ description: z.string(), amount: z.number().nonnegative() }).passthrough()).optional(),
+        total: z.number().positive(),
+      }).passthrough().optional(),
+    }).safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: "Invalid quote update" }, { status: 400 });
+    const body = parsed.data;
     const {
       status,
       quoted_price,
@@ -58,6 +72,10 @@ export async function PATCH(
 
     const currentStatus = (currentQuote.lifecycle_status || currentQuote.status) as QuoteStatus;
 
+    if (["accepted", "rejected", "expired", "cancelled"].includes(currentStatus)
+      && (quoted_price !== undefined || pricing_breakdown !== undefined || expires_at !== undefined)) {
+      return NextResponse.json({ error: "Finalized offers cannot be repriced" }, { status: 409 });
+    }
     // Validate status transition
     if (status && status !== currentStatus) {
       const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
@@ -82,6 +100,9 @@ export async function PATCH(
       updated_at: now,
     };
 
+    if (body.organization_id !== undefined) {
+      updateData.organization_id = body.organization_id;
+    }
     if (status) {
       updateData.status = status;
       updateData.lifecycle_status = status;
@@ -108,14 +129,15 @@ export async function PATCH(
       .from("quotes")
       .update(updateData)
       .eq("id", id)
+      .eq("updated_at", currentQuote.updated_at)
       .select()
       .single();
 
     if (error) {
       console.error("Error updating quote:", error);
       return NextResponse.json(
-        { error: "Failed to update quote" },
-        { status: 500 }
+        { error: error.code === "PGRST116" ? "Quote changed. Refresh and try again." : "Failed to update quote" },
+        { status: error.code === "PGRST116" ? 409 : 500 }
       );
     }
 

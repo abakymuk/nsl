@@ -1,3 +1,5 @@
+import { LiveRefresh } from "@/components/dashboard/live-refresh";
+import { requireAdminModule } from "@/lib/require-admin-module";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -46,6 +48,7 @@ export default async function AdminLoadsPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
+  await requireAdminModule("loads");
   const { status, q } = await searchParams;
   const loads = await getLoads(status, q);
 
@@ -61,6 +64,7 @@ export default async function AdminLoadsPage({
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Shipments</h1>

@@ -1,3 +1,5 @@
+import { LiveRefresh } from "@/components/dashboard/live-refresh";
+import { requireAdminModule } from "@/lib/require-admin-module";
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -321,6 +323,7 @@ export default async function LoadDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminModule("loads");
   const { id } = await params;
   const load = await getLoad(id);
 
@@ -332,6 +335,7 @@ export default async function LoadDetailPage({
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <div className="flex items-center gap-4">
         <Link
           href="/admin/loads"

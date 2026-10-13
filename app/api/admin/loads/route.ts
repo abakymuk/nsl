@@ -91,6 +91,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let organizationId: string | null = null;
+    if (quote_id) {
+      const { data: quote, error } = await getSupabase().from("quotes")
+        .select("organization_id, lifecycle_status").eq("id", quote_id).single();
+      if (error || !quote || quote.lifecycle_status !== "accepted") {
+        return NextResponse.json({ error: "An accepted quote is required" }, { status: 409 });
+      }
+      organizationId = quote.organization_id;
+    }
     // Generate tracking number
     const tracking_number = generateTrackingNumber();
 
@@ -99,6 +108,7 @@ export async function POST(request: NextRequest) {
       .from("loads")
       .insert({
         quote_id,
+        organization_id: organizationId,
         tracking_number,
         container_number,
         container_size,
@@ -131,17 +141,6 @@ export async function POST(request: NextRequest) {
       description: "Load created and booked",
       notes: quote_id ? "Created from accepted quote" : "Manually created",
     });
-
-    // If created from quote, update quote status to completed
-    if (quote_id) {
-      await getSupabase()
-        .from("quotes")
-        .update({
-          status: "completed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", quote_id);
-    }
 
     // Send tracking notification email if customer email provided
     if (customer_email) {

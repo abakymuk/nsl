@@ -1,3 +1,5 @@
+import { LiveRefresh } from "@/components/dashboard/live-refresh";
+import { getUserOrgMembership } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getUser, createUntypedAdminClient } from "@/lib/supabase/server";
 import { DashboardAnalyticsTracker } from "@/components/dashboard/analytics-tracker";
@@ -13,39 +15,14 @@ function getSupabase() {
   return _supabase;
 }
 
-async function getCustomerCompany(email: string) {
-  // First check quotes table for company name
-  const { data: quoteData } = await getSupabase()
-    .from("quotes")
-    .select("company_name")
-    .eq("email", email)
-    .limit(1)
-    .single();
+async function getShipments(organizationId: string, status?: string) {
 
-  if (quoteData?.company_name) return quoteData.company_name;
-
-  // Fallback: check shipments for customer_name
-  const { data: shipmentData } = await getSupabase()
-    .from("loads")
-    .select("customer_name")
-    .eq("customer_email", email)
-    .limit(1)
-    .single();
-
-  return shipmentData?.customer_name || null;
-}
-
-async function getShipments(email: string, companyName: string | null, status?: string) {
-  // Filter by company name if available (to show all company loads)
-  const filter = companyName
-    ? { column: "customer_name", value: companyName }
-    : { column: "customer_email", value: email };
 
   // Only select columns needed for the list view
   let query = getSupabase()
     .from("loads")
     .select("id, tracking_number, container_number, origin, destination, status, eta, created_at")
-    .eq(filter.column, filter.value)
+    .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
   if (status && status !== "all") {
@@ -73,17 +50,18 @@ export default async function ShipmentsPage({
     redirect("/sign-in");
   }
 
-  const email = user.email || "";
   const { status } = await searchParams;
 
-  // Get company name to show all company loads
-  const companyName = await getCustomerCompany(email);
-  const loads = await getShipments(email, companyName, status);
+  // Resolve organization membership
+  const membership = await getUserOrgMembership(user.id);
+  const organizationId = membership?.organization.id || "00000000-0000-0000-0000-000000000000";
+  const loads = await getShipments(organizationId, status);
 
   const statuses = ["all", "booked", "in_transit", "delivered"];
 
   return (
     <div className="space-y-6">
+      <LiveRefresh organizationId={organizationId} />
       {/* Analytics tracking */}
       <DashboardAnalyticsTracker section="loads" />
 

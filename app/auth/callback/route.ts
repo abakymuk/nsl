@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { completeRegistration } from "@/lib/registration";
 import { checkInitialSuperAdmin, getPostLoginRedirect } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -34,13 +35,18 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && data.user) {
+      try {
+        await completeRegistration(supabase, data.user);
+      } catch {
+        return NextResponse.redirect(`${origin}/dashboard?setup=failed`);
+      }
       // Check if this user should be auto-promoted to super admin (from env var)
       if (data.user.email) {
         await checkInitialSuperAdmin(data.user.email);
       }
 
       // If explicit redirect was requested, use it
-      if (next) {
+      if (next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 

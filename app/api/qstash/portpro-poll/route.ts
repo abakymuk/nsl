@@ -6,13 +6,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Receiver } from "@upstash/qstash";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import {
-  getPortProClient,
-  mapPortProStatus,
-  formatLocation,
-  extractLookupValue,
-  PortProLoad,
-} from "@/lib/portpro";
+import { getPortProClient } from "@/lib/portpro";
+import { syncPortProLoad } from "@/lib/portpro-processing";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 1 minute max
@@ -83,62 +78,35 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabase();
   const startTime = Date.now();
-  let synced = 0;
+  const synced = 0;
   let updated = 0;
   let errors = 0;
 
   try {
     const portpro = getPortProClient();
 
-    // Only fetch recently updated loads (last 10 minutes for 5-min polling)
-    // This is more efficient than full reconciliation
-    const loads = await portpro.getLoads({ limit: 100 });
-
-    console.log(`QStash Poll: Processing ${loads.length} loads`);
-
+    const { data: cursor, error: cursorError } = await supabase.from("sync_cursors")
+      .select("offset_value").eq("name", "portpro").single();
+    if (cursorError) throw cursorError;
+    const offset = cursor.offset_value;
+    const loads = await portpro.getLoads({ skip: offset, limit: 50 });
     for (const load of loads) {
       try {
-        // Include all loads (even without container number)
-
-        const { data: existing } = await supabase
-          .from("loads")
-          .select("id, status, updated_at")
-          .eq("portpro_reference", load.reference_number)
-          .single();
-
-        const shipmentData = buildShipmentData(load);
-
-        if (existing) {
-          // Check if data actually changed (compare timestamps)
-          const portProUpdated = new Date(load.updatedAt || 0).getTime();
-          const localUpdated = new Date(existing.updated_at || 0).getTime();
-
-          if (portProUpdated > localUpdated) {
-            await supabase
-              .from("loads")
-              .update(shipmentData)
-              .eq("id", existing.id);
-            updated++;
-          }
-        } else {
-          // New load
-          const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random()
-            .toString(36)
-            .substring(2, 6)
-            .toUpperCase()}`;
-
-          await supabase.from("loads").insert({
-            ...shipmentData,
-            tracking_number: trackingNumber,
-          });
-          synced++;
-        }
-      } catch (err) {
-        console.error(`Poll error for ${load.reference_number}:`, err);
+        const result = await syncPortProLoad(load);
+        if (!result.duplicate) updated++;
+      } catch (error) {
+        console.error("PortPro snapshot failed", error);
         errors++;
       }
     }
-
+    // Retry the page on any error. Advance only once; concurrent polls cannot
+    // overwrite a newer cursor. An empty page starts a new full sweep.
+    if (errors === 0) {
+      const { error } = await supabase.from("sync_cursors")
+        .update({ offset_value: loads.length ? offset + loads.length : 0 })
+        .eq("name", "portpro").eq("offset_value", offset);
+      if (error) throw error;
+    }
     const duration = Date.now() - startTime;
 
     // Only log if something changed
@@ -147,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: true,
+      success: errors === 0,
       synced,
       updated,
       errors,
@@ -160,74 +128,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function buildShipmentData(load: PortProLoad) {
-  const pickupLocation =
-    formatLocation(load.pickupLocation) ||
-    formatLocation(load.shipper) ||
-    formatLocation(load.terminal);
-
-  const deliveryLocation =
-    formatLocation(load.deliveryLocation) || formatLocation(load.consignee);
-
-  return {
-    container_number: load.containerNo,
-    container_size: extractLookupValue(load.containerSize ?? null),
-    container_type: extractLookupValue(load.containerType ?? null),
-    status: mapPortProStatus(load.status),
-    origin: pickupLocation,
-    destination: deliveryLocation,
-    customer_name: load.caller?.company_name || null,
-    customer_email: load.caller?.email || null,
-    eta: load.deliveryTimes?.[0]?.deliveryFromTime || null,
-    pickup_time: load.pickupTimes?.[0]?.pickupFromTime || null,
-    last_free_day: load.lastFreeDay || null,
-    weight: load.weight || null,
-    seal_number: load.sealNo || null,
-    chassis_number: load.chassisNo || null,
-    total_miles: load.totalMiles || null,
-    billing_total: load.totalAmount || null,
-    load_margin: calculateMargin(load),
-    portpro_reference: load.reference_number,
-    portpro_load_id: load._id,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function calculateMargin(load: PortProLoad): number | null {
-  if (load.totalAmount == null) return null;
-
-  let totalCosts = 0;
-
-  if (load.expense?.length) {
-    totalCosts += load.expense.reduce(
-      (sum, e) => sum + (e.finalAmount || e.amount || 0),
-      0
-    );
-  }
-
-  if (load.vendorPay?.length) {
-    totalCosts += load.vendorPay.reduce((sum, vp) => {
-      if (vp.totalAmount != null) return sum + vp.totalAmount;
-      if (vp.pricing?.length) {
-        return (
-          sum +
-          vp.pricing.reduce((s, p) => s + (p.finalAmount || p.amount || 0), 0)
-        );
-      }
-      return sum;
-    }, 0);
-  }
-
-  if (load.driverPay?.length) {
-    totalCosts += load.driverPay.reduce(
-      (sum, dp) => sum + (dp.totalAmount || dp.amount || 0),
-      0
-    );
-  }
-
-  return load.totalAmount - totalCosts;
 }
 
 // Health check

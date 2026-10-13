@@ -62,7 +62,7 @@ async function getEmployeesWithPermission(permission: string): Promise<string[]>
 
   if (error) {
     console.error("Error fetching employees:", error);
-    return [];
+    throw error;
   }
 
   return (data || []).map((e) => e.id);
@@ -83,7 +83,7 @@ async function getSuperAdminEmployeeIds(): Promise<string[]> {
 
   if (profileError) {
     console.error("Error fetching super admins:", profileError);
-    return [];
+    throw profileError;
   }
 
   if (!superAdmins || superAdmins.length === 0) {
@@ -100,7 +100,7 @@ async function getSuperAdminEmployeeIds(): Promise<string[]> {
 
   if (empError) {
     console.error("Error fetching super admin employees:", empError);
-    return [];
+    throw empError;
   }
 
   return (employees || []).map((e) => e.id);

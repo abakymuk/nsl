@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -57,6 +57,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function QuoteForm() {
   const router = useRouter();
+  const submission = useRef<{ payload: string; key: string } | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,10 +110,14 @@ export default function QuoteForm() {
     setError(null);
 
     try {
+      const payload = JSON.stringify(formData);
+      if (submission.current?.payload !== payload) {
+        submission.current = { payload, key: crypto.randomUUID() };
+      }
       const response = await fetch("/api/quote", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json", "Idempotency-Key": submission.current.key },
+        body: payload,
       });
 
       if (!response.ok) {

@@ -1,7 +1,8 @@
+import { syncPortProLoad } from "@/lib/portpro-processing";
 import { NextRequest, NextResponse } from "next/server";
 import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { hasModuleAccess } from "@/lib/auth";
-import { getPortProClient, mapPortProStatus, formatLocation, extractLookupValue, PortProLoad, PortProDriverOrder, PortProMove, PortProLocation } from "@/lib/portpro";
+import { getPortProClient, formatLocation, PortProLoad, PortProDriverOrder, PortProMove, PortProLocation } from "@/lib/portpro";
 
 // Lazy initialization to avoid module-scope env var access during build
 let _supabase: ReturnType<typeof createUntypedAdminClient> | null = null;
@@ -63,37 +64,13 @@ export async function POST(request: NextRequest) {
     }
 
     let synced = 0;
-    let skipped = 0;
+    const skipped = 0;
     let errors = 0;
     const errorDetails: string[] = [];
 
     // Process each load
     for (const load of loads) {
       try {
-        // Skip loads without container number
-        if (!load.containerNo) {
-          console.log(`Skipping load ${load.reference_number} - no container number`);
-          skipped++;
-          continue;
-        }
-
-        // Check if load already exists by container_number
-        const { data: existing, error: selectError } = await getSupabase()
-          .from("loads")
-          .select("id")
-          .eq("container_number", load.containerNo)
-          .limit(1);
-
-        if (selectError) {
-          console.error(`Error checking existing shipment:`, selectError);
-          errors++;
-          errorDetails.push(`Select ${load.reference_number}: ${selectError.message}`);
-          continue;
-        }
-
-        // Generate tracking number for new loads
-        const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
         // Determine locations using the formatLocation helper
         // Try top-level fields first, then fall back to driverOrder moves
         let pickupLocation = formatLocation(load.pickupLocation)
@@ -127,85 +104,12 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Full shipment data from PortPro with all available fields
-        const shipmentData = {
-          // Container info
-          container_number: load.containerNo,
-          container_size: extractLookupValue(load.containerSize ?? null),
-          container_type: extractLookupValue(load.containerType ?? null),
-          // Status & location
-          status: mapPortProStatus(load.status),
-          current_location: getLoadLocation(load),
-          // Locations (addresses)
-          origin: pickupLocation,
-          destination: deliveryLocation,
-          return_location: returnLocation,
-          // Customer info
-          customer_name: load.caller?.company_name || null,
-          customer_email: load.caller?.email || null,
-          customer_phone: load.caller?.phone || null,
-          // Booking & shipping
-          booking_number: load.bookingNo || null,
-          shipping_line: load.ssl || null,
-          commodity: load.commodity || null,
-          // Dates
-          eta: load.deliveryTimes?.[0]?.deliveryFromTime || null,
-          pickup_time: load.pickupTimes?.[0]?.pickupFromTime || null,
-          last_free_day: load.lastFreeDay || null,
-          // Equipment
-          weight: load.weight || null,
-          seal_number: load.sealNo || null,
-          chassis_number: load.chassisNo || null,
-          // Distance
-          total_miles: load.totalMiles || null,
-          // Billing
-          billing_total: load.totalAmount || null,
-          load_margin: calculateMargin(load),
-          // PortPro reference
-          portpro_reference: load.reference_number,
-          portpro_load_id: load._id,
-          // Notes
-          public_notes: `PortPro: ${load.reference_number} - ${load.type_of_load}`,
-          updated_at: new Date().toISOString(),
-        };
-
-        let loadId: string;
-
-        if (existing && existing.length > 0) {
-          // Update existing shipment (don't change tracking_number)
-          const { error: updateError } = await getSupabase()
-            .from("loads")
-            .update(shipmentData)
-            .eq("id", existing[0].id);
-
-          if (updateError) {
-            console.error(`Error updating shipment for ${load.reference_number}:`, updateError);
-            errors++;
-            errorDetails.push(`Update ${load.reference_number}: ${updateError.message}`);
-            continue;
-          }
-          loadId = existing[0].id;
-          console.log(`Updated shipment for ${load.reference_number}`);
-        } else {
-          // Create new shipment with tracking number
-          const { data: newLoad, error: insertError } = await getSupabase()
-            .from("loads")
-            .insert({
-              ...shipmentData,
-              tracking_number: trackingNumber,
-            })
-            .select("id")
-            .single();
-
-          if (insertError || !newLoad) {
-            console.error(`Error creating shipment for ${load.reference_number}:`, insertError);
-            errors++;
-            errorDetails.push(`Insert ${load.reference_number}: ${insertError?.message || "Unknown"}`);
-            continue;
-          }
-          loadId = newLoad.id;
-          console.log(`Created shipment for ${load.reference_number} (${load.containerNo}) - Tracking: ${trackingNumber}`);
-        }
+        const result = await syncPortProLoad(load, {
+          origin: pickupLocation, destination: deliveryLocation,
+          return_location: returnLocation, current_location: getLoadLocation(load),
+        });
+        if (!result.id) throw new Error("Load was not saved");
+        const loadId = result.id;
 
         // Sync tracking events from driverOrder
         if (load.driverOrder && load.driverOrder.length > 0) {
@@ -221,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: true,
+      success: errors === 0,
       message: `Sync completed`,
       total: loads.length,
       synced,
@@ -347,13 +251,6 @@ function formatMoveLocation(move: PortProMove): { name: string | null; address: 
 async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrder[]) {
   console.log(`Syncing ${driverOrders.length} driver orders for load ${loadId}`);
 
-  // First, clear existing portpro tracking events for this load (to avoid duplicates)
-  await getSupabase()
-    .from("load_events")
-    .delete()
-    .eq("load_id", loadId)
-    .in("event_type", ["move_start", "stop"]);
-
   // Collect all events to insert in a single batch
   const eventsToInsert: Record<string, unknown>[] = [];
 
@@ -413,15 +310,11 @@ async function syncTrackingEvents(loadId: string, driverOrders: PortProDriverOrd
     }
   }
 
-  // Batch insert all events at once
-  if (eventsToInsert.length > 0) {
-    const { error } = await getSupabase().from("load_events").insert(eventsToInsert);
-    if (error) {
-      console.error(`Error batch inserting events:`, error);
-    } else {
-      console.log(`Created ${eventsToInsert.length} tracking events for load ${loadId}`);
-    }
-  }
+  const { error } = await getSupabase().rpc("replace_portpro_tracking", {
+    p_load_id: loadId, p_events: eventsToInsert,
+  });
+  if (error) throw error;
+
 }
 
 // Helper to get driver name from various possible fields
@@ -583,31 +476,3 @@ function createStopEventFromDriverOrder(
 
 // Calculate load margin from PortPro data
 // Margin = Revenue (totalAmount) - Costs (expense + vendorPay + driverPay)
-function calculateMargin(load: PortProLoad): number | null {
-  if (load.totalAmount == null) return null;
-
-  let totalCosts = 0;
-
-  // Sum expenses
-  if (load.expense?.length) {
-    totalCosts += load.expense.reduce((sum, e) => sum + (e.finalAmount || e.amount || 0), 0);
-  }
-
-  // Sum vendor pay
-  if (load.vendorPay?.length) {
-    totalCosts += load.vendorPay.reduce((sum, vp) => {
-      if (vp.totalAmount != null) return sum + vp.totalAmount;
-      if (vp.pricing?.length) {
-        return sum + vp.pricing.reduce((s, p) => s + (p.finalAmount || p.amount || 0), 0);
-      }
-      return sum;
-    }, 0);
-  }
-
-  // Sum driver pay
-  if (load.driverPay?.length) {
-    totalCosts += load.driverPay.reduce((sum, dp) => sum + (dp.totalAmount || dp.amount || 0), 0);
-  }
-
-  return load.totalAmount - totalCosts;
-}

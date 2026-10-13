@@ -3,34 +3,19 @@
  * Runs every 15 minutes to retry failed webhooks
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   getItemsReadyForRetry,
   updateRetryAttempt,
   getDeadLetterStats,
   isDLQOverThreshold,
 } from "@/lib/webhook-dlq";
-import { mapPortProStatus, WebhookPayload } from "@/lib/portpro";
+import { type WebhookPayload } from "@/lib/portpro";
+import { processPortProWebhook } from "@/lib/portpro-processing";
 import { sendSlackAlert } from "@/lib/sync-monitoring";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 1 minute
-
-// Lazy initialization to avoid module-scope env var access during build
-let _supabase: SupabaseClient | null = null;
-function getSupabase(): SupabaseClient {
-  if (!_supabase) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      throw new Error("Supabase environment variables are not configured");
-    }
-    _supabase = createClient(url, key);
-  }
-  return _supabase;
-}
 
 export async function GET(request: NextRequest) {
   // Verify cron secret (fail closed)
@@ -72,7 +57,8 @@ export async function GET(request: NextRequest) {
         const payload: WebhookPayload = JSON.parse(item.payload);
 
         // Reprocess based on event type
-        const success = await reprocessWebhook(item.eventType, payload);
+        await processPortProWebhook({ ...payload, event_type: item.eventType });
+    const success = true;
 
         if (success) {
           await updateRetryAttempt(item.id, true);
@@ -103,132 +89,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**
- * Reprocess a webhook event (simplified version of main webhook handler)
- */
-async function reprocessWebhook(
-  eventType: string,
-  payload: WebhookPayload
-): Promise<boolean> {
-  const data = payload.data;
-  if (!data) return false;
-
-  const referenceNumber = payload.reference_number || data.reference_number;
-
-  switch (eventType) {
-    case "load#created":
-      return await handleLoadCreated(data, referenceNumber);
-
-    case "load#status_updated":
-      return await handleLoadStatusUpdated(data, referenceNumber);
-
-    case "load#info_updated":
-    case "load#dates_updated":
-      return await handleLoadInfoUpdated(data, referenceNumber);
-
-    case "load#equipment_updated":
-      return await handleEquipmentUpdated(data, referenceNumber);
-
-    default:
-      console.log(`DLQ Retry: Skipping unhandled event type ${eventType}`);
-      return true; // Mark as success to remove from queue
-  }
-}
-
-async function handleLoadCreated(
-  data: Record<string, any>,
-  referenceNumber: string
-): Promise<boolean> {
-  const supabase = getSupabase();
-  const { data: existing } = await supabase
-    .from("loads")
-    .select("id")
-    .eq("portpro_reference", referenceNumber)
-    .single();
-
-  if (existing) return true; // Already exists
-
-  const trackingNumber = `NSL${Date.now().toString(36).toUpperCase()}${Math.random()
-    .toString(36)
-    .substring(2, 6)
-    .toUpperCase()}`;
-
-  const { error } = await supabase.from("loads").insert({
-    tracking_number: trackingNumber,
-    portpro_reference: referenceNumber,
-    portpro_load_id: data._id,
-    container_number: data.containerNo || "PENDING",
-    status: mapPortProStatus(data.status || "PENDING"),
-    customer_name: data.caller?.company_name,
-    customer_email: data.caller?.email,
-  });
-
-  return !error;
-}
-
-async function handleLoadStatusUpdated(
-  data: Record<string, any>,
-  referenceNumber: string
-): Promise<boolean> {
-  const supabase = getSupabase();
-  const newStatus = data.status || data.changedValues?.status;
-  if (!newStatus) return true;
-
-  const mappedStatus = mapPortProStatus(newStatus);
-
-  const { error } = await supabase
-    .from("loads")
-    .update({
-      status: mappedStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("portpro_reference", referenceNumber);
-
-  return !error;
-}
-
-async function handleLoadInfoUpdated(
-  data: Record<string, any>,
-  referenceNumber: string
-): Promise<boolean> {
-  const supabase = getSupabase();
-  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-
-  if (data.deliveryTimes?.[0]?.deliveryFromTime) {
-    updates.eta = data.deliveryTimes[0].deliveryFromTime;
-  }
-  if (data.pickupTimes?.[0]?.pickupFromTime) {
-    updates.pickup_time = data.pickupTimes[0].pickupFromTime;
-  }
-  if (data.containerSize) {
-    updates.container_size = data.containerSize;
-  }
-
-  const { error } = await supabase
-    .from("loads")
-    .update(updates)
-    .eq("portpro_reference", referenceNumber);
-
-  return !error;
-}
-
-async function handleEquipmentUpdated(
-  data: Record<string, any>,
-  referenceNumber: string
-): Promise<boolean> {
-  const supabase = getSupabase();
-  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-
-  if (data.containerNo) updates.container_number = data.containerNo;
-  if (data.chassisNo) updates.chassis_number = data.chassisNo;
-  if (data.sealNo) updates.seal_number = data.sealNo;
-
-  const { error } = await supabase
-    .from("loads")
-    .update(updates)
-    .eq("portpro_reference", referenceNumber);
-
-  return !error;
 }
