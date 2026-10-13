@@ -162,7 +162,7 @@ against your hosted Supabase project.
   requests. The PortPro polling schedule is still provisioned separately.
 - Production deployment depends on the same commit's CI checks. Configure the
   GitHub `production` environment and set repository variable
-  `VERCEL_CLI_VERSION` to a reviewed exact CLI version. If Vercel Git integration
+  `VERCEL_CLI_VERSION` to a reviewed exact CLI version. Vercel Git integration
   is configured not to auto-deploy `main`, avoiding an unchecked duplicate release.
   The workflow stages production with `--skip-domain`; verify the staged deployment
   and apply pending migrations before promoting it to the public domains.

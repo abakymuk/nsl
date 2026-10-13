@@ -44,6 +44,16 @@ jobs:
         run: vercel pull --yes --environment=production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Configure canonical signup callback
+        run: |
+          vercel env add NEXT_PUBLIC_SITE_URL production --force --yes --value https://www.newstreamlogistics.com
+          vercel pull --yes --environment=production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Verify required production configuration
+        run: node scripts/check-production-env.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       - name: Build the checked commit
         run: vercel build --prod
         env:
