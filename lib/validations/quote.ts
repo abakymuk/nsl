@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Shared with the browser: validate without eval under our production CSP.
+z.config({ jitless: true });
+
 // List of valid terminals (LA/LB ports - no LACT per business requirements)
 export const VALID_TERMINALS = [
   "YTI (Yusen Terminals)",
