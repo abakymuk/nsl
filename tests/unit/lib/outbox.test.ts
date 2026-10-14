@@ -16,12 +16,33 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 describe("Slack-only delivery", () => {
-  it("sends all request details as plain text without mentions", () => {
+  it("groups complete details into blocks while keeping the notification preview short", () => {
     const message = buildSlackMessage(quote);
+    const content = JSON.stringify(message.blocks);
+    expect(message.blocks[0].type).toBe("header");
+    for (const value of [quote.reference_number, quote.email, quote.phone, quote.container_number, quote.lfd, quote.availability_date, quote.special_instructions]) expect(content).toContain(value);
+    expect(content).toContain("Required at delivery");
+    expect(message.text.length).toBeLessThan(300);
+    expect(message.text).not.toContain(quote.special_instructions);
+    expect(content).toContain("PDT");
+  });
+  it("omits empty optional details and avoids a misleading urgency badge", () => {
+    const content = JSON.stringify(buildSlackMessage({ ...quote, email: null, container_number: null, container_type: null, pickup_terminal: null, lfd: null, availability_date: null, special_instructions: null, delivery_type: null, appointment_required: false }));
+    for (const absent of ["Not provided", "Email", "Container", "Equipment", "Terminal", "Last free day", "Available", "Notes", "Appointment", "Priority"]) expect(content).not.toContain(absent);
+  });
+  it("keeps customer input literal without mention or link elements", () => {
+    const message = buildSlackMessage({ ...quote, special_instructions: "<!channel> <@U123> *bold* https://example.test" });
     expect(message.mrkdwn).toBe(false);
-    expect(message.blocks[0].text.type).toBe("plain_text");
-    for (const value of [quote.reference_number, quote.email, quote.phone, quote.container_number, quote.lfd, quote.availability_date, quote.special_instructions]) expect(message.text).toContain(value);
-    expect(message.text).toContain("Appointment required: Yes");
+    const textBlocks = message.blocks.filter(block => block.type === "rich_text");
+    const elements = textBlocks.flatMap(block => block.elements.flatMap(section => section.elements));
+    expect(elements.every(element => element.type === "text")).toBe(true);
+    expect(elements.find(element => element.text === quote.contact_name)?.style).toBeUndefined();
+    expect(elements.some(element => element.text.includes("<!channel> <@U123> *bold*"))).toBe(true);
+  });
+  it("highlights urgent requests and preserves the full maximum-length note", () => {
+    const message = buildSlackMessage({ ...quote, time_sensitive: true, special_instructions: "x".repeat(1000) });
+    expect(JSON.stringify(message.blocks[0])).toContain("Priority quote request");
+    expect(JSON.stringify(message.blocks)).toContain("x".repeat(1000));
   });
   it("marks successful delivery after Slack accepts it", async () => {
     mocks.fetch.mockResolvedValue({ ok: true });
