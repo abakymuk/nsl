@@ -36,10 +36,10 @@ export default function ContactPage() {
                 <h3 className="font-semibold">Email</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   <a
-                    href="mailto:info@newstreamlogistics.com"
+                    href="mailto:hello@newstreamlogistics.com"
                     className="break-words text-primary hover:underline"
                   >
-                    info@newstreamlogistics.com
+                    hello@newstreamlogistics.com
                   </a>
                 </p>
               </div>

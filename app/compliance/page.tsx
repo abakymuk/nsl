@@ -168,10 +168,10 @@ export default function CompliancePage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Contact us at{" "}
           <a
-            href="mailto:info@newstreamlogistics.com"
+            href="mailto:hello@newstreamlogistics.com"
             className="text-primary hover:underline"
           >
-            info@newstreamlogistics.com
+            hello@newstreamlogistics.com
           </a>{" "}
           or use our{" "}
           <a href="/contact" className="text-primary hover:underline">
