@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { Phone, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function PhoneBanner() {
+  const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const lastScrollYRef = useRef(0);
@@ -40,8 +42,8 @@ export function PhoneBanner() {
     setIsVisible(false);
   };
 
-  // Don't show if dismissed, on desktop, or on admin pages
-  if (isDismissed) return null;
+  // Keep floating controls away from quote form inputs and submission.
+  if (isDismissed || pathname === "/quote") return null;
 
   return (
     <AnimatePresence>
