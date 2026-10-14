@@ -1,148 +1,20 @@
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { createHmac } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { createUntypedAdminClient } from "@/lib/supabase/server";
 
-// Create rate limiters only if Redis is configured
-let quoteRateLimiter: Ratelimit | null = null;
-let contactRateLimiter: Ratelimit | null = null;
-let trackRateLimiter: Ratelimit | null = null;
-let signupRateLimiter: Ratelimit | null = null;
+// Share one limit across server instances using the existing database, not Redis.
+export async function checkRateLimit(request: NextRequest) {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error("Missing quote storage configuration");
+  const address = (request.headers.get("x-vercel-forwarded-for") || request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+  const identifier = createHmac("sha256", secret).update(address).digest("hex");
+  const { data, error } = await createUntypedAdminClient().rpc("check_quote_rate_limit", { p_identifier: identifier });
+  if (error) throw error;
+  return data === true;
+}
 
-function getRedis() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (!url || !token) {
-    return null;
-  }
-
-  return new Redis({
-    url,
-    token,
+export function rateLimitResponse() {
+  return NextResponse.json({ error: "Too many requests. Please try again later." }, {
+    status: 429, headers: { "Retry-After": "60" },
   });
-}
-
-function getQuoteRateLimiter() {
-  if (quoteRateLimiter) return quoteRateLimiter;
-
-  const redis = getRedis();
-  if (!redis) return null;
-
-  quoteRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, "1 m"), // 5 requests per minute
-    analytics: true,
-    prefix: "ratelimit:quote",
-  });
-
-  return quoteRateLimiter;
-}
-
-function getContactRateLimiter() {
-  if (contactRateLimiter) return contactRateLimiter;
-
-  const redis = getRedis();
-  if (!redis) return null;
-
-  contactRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(3, "1 m"), // 3 requests per minute
-    analytics: true,
-    prefix: "ratelimit:contact",
-  });
-
-  return contactRateLimiter;
-}
-
-function getTrackRateLimiter() {
-  if (trackRateLimiter) return trackRateLimiter;
-
-  const redis = getRedis();
-  if (!redis) return null;
-
-  trackRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(20, "1 m"), // 20 requests per minute per IP
-    analytics: true,
-    prefix: "ratelimit:track",
-  });
-
-  return trackRateLimiter;
-}
-
-function getSignupRateLimiter() {
-  if (signupRateLimiter) return signupRateLimiter;
-
-  const redis = getRedis();
-  if (!redis) return null;
-
-  signupRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, "10 m"), // 5 signups per 10 minutes per IP
-    analytics: true,
-    prefix: "ratelimit:signup",
-  });
-
-  return signupRateLimiter;
-}
-
-export type RateLimitType = "quote" | "contact" | "track" | "signup";
-
-function getLimiter(type: RateLimitType) {
-  switch (type) {
-    case "quote": return getQuoteRateLimiter();
-    case "contact": return getContactRateLimiter();
-    case "track": return getTrackRateLimiter();
-    case "signup": return getSignupRateLimiter();
-  }
-}
-
-export async function checkRateLimit(
-  request: NextRequest,
-  type: RateLimitType
-): Promise<{ success: boolean; remaining?: number; reset?: number }> {
-  const limiter = getLimiter(type);
-
-  // If no Redis configured, allow all requests (development mode)
-  if (!limiter) {
-    console.warn(`Rate limiting disabled: UPSTASH_REDIS not configured`);
-    return { success: true };
-  }
-
-  // Get identifier: prefer IP, fallback to a header or generate one
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded ? forwarded.split(",")[0].trim() : "127.0.0.1";
-  const identifier = `${type}:${ip}`;
-
-  try {
-    const result = await limiter.limit(identifier);
-
-    return {
-      success: result.success,
-      remaining: result.remaining,
-      reset: result.reset,
-    };
-  } catch (error) {
-    console.error("Rate limit check failed:", error);
-    // On error, allow the request but log it
-    return { success: true };
-  }
-}
-
-export function rateLimitResponse(reset?: number): NextResponse {
-  const retryAfter = reset ? Math.ceil((reset - Date.now()) / 1000) : 60;
-
-  return NextResponse.json(
-    {
-      error: "Too many requests. Please try again later.",
-      retryAfter,
-    },
-    {
-      status: 429,
-      headers: {
-        "Retry-After": String(retryAfter),
-        "X-RateLimit-Remaining": "0",
-      },
-    }
-  );
 }

@@ -8,11 +8,15 @@ import { setTimeout as delay } from "node:timers/promises";
 
 let savedQuote;
 let inserts = 0;
+let delivered = false;
+let slackMessages = [];
 const backend = createServer(async (request, response) => {
   response.setHeader("Content-Type", "application/json");
   const path = new URL(request.url, "http://localhost").pathname;
-  if (path === "/rest/v1/quotes" && request.method === "GET") {
-    response.end(JSON.stringify(savedQuote ? [savedQuote] : []));
+  if (path === "/rest/v1/rpc/check_quote_rate_limit") {
+    response.end("true");
+  } else if (path === "/rest/v1/quotes" && request.method === "GET") {
+    response.end(JSON.stringify(request.headers.accept?.includes("vnd.pgrst.object") ? savedQuote : savedQuote ? [savedQuote] : []));
   } else if (path === "/rest/v1/quotes" && request.method === "POST") {
     let body = "";
     for await (const chunk of request) body += chunk;
@@ -21,9 +25,18 @@ const backend = createServer(async (request, response) => {
     response.statusCode = 201;
     response.end(JSON.stringify(savedQuote));
   } else if (path === "/rest/v1/rpc/claim_quote_notifications") {
-    response.end("[]");
-  } else if (path === "/rest/v1/quote_tokens" && request.method === "GET") {
-    response.end(JSON.stringify({ token: "a".repeat(64) }));
+    response.end(JSON.stringify(savedQuote && !delivered ? [{ id: "job-1", quote_id: savedQuote.id, channel: "slack", attempts: 1 }] : []));
+  } else if (path === "/test-slack" && request.method === "POST") {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    slackMessages.push(JSON.parse(body));
+    response.end("ok");
+  } else if (path === "/rest/v1/notification_outbox" && request.method === "PATCH") {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    delivered = Boolean(JSON.parse(body).delivered_at);
+    response.statusCode = 204;
+    response.end();
   } else {
     response.statusCode = 500;
     response.end(JSON.stringify({ message: `Unexpected test backend request: ${request.method} ${path}` }));
@@ -40,12 +53,8 @@ const app = spawn(process.execPath, ["--no-experimental-require-module", "node_m
   env: {
     ...process.env,
     NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
     SUPABASE_SERVICE_ROLE_KEY: "test-service-key",
-    RESEND_API_KEY: "re_test_key",
-    UPSTASH_REDIS_REST_URL: "",
-    UPSTASH_REDIS_REST_TOKEN: "",
-    SLACK_WEBHOOK_URL: "",
+    SLACK_WEBHOOK_URL: "http://127.0.0.1:54321/test-slack",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -61,6 +70,15 @@ try {
     if (attempt === 59) throw new Error("Production server did not become ready");
     await delay(500);
   }
+  if (process.argv.includes("--serve")) {
+    console.log(`Browser fixture ready at ${baseUrl}`);
+    await new Promise(resolve => process.once("SIGTERM", resolve));
+  } else {
+  for (const path of ["/", "/services", "/process", "/compliance", "/about", "/contact", "/quote"]) {
+    assert.equal((await fetch(`${baseUrl}${path}`)).status, 200, path);
+  }
+  assert.equal((await fetch(`${baseUrl}/api/track`)).status, 410);
+  assert.equal((await fetch(`${baseUrl}/admin`, { redirect: "manual" })).status, 307);
   const post = (body, key) => fetch(`${baseUrl}/api/quote`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(key ? { "Idempotency-Key": key } : {}) },
@@ -79,7 +97,7 @@ try {
   const result = await submitted.json();
   assert.equal(result.success, true);
   assert.equal(result.referenceNumber, "NSL-RUNTIME-TEST");
-  assert.ok(result.statusUrl.endsWith(`/quote/status/${"a".repeat(64)}`));
+  assert.equal(result.statusUrl, undefined);
   assert.equal(savedQuote.company_name, "TEST Company");
   assert.equal(savedQuote.special_instructions, "Local fixture only");
 
@@ -87,8 +105,13 @@ try {
   assert.equal(retried.status, 200);
   assert.equal((await retried.json()).referenceNumber, result.referenceNumber);
   assert.equal(inserts, 1, "A retry must not create another quote");
+  assert.equal(delivered, true, "Slack delivery must be acknowledged");
+  assert.equal(slackMessages.length, 1, "An acknowledged job must not be delivered twice");
+  assert.match(slackMessages[0].text, /TEST Runtime/);
+  assert.match(slackMessages[0].text, /90210/);
   assert.equal((await post({ ...form, deliveryZip: "90211" }, key)).status, 409);
-  console.log("Production runtime passed: validation, sanitized save, status link, retry, conflict.");
+  console.log("Production runtime passed: public pages, retired routes, validation, sanitized save, Slack delivery, retry, conflict.");
+  }
 } catch (error) {
   console.error(output);
   throw error;

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Phone, Mail, MapPin, ArrowUpRight } from "lucide-react";
 import { CONTACT } from "@/lib/contact";
 
@@ -21,12 +20,6 @@ const navigation = {
 };
 
 export function Footer() {
-  const pathname = usePathname();
-
-  // Don't render footer on admin pages (admin has its own layout)
-  if (pathname?.startsWith("/admin")) {
-    return null;
-  }
   return (
     <footer className="border-t bg-secondary/30 pb-24 md:pb-0">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -131,17 +124,6 @@ export function Footer() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Request a Quote</p>
                   <p className="text-xs text-muted-foreground">Get pricing in 15 min</p>
-                </div>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </Link>
-
-              <Link
-                href="/track"
-                className="flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:border-primary/50 hover:bg-card/80 transition-all group"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">Track Container</p>
-                  <p className="text-xs text-muted-foreground">Check your load status</p>
                 </div>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </Link>

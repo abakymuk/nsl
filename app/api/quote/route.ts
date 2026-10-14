@@ -3,25 +3,22 @@ import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
 import { quoteFormSchema, calculateLeadScore, isUrgentLead } from "@/lib/validations/quote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
-import { createUntypedAdminClient, getUser } from "@/lib/supabase/server";
-import { getUserOrgMembership } from "@/lib/auth";
-import { getOrCreateStatusToken, buildStatusUrl } from "@/lib/quotes/tokens";
+import { createUntypedAdminClient } from "@/lib/supabase/server";
 import { deliverQuoteNotifications } from "@/lib/quotes/outbox";
 import { sanitizeObject } from "@/lib/sanitize";
 
 export async function POST(request: NextRequest) {
-  const rateLimit = await checkRateLimit(request, "quote");
-  if (!rateLimit.success) return rateLimitResponse(rateLimit.reset);
   try {
-    const input = await request.json().catch(() => null);
+    if (!(await checkRateLimit(request))) return rateLimitResponse();
+    const raw = await request.text();
+    if (raw.length > 16000) return NextResponse.json({ error: "Request too large" }, { status: 413 });
+    const input = (() => { try { return JSON.parse(raw); } catch { return null; } })();
     const parsed = quoteFormSchema.safeParse(input && typeof input === "object" ? sanitizeObject(input) : input);
     if (!parsed.success) return NextResponse.json({ error: "Validation failed", errors: parsed.error.issues }, { status: 400 });
     const body = parsed.data;
     const key = request.headers.get("idempotency-key") || randomUUID();
     if (!z.uuid().safeParse(key).success) return NextResponse.json({ error: "Invalid submission key" }, { status: 400 });
-    const user = await getUser();
-    const membership = user?.email_confirmed_at ? await getUserOrgMembership(user.id) : null;
-    const organizationId = membership?.organization.id || null;
+    const organizationId = null;
     // Public form fields never establish organization membership or ownership.
     const hash = createHash("sha256").update(JSON.stringify({ body, organizationId })).digest("hex");
     const db = createUntypedAdminClient();
@@ -59,12 +56,7 @@ export async function POST(request: NextRequest) {
     // Notifications are enqueued by the insert transaction. Immediate delivery
     // is best effort; the cron retries persisted jobs if a provider is unavailable.
     try { await deliverQuoteNotifications(quote.id); } catch (error) { console.error("Notification delivery deferred", error); }
-    let statusUrl: string | null = null;
-    try {
-      const token = await getOrCreateStatusToken(quote.id);
-      if (token) statusUrl = buildStatusUrl(token);
-    } catch (error) { console.error("Status link deferred", error); }
-    return NextResponse.json({ success: true, referenceNumber: quote.reference_number, statusUrl, leadScore, isUrgent });
+    return NextResponse.json({ success: true, referenceNumber: quote.reference_number, leadScore, isUrgent });
   } catch (error) {
     console.error("Quote submission failed", error);
     return NextResponse.json({ error: "Unable to save your request. Please try again." }, { status: 503 });

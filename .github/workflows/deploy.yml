@@ -44,7 +44,7 @@ jobs:
         run: vercel pull --yes --environment=production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      - name: Configure canonical signup callback
+      - name: Configure canonical website URL
         run: |
           vercel env add NEXT_PUBLIC_SITE_URL production --force --yes --value https://www.newstreamlogistics.com
           vercel pull --yes --environment=production

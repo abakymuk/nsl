@@ -1,22 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 import { Phone, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function PhoneBanner() {
-  const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const lastScrollYRef = useRef(0);
 
-  // Check if on admin pages
-  const isAdminPage = pathname?.startsWith("/admin");
 
   useEffect(() => {
-    // Don't set up scroll listener on admin pages
-    if (isAdminPage) return;
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -39,7 +33,7 @@ export function PhoneBanner() {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isAdminPage]);
+  }, []);
 
   const handleDismiss = () => {
     setIsDismissed(true);
@@ -47,7 +41,7 @@ export function PhoneBanner() {
   };
 
   // Don't show if dismissed, on desktop, or on admin pages
-  if (isDismissed || isAdminPage) return null;
+  if (isDismissed) return null;
 
   return (
     <AnimatePresence>
@@ -64,15 +58,7 @@ export function PhoneBanner() {
               <a
                 href="tel:+18885330302"
                 className="flex items-center gap-3 flex-1"
-                onClick={() => {
-                  // Track click event for analytics
-                  if (typeof window !== "undefined" && window.gtag) {
-                    window.gtag("event", "click_to_call", {
-                      event_category: "engagement",
-                      event_label: "phone_banner",
-                    });
-                  }
-                }}
+
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
                   <Phone className="h-5 w-5" />
@@ -97,15 +83,4 @@ export function PhoneBanner() {
       )}
     </AnimatePresence>
   );
-}
-
-// Add type declaration for gtag
-declare global {
-  interface Window {
-    gtag?: (
-      command: string,
-      action: string,
-      params?: Record<string, string>
-    ) => void;
-  }
 }
