@@ -13,7 +13,7 @@ export const CONTACT = {
   PHONE_TEL: "+1-888-533-0302", // For tel: links and structured data
 
   // Email addresses
-  EMAIL_INFO: "info@newstreamlogistics.com",
+  EMAIL_INFO: "hello@newstreamlogistics.com",
   EMAIL_NOREPLY: "noreply@newstreamlogistics.com",
   EMAIL_QUOTES: "quotes@newstreamlogistics.com",
   EMAIL_CONTACT: "contact@newstreamlogistics.com",
