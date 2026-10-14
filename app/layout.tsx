@@ -5,6 +5,7 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { LocalBusinessSchema, ServiceSchema } from "@/components/structured-data";
 import { PhoneBanner } from "@/components/phone-banner";
+import { WebsiteAnalytics } from "@/components/website-analytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -86,6 +87,7 @@ export default function RootLayout({
               <Footer />
             </div>
             <PhoneBanner />
+            <WebsiteAnalytics />
       </body>
     </html>
   );
