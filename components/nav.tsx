@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FloatingNav } from "@/components/ui/aceternity/floating-navbar";
 import { FloatingDock } from "@/components/ui/aceternity/floating-dock";
 import { ShimmerButton } from "@/components/ui/magic/shimmer-button";
@@ -20,6 +21,7 @@ const dockItems = [
 ];
 
 export function Nav() {
+  const pathname = usePathname();
   return <>
     <FloatingNav navItems={navItems} logo={
       <Link href="/" className="flex items-center gap-2">
@@ -31,7 +33,7 @@ export function Nav() {
         <Link href="/quote">Get Quote</Link>
       </ShimmerButton>
     } />
-    <FloatingDock items={dockItems} />
+    {pathname !== "/quote" && <FloatingDock items={dockItems} />}
     <div className="h-16" />
   </>;
 }

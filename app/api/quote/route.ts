@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         submission_key: key, submission_hash: hash, organization_id: organizationId,
         contact_name: body.fullName, company_name: body.companyName,
         email: body.email || null, phone: body.phone,
-        container_number: body.containerNumber || null, container_type: body.containerType || "40ft",
+        container_number: body.containerNumber || null, container_type: body.containerType || null,
         pickup_terminal: body.terminal || null, delivery_zip: body.deliveryZip,
         delivery_type: body.deliveryType || null, appointment_required: body.appointmentRequired,
         service_type: body.moveType || "import", lfd: body.lfd || null,
