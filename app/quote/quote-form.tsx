@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PORTS, quoteFormSchema } from "@/lib/validations/quote";
+import { track } from "@/lib/analytics";
 
 type FieldName = "fullName" | "companyName" | "phone" | "email" | "port" | "deliveryZip" | "notes";
 
@@ -21,14 +22,22 @@ export default function QuoteForm() {
   const router = useRouter();
   const submission = useRef<{ payload: string; key: string } | null>(null);
   const inFlight = useRef(false);
+  const startedAt = useRef<number | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
 
+  function markStarted() {
+    if (startedAt.current !== null) return;
+    startedAt.current = Date.now();
+    track("NSL: Quote Form Started");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inFlight.current) return;
+    markStarted();
     const form = event.currentTarget;
     const fields = Object.fromEntries(Array.from(new FormData(form), ([key, value]) => [key, String(value).trim()]));
     const input = { port: "", ...fields, requestType: "standard" };
@@ -41,6 +50,7 @@ export default function QuoteForm() {
         if (!errors[field]) errors[field] = field === "phone" && !fields.phone ? "Phone is required" : issue.message;
       }
       setFieldErrors(errors);
+      track("NSL: Quote Validation Failed", { invalid_fields: Object.keys(errors) });
       const first = form.elements.namedItem(String(parsed.error.issues[0].path[0]));
       if (first instanceof HTMLElement) first.focus();
       return;
@@ -48,6 +58,10 @@ export default function QuoteForm() {
     setFieldErrors({});
     inFlight.current = true;
     setLoading(true);
+    const duration_seconds = Math.round((Date.now() - (startedAt.current ?? Date.now())) / 1000);
+    const port = parsed.data.port === "la" ? "la" : parsed.data.port === "lb" ? "lb" : undefined;
+    track("NSL: Quote Submit Attempted", { port, duration_seconds });
+    let errorType: "validation" | "rate_limit" | "conflict" | "server" | "network" | "timeout" = "network";
     try {
       const payload = JSON.stringify(input);
       if (submission.current?.payload !== payload) submission.current = { payload, key: crypto.randomUUID() };
@@ -57,15 +71,22 @@ export default function QuoteForm() {
         body: payload,
         signal: AbortSignal.timeout(20000),
       });
+      errorType = response.status === 429 ? "rate_limit" : response.status === 409 ? "conflict" : response.status === 400 ? "validation" : "server";
       const result = await response.json();
       if (!response.ok || !result.success) {
         throw new Error(result.errors?.map((issue: { message: string }) => issue.message).join("; ") || result.error || "Failed to submit quote request");
       }
+      track("NSL: Quote Submit Succeeded", {
+        port, duration_seconds,
+        $insert_id: `quote-success:${submission.current.key}`,
+      });
       const params = new URLSearchParams({ requestType: "standard" });
       if (result.referenceNumber) params.set("ref", result.referenceNumber);
       if (result.isUrgent) params.set("urgent", "true");
       router.push(`/quote/thank-you?${params.toString()}`);
-    } catch {
+    } catch (cause) {
+      if (cause instanceof Error && (cause.name === "TimeoutError" || cause.name === "AbortError")) errorType = "timeout";
+      track("NSL: Quote Submit Failed", { error_type: errorType });
       setError("Unable to submit your request. Please try again or call (888) 533-0302.");
       setLoading(false);
       inFlight.current = false;
@@ -87,7 +108,7 @@ export default function QuoteForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate aria-busy={loading} className="rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
+      <form onSubmit={handleSubmit} onChange={markStarted} noValidate aria-busy={loading} className="rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
         <div ref={errorRef} role="alert" tabIndex={-1} className={error ? "mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" : "sr-only"}>{error}</div>
         <fieldset disabled={loading} className="grid min-w-0 gap-5 sm:grid-cols-2">
           <legend className="sr-only">Quote request details</legend>
