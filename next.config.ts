@@ -15,7 +15,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.intercomcdn.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mixpanel.com https://*.intercom.io https://*.intercomcdn.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mixpanel.com https://*.intercom.io wss://nexus-websocket-a.intercom.io wss://nexus-websocket-b.intercom.io https://*.intercomcdn.com",
       "worker-src 'self' blob:",
       "frame-src 'self' https://intercom-sheets.com",
       "frame-ancestors 'none'",

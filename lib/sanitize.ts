@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 /**
  * Sanitize a string to prevent XSS attacks
@@ -7,13 +7,15 @@ import DOMPurify from "isomorphic-dompurify";
 export function sanitizeString(input: string | undefined | null): string {
   if (!input) return "";
 
-  // First, use DOMPurify to remove any HTML/script content
-  const sanitized = DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [], // No HTML tags allowed
-    ALLOWED_ATTR: [], // No attributes allowed
+  // Parse on the server without a browser DOM/jsdom dependency. In particular,
+  // this must work when the runtime cannot require ESM from CommonJS.
+  const sanitized = sanitizeHtml(input, {
+    allowedTags: [],
+    allowedAttributes: {},
+    nonTextTags: ["script", "style", "textarea", "option", "noscript", "template"],
   });
 
-  // Additional cleanup: trim whitespace and limit length
+  // Length limits are enforced by each field's validation schema.
   return sanitized.trim();
 }
 
