@@ -2,7 +2,7 @@
  * Quick-win tests for quote validation pure functions
  * These tests can be run immediately without any mocking
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   quoteFormSchema,
   calculateLeadScore,
@@ -334,4 +334,21 @@ describe("isUrgentLead", () => {
     const data = { ...baseData, requestType: "not_sure" };
     expect(isUrgentLead(2, data)).toBe(false);
   });
+});
+
+
+it("validates a fresh quote schema when browser CSP forbids code generation", () => {
+  const blockedEval = vi.spyOn(globalThis, "Function").mockImplementation(() => {
+    throw new EvalError("CSP blocks unsafe-eval");
+  });
+  try {
+    const result = quoteFormSchema.clone().safeParse({
+      fullName: "TEST CSP", companyName: "TEST Company", phone: "202-555-0143",
+      port: "la", requestType: "standard", deliveryZip: "90210",
+    });
+    expect(result.success).toBe(true);
+    expect(blockedEval).not.toHaveBeenCalled();
+  } finally {
+    blockedEval.mockRestore();
+  }
 });
