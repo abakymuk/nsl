@@ -99,6 +99,7 @@ try {
   assert.equal(result.referenceNumber, "NSL-RUNTIME-TEST");
   assert.equal(result.statusUrl, undefined);
   assert.equal(savedQuote.company_name, "TEST Company");
+  assert.equal(savedQuote.container_type, null, "Do not invent equipment for the short form");
   assert.equal(savedQuote.special_instructions, "Local fixture only");
 
   const retried = await post(form, key);
