@@ -46,7 +46,10 @@ sql = bootstrap + (root / "supabase/schema.sql").read_text()
 sql += "\nALTER TABLE loads RENAME TO shipments; ALTER TABLE load_events RENAME TO shipment_events;\n"
 sql += "ALTER TABLE shipment_events RENAME COLUMN load_id TO shipment_id;\n"
 for migration in sorted((root / "supabase/migrations").glob("*.sql")):
+    if migration.name.endswith("_simplify_quote_delivery.sql"):
+        # Exercise the historical schema before retiring its browser access.
+        sql += (root / "tests/database/regressions.sql").read_text()
     sql += "\n" + migration.read_text() + "\n"
-sql += (root / "tests/database/regressions.sql").read_text()
+sql += (root / "tests/database/simple-site.sql").read_text()
 subprocess.run(["psql", url, "-X", "-v", "ON_ERROR_STOP=1", "-q"], input=sql, text=True, check=True)
 print("Database migration and regression checks passed")

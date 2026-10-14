@@ -6,11 +6,3 @@ export async function GET() {
     timestamp: new Date().toISOString(),
   });
 }
-
-export async function POST() {
-  return NextResponse.json({
-    status: "ok",
-    method: "POST",
-    timestamp: new Date().toISOString(),
-  });
-}

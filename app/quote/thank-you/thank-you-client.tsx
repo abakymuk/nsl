@@ -6,19 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CheckCircle2,
-  MessageCircle,
   Copy,
   Check,
   Phone,
   Clock,
-  AlertTriangle,
   ArrowRight,
   Zap,
 } from "lucide-react";
-import { showNewMessage } from "@intercom/messenger-js-sdk";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { REQUEST_TYPES } from "@/lib/validations/quote";
-import { IntercomEvents } from "@/lib/intercom";
 
 export function ThankYouClient() {
   const searchParams = useSearchParams();
@@ -28,37 +24,11 @@ export function ThankYouClient() {
   const isUrgent = searchParams.get("urgent") === "true";
   const [copied, setCopied] = useState(false);
 
-  // Track successful submission
-  useEffect(() => {
-    // Track quote submission success event
-    try {
-      IntercomEvents.quoteSubmitted({
-        container: containerNumber || "not_provided",
-        terminal: "from_form",
-        zip: "from_form",
-        containerType: "from_form",
-      });
-    } catch {
-      // Intercom not loaded
-    }
-  }, [containerNumber]);
-
   const handleCopyRef = async () => {
     if (referenceNumber) {
       await navigator.clipboard.writeText(referenceNumber);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleChatClick = () => {
-    try {
-      const message = referenceNumber
-        ? `Hi! I just submitted request ${referenceNumber}${containerNumber ? ` for container ${containerNumber}` : ""}. I have a question.`
-        : `Hi! I just submitted a quote request${containerNumber ? ` for container ${containerNumber}` : ""}. I have a question.`;
-      showNewMessage(message);
-    } catch {
-      window.location.href = "/contact";
     }
   };
 
@@ -248,26 +218,8 @@ export function ThankYouClient() {
               </div>
             )}
 
-            {/* Chat CTA */}
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <p className="text-sm text-muted-foreground mb-3 text-center">
-                Have a quick question? Chat with us.
-              </p>
-              <Button
-                onClick={handleChatClick}
-                variant="outline"
-                className="w-full border-primary/50 hover:bg-primary/10"
-              >
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Chat About This Request
-              </Button>
-            </div>
-
             {/* Navigation */}
             <div className="flex flex-col gap-3 pt-4 sm:flex-row">
-              <Button asChild className="flex-1">
-                <Link href="/track">Track a Container</Link>
-              </Button>
               <Button variant="outline" asChild className="flex-1">
                 <Link href="/">Back to Home</Link>
               </Button>

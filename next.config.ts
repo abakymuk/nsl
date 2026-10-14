@@ -11,13 +11,13 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://widget.intercom.io https://js.intercomcdn.com",
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
-      "font-src 'self' data: https://fonts.intercomcdn.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mixpanel.com https://*.intercom.io wss://nexus-websocket-a.intercom.io wss://nexus-websocket-b.intercom.io https://*.intercomcdn.com",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.sentry.io",
       "worker-src 'self' blob:",
-      "frame-src 'self' https://intercom-sheets.com",
+      "frame-src 'none'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/webp", "image/avif"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+  },
+  async redirects() {
+    return [
+      ...["/admin/:path*", "/dashboard/:path*", "/sign-in", "/sign-up", "/magic-link", "/invite/:path*", "/auth/:path*", "/track"].map(source => ({ source, destination: "/contact", permanent: false })),
+      ...["/quote/status/:path*", "/quote/accept/:path*"].map(source => ({ source, destination: "/contact", permanent: false })),
+      { source: "/contact/thank-you", destination: "/contact", permanent: false },
+    ];
   },
   async headers() {
     return [

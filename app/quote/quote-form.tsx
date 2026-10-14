@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -23,9 +23,7 @@ import {
 } from "lucide-react";
 import type { QuoteFormData } from "@/types";
 import { cn } from "@/lib/utils";
-import { Analytics } from "@/lib/analytics";
 import {
-  VALID_TERMINALS,
   REQUEST_TYPES,
   DELIVERY_TYPES,
   PORTS,
@@ -53,7 +51,6 @@ const steps = [
 ];
 
 const phoneRegex = /^(\+1)?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function QuoteForm() {
   const router = useRouter();
@@ -85,9 +82,6 @@ export default function QuoteForm() {
     moveType: "import",
   });
 
-  useEffect(() => {
-    Analytics.quoteStarted();
-  }, []);
 
   // Step 1 validation: Name, Company, Phone required
   const canProceedStep1 =
@@ -98,8 +92,6 @@ export default function QuoteForm() {
     formData.port &&
     formData.requestType;
 
-  // Step 2 validation: All optional, can always proceed
-  const canProceedStep2 = true;
 
   // Step 3 validation: ZIP required (trim whitespace before checking)
   const canSubmit = formData.deliveryZip.trim().replace(/\s+/g, '').match(/^\d{5}(-\d{4})?$/);
@@ -124,7 +116,7 @@ export default function QuoteForm() {
         let errorMessage = "Failed to submit quote request";
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
+          errorMessage = errorData.errors?.map((issue: { message: string }) => issue.message).join("; ") || errorData.error || errorMessage;
         } catch {
           // Response body is empty or not JSON
         }
@@ -132,20 +124,6 @@ export default function QuoteForm() {
       }
 
       const result = await response.json();
-      Analytics.quoteSubmitted({
-        container: formData.containerNumber || "not_provided",
-        terminal: formData.terminal || "not_selected",
-        zip: formData.deliveryZip,
-        containerType: formData.containerType || "not_selected",
-      });
-      // Track successful submission with additional data
-      Analytics.quoteSubmitSuccess({
-        referenceNumber: result.referenceNumber || null,
-        requestType: formData.requestType,
-        isUrgent: result.isUrgent || formData.timeSensitive,
-        leadScore: result.leadScore || 0,
-      });
-
       const params = new URLSearchParams();
       if (result.referenceNumber) params.set("ref", result.referenceNumber);
       if (formData.containerNumber) params.set("container", formData.containerNumber);
@@ -155,28 +133,12 @@ export default function QuoteForm() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
-      Analytics.quoteSubmitError(errorMessage);
       setLoading(false);
     }
   };
 
   const nextStep = () => {
     if (currentStep < 3) {
-      Analytics.quoteStepCompleted(currentStep);
-      // Track step-specific data
-      if (currentStep === 1) {
-        Analytics.quoteStep1Complete({
-          requestType: formData.requestType,
-          port: formData.port,
-          timeSensitive: formData.timeSensitive ?? false,
-        });
-      } else if (currentStep === 2) {
-        Analytics.quoteStep2Complete({
-          hasContainer: !!formData.containerNumber,
-          hasTerminal: !!formData.terminal,
-          hasLfd: !!formData.lfd,
-        });
-      }
       setCurrentStep(currentStep + 1);
     }
   };

@@ -1,19 +1,11 @@
 "use client";
 
-import { useRef } from "react";
 import { motion } from "framer-motion";
-import { PriceEstimator } from "@/components/quote/price-estimator";
 import QuoteForm from "./quote-form";
 import { Star, Shield, Clock, Truck } from "lucide-react";
 import { featuredTestimonial } from "@/lib/data/testimonials";
 
 export default function QuotePageClient() {
-  const formRef = useRef<HTMLDivElement>(null);
-
-  const scrollToForm = () => {
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-slate-50 dark:to-slate-950/50">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -21,8 +13,6 @@ export default function QuotePageClient() {
           {/* Sidebar - Desktop */}
           <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              {/* Price Estimator */}
-              <PriceEstimator onGetFullQuote={scrollToForm} />
 
               {/* Trust Indicators */}
               <motion.div
@@ -113,13 +103,8 @@ export default function QuotePageClient() {
 
           {/* Main Form Area */}
           <div className="lg:col-span-2">
-            {/* Mobile Price Estimator */}
-            <div className="lg:hidden mb-8">
-              <PriceEstimator onGetFullQuote={scrollToForm} />
-            </div>
-
             {/* Form */}
-            <div ref={formRef}>
+            <div>
               <QuoteForm />
             </div>
           </div>
